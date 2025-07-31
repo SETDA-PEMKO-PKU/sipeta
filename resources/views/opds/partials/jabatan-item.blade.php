@@ -1,32 +1,35 @@
 <div class="jabatan-item {{ $level > 0 ? 'child' : '' }}" style="margin-left: {{ $level * 2 }}rem;">
     <div class="row align-items-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <h6 class="mb-1">
                 <i class="fas fa-user-tie me-2"></i>
                 {{ $jabatan->nama }}
             </h6>
-            @if($jabatan->kelas && $jabatan->kelas !== 'null')
-                <small class="text-muted">
-                    <i class="fas fa-star me-1"></i>
-                    Kelas: {{ $jabatan->kelas }}
-                </small>
-            @endif
-        </div>
-        <div class="col-md-3">
-            <div class="text-center">
-                <small class="text-muted d-block">Kebutuhan vs Bezetting</small>
-                <strong class="text-primary">{{ $jabatan->bezetting }}/{{ $jabatan->kebutuhan }}</strong>
+            <div class="mt-2">
+                @if($jabatan->jenis_jabatan)
+                    <span class="badge bg-info me-1">{{ $jabatan->jenis_jabatan }}</span>
+                @endif
+                
+                @if($jabatan->kelas && $jabatan->kelas !== 'null')
+                    <small class="text-muted me-2">Kelas: {{ $jabatan->kelas }}</small>
+                @endif
+                
+                <small class="text-muted me-2">Bezetting: {{ $jabatan->asns->count() }}</small>
+                <small class="text-muted me-2">Kebutuhan: {{ $jabatan->kebutuhan }}</small>
+                
                 @php
-                    $percentage = $jabatan->kebutuhan > 0 ? ($jabatan->bezetting / $jabatan->kebutuhan) * 100 : 0;
-                    $barClass = $percentage >= 80 ? 'bezetting-good' : ($percentage >= 50 ? 'bezetting-warning' : 'bezetting-danger');
+                    $selisih = $jabatan->asns->count() - $jabatan->kebutuhan;
                 @endphp
-                <div class="bezetting-bar mt-1">
-                    <div class="bezetting-fill {{ $barClass }}" style="width: {{ min($percentage, 100) }}%"></div>
-                </div>
-                <small class="text-muted">{{ number_format($percentage, 1) }}%</small>
+                @if($selisih > 0)
+                    <small class="text-warning me-2">+/-: +{{ $selisih }}</small>
+                @elseif($selisih < 0)
+                    <small class="text-danger me-2">+/-: {{ $selisih }}</small>
+                @else
+                    <small class="text-success me-2">+/-: 0</small>
+                @endif
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="text-end">
                 @if($jabatan->asns->count() > 0)
                     <span class="badge bg-success">
@@ -50,10 +53,24 @@
             <div class="ms-3">
                 @foreach($jabatan->asns as $asn)
                     <div class="d-inline-block me-3 mb-1">
-                        <span class="badge bg-light text-dark">
+                        <span class="badge bg-light text-dark position-relative">
                             <i class="fas fa-user me-1"></i>
                             {{ $asn->nama }}
                             <small class="text-muted">({{ $asn->nip }})</small>
+                            
+                            <!-- Tombol aksi ASN -->
+                            <div class="btn-group btn-group-sm ms-2" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="editAsn({{ $asn->id }}, '{{ $asn->nama }}', '{{ $asn->nip }}', {{ $asn->jabatan_id }}, {{ $asn->bagian_id ?? 'null' }})" 
+                                        title="Edit ASN">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="deleteAsn({{ $asn->id }}, '{{ $asn->nama }}')" 
+                                        title="Hapus ASN">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </span>
                     </div>
                 @endforeach

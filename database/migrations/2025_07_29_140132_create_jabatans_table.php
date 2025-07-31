@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('kelas', 50)->default('null');
             $table->integer('kebutuhan')->default(0);
             $table->integer('bezetting')->default(0);
-            $table->unsignedBigInteger('bagian_id');
+            $table->unsignedBigInteger('bagian_id')->nullable();
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->timestamps();
             

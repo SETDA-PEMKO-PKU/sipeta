@@ -14,7 +14,9 @@ class Asn extends Model
     protected $fillable = [
         'nama',
         'nip',
-        'jabatan_id'
+        'jabatan_id',
+        'bagian_id',
+        'opd_id'
     ];
 
     /**
@@ -26,19 +28,27 @@ class Asn extends Model
     }
 
     /**
-     * Mendapatkan bagian melalui jabatan
+     * Relasi langsung ke bagian
      */
     public function bagian()
     {
-        return $this->hasOneThrough(Bagian::class, Jabatan::class, 'id', 'id', 'jabatan_id', 'bagian_id');
+        return $this->belongsTo(Bagian::class, 'bagian_id');
     }
 
     /**
-     * Mendapatkan OPD melalui jabatan dan bagian
+     * Relasi langsung ke OPD
      */
     public function opd()
     {
-        return $this->jabatan->bagian->opd ?? null;
+        return $this->belongsTo(Opd::class, 'opd_id');
+    }
+
+    /**
+     * Mendapatkan bagian melalui jabatan (fallback)
+     */
+    public function bagianMelaluiJabatan()
+    {
+        return $this->hasOneThrough(Bagian::class, Jabatan::class, 'id', 'id', 'jabatan_id', 'parent_id');
     }
 
     /**

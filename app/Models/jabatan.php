@@ -13,40 +13,41 @@ class Jabatan extends Model
 
     protected $fillable = [
         'nama',
+        'jenis_jabatan',
         'kelas',
         'kebutuhan',
-        'bezetting',
-        'bagian_id',
-        'parent_id'
+        'parent_id',
+        'opd_id'
     ];
 
     protected $casts = [
-        'kebutuhan' => 'integer',
-        'bezetting' => 'integer'
+        'kelas' => 'integer',
+        'kebutuhan' => 'integer'
     ];
 
     /**
-     * Relasi ke bagian yang memiliki jabatan ini
+     * Relasi ke bagian yang memiliki jabatan ini (melalui parent_id)
      */
     public function bagian()
     {
-        return $this->belongsTo(Bagian::class, 'bagian_id');
+        return $this->belongsTo(Bagian::class, 'parent_id');
     }
 
     /**
-     * Relasi ke jabatan parent
+     * Relasi ke bagian parent
      */
-    public function parent()
+    public function parentBagian()
     {
-        return $this->belongsTo(Jabatan::class, 'parent_id');
+        return $this->belongsTo(Bagian::class, 'parent_id');
     }
 
     /**
-     * Relasi ke jabatan-jabatan child
+     * Mendapatkan jabatan-jabatan dalam bagian yang sama
      */
-    public function children()
+    public function siblings()
     {
-        return $this->hasMany(Jabatan::class, 'parent_id');
+        return $this->hasMany(Jabatan::class, 'parent_id', 'parent_id')
+                    ->where('id', '!=', $this->id);
     }
 
     /**
@@ -58,53 +59,67 @@ class Jabatan extends Model
     }
 
     /**
-     * Mendapatkan OPD melalui bagian
+     * Mendapatkan OPD langsung atau melalui bagian
      */
     public function opd()
     {
-        return $this->hasOneThrough(Opd::class, Bagian::class, 'id', 'id', 'bagian_id', 'opd_id');
+        // Jika jabatan memiliki opd_id langsung (jabatan kepala OPD)
+        if ($this->opd_id) {
+            return $this->belongsTo(Opd::class, 'opd_id');
+        }
+        // Jika jabatan terkait dengan bagian
+        return $this->hasOneThrough(Opd::class, Bagian::class, 'id', 'id', 'parent_id', 'opd_id');
+    }
+    
+    /**
+     * Relationship langsung ke OPD untuk jabatan kepala
+     */
+    public function opdLangsung()
+    {
+        return $this->belongsTo(Opd::class, 'opd_id');
     }
 
     /**
-     * Mendapatkan semua descendants (anak cucu) dari jabatan ini
+     * Mendapatkan semua jabatan dalam bagian yang sama dan sub-bagian
      */
-    public function descendants()
+    public function getRelatedJabatans()
     {
-        $descendants = collect();
-        
-        foreach ($this->children as $child) {
-            $descendants->push($child);
-            $descendants = $descendants->merge($child->descendants());
+        if (!$this->parentBagian) {
+            return collect();
         }
         
-        return $descendants;
+        $relatedJabatans = collect();
+        
+        // Jabatan dalam bagian yang sama
+        $relatedJabatans = $relatedJabatans->merge(
+            Jabatan::where('parent_id', $this->parent_id)
+                   ->where('id', '!=', $this->id)
+                   ->get()
+        );
+        
+        // Jabatan dalam sub-bagian
+        foreach ($this->parentBagian->children as $subBagian) {
+            $relatedJabatans = $relatedJabatans->merge($subBagian->jabatans);
+        }
+        
+        return $relatedJabatans;
     }
 
     /**
-     * Mendapatkan path hierarki jabatan
+     * Mendapatkan path hierarki jabatan melalui bagian
      */
     public function getPath()
     {
         $path = collect([$this]);
-        $parent = $this->parent;
+        $parentBagian = $this->parentBagian;
         
-        while ($parent) {
-            $path->prepend($parent);
-            $parent = $parent->parent;
+        while ($parentBagian) {
+            $path->prepend($parentBagian);
+            $parentBagian = $parentBagian->parent;
         }
         
         return $path;
     }
 
-    /**
-     * Menghitung persentase bezetting
-     */
-    public function getBezettingPercentageAttribute()
-    {
-        if ($this->kebutuhan == 0) {
-            return 0;
-        }
-        
-        return round(($this->bezetting / $this->kebutuhan) * 100, 2);
-    }
+
 }

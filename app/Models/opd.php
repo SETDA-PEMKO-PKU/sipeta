@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Opd extends Model
 {
@@ -24,11 +25,33 @@ class Opd extends Model
     }
 
     /**
-     * Mendapatkan semua jabatan yang ada di OPD ini melalui bagian
+     * Mendapatkan semua jabatan yang ada di OPD ini
+     * Termasuk jabatan yang terkait dengan bagian dan jabatan pimpinan OPD (tanpa bagian)
      */
     public function jabatans()
     {
-        return $this->hasManyThrough(Jabatan::class, Bagian::class, 'opd_id', 'bagian_id');
+        // Menggunakan hasManyThrough dengan parent_id yang sekarang mereferensikan bagians
+        return $this->hasManyThrough(Jabatan::class, Bagian::class, 'opd_id', 'parent_id');
+    }
+    
+    /**
+     * Mendapatkan jabatan kepala OPD (jabatan tanpa bagian)
+     */
+    public function jabatanKepala()
+    {
+        return $this->hasMany(Jabatan::class, 'opd_id')->whereNull('parent_id');
+    }
+
+    /**
+     * Mendapatkan semua jabatan termasuk kepala OPD
+     */
+    public function getAllJabatans()
+    {
+        // Gabungkan jabatan kepala OPD dan jabatan dari bagian
+        $jabatanKepala = $this->jabatanKepala()->get();
+        $jabatanBagian = $this->jabatans()->get();
+        
+        return $jabatanKepala->merge($jabatanBagian);
     }
 
     /**
@@ -36,8 +59,8 @@ class Opd extends Model
      */
     public function asns()
     {
-        return $this->hasManyThrough(Asn::class, Jabatan::class, 'bagian_id', 'jabatan_id')
-                    ->join('bagians', 'jabatans.bagian_id', '=', 'bagians.id')
+        return $this->hasManyThrough(Asn::class, Jabatan::class, 'parent_id', 'jabatan_id')
+                    ->join('bagians', 'jabatans.parent_id', '=', 'bagians.id')
                     ->where('bagians.opd_id', $this->id);
     }
 }

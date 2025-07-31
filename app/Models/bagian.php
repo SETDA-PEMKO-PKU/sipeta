@@ -46,7 +46,7 @@ class Bagian extends Model
      */
     public function jabatans()
     {
-        return $this->hasMany(Jabatan::class, 'bagian_id');
+        return $this->hasMany(Jabatan::class, 'parent_id');
     }
 
     /**

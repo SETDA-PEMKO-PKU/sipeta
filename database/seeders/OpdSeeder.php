@@ -54,29 +54,29 @@ class OpdSeeder extends Seeder
             // Buat jabatan
             $jabatanKepala = Jabatan::create([
                 'nama' => 'Kepala Dinas',
-                'kelas' => 'IV/a',
+                'jenis_jabatan' => 'Struktural',
+                'kelas' => 'IV/b',
                 'kebutuhan' => 1,
                 'bezetting' => 1,
-                'bagian_id' => $bagianSekretariat->id,
-                'parent_id' => null
+                'parent_id' => null // Jabatan pimpinan tanpa parent bagian
             ]);
 
             $jabatanSekretaris = Jabatan::create([
                 'nama' => 'Sekretaris',
+                'jenis_jabatan' => 'Struktural',
                 'kelas' => 'IV/a',
                 'kebutuhan' => 1,
                 'bezetting' => 1,
-                'bagian_id' => $bagianSekretariat->id,
-                'parent_id' => $jabatanKepala->id
+                'parent_id' => $bagianSekretariat->id // Parent bagian adalah Sekretariat
             ]);
 
             $jabatanKasubag = Jabatan::create([
                 'nama' => 'Kepala Sub Bagian Umum',
+                'jenis_jabatan' => 'Struktural',
                 'kelas' => 'III/d',
                 'kebutuhan' => 1,
                 'bezetting' => 0,
-                'bagian_id' => $subBagianUmum->id,
-                'parent_id' => $jabatanSekretaris->id
+                'parent_id' => $subBagianUmum->id // Parent bagian adalah Sub Bagian Umum
             ]);
 
             // Buat ASN contoh
