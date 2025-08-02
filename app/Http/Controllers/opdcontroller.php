@@ -15,7 +15,9 @@ class OpdController extends Controller
      */
     public function index()
     {
-        $opds = Opd::orderBy('nama')->get();
+        $opds = Opd::with(['bagians', 'jabatanKepala', 'bagians.jabatans.asns'])
+                   ->orderBy('nama')
+                   ->get();
         return view('opds.index', compact('opds'));
     }
 
@@ -333,5 +335,132 @@ class OpdController extends Controller
 
         return redirect()->route('opds.show', $opdId)
                         ->with('success', 'ASN "' . $namaAsn . '" berhasil dihapus!');
+    }
+
+    /**
+     * Export data OPD ke format CSV
+     */
+    public function export($id)
+    {
+        $opd = Opd::with([
+            'bagians.jabatans.asns', 
+            'jabatanKepala.asns'
+        ])->findOrFail($id);
+
+        // Prepare data untuk export
+        $exportData = [];
+        
+        // Header CSV
+        $exportData[] = [
+            'OPD',
+            'Bagian',
+            'Jabatan',
+            'Jenis Jabatan',
+            'Kelas',
+            'Kebutuhan',
+            'Bezetting',
+            'Selisih',
+            'ASN - Nama',
+            'ASN - NIP'
+        ];
+
+        // Data Jabatan Kepala OPD
+        foreach ($opd->jabatanKepala as $jabatan) {
+            $bezetting = $jabatan->asns->count();
+            $selisih = $bezetting - $jabatan->kebutuhan;
+            
+            if ($jabatan->asns->count() > 0) {
+                foreach ($jabatan->asns as $asn) {
+                    $exportData[] = [
+                        $opd->nama,
+                        'Kepala OPD',
+                        $jabatan->nama,
+                        $jabatan->jenis_jabatan,
+                        $jabatan->kelas ?? '-',
+                        $jabatan->kebutuhan,
+                        $bezetting,
+                        $selisih,
+                        $asn->nama,
+                        $asn->nip
+                    ];
+                }
+            } else {
+                $exportData[] = [
+                    $opd->nama,
+                    'Kepala OPD',
+                    $jabatan->nama,
+                    $jabatan->jenis_jabatan,
+                    $jabatan->kelas ?? '-',
+                    $jabatan->kebutuhan,
+                    $bezetting,
+                    $selisih,
+                    '-',
+                    '-'
+                ];
+            }
+        }
+
+        // Data Bagian dan Jabatan
+        foreach ($opd->bagians as $bagian) {
+            foreach ($bagian->jabatans as $jabatan) {
+                $bezetting = $jabatan->asns->count();
+                $selisih = $bezetting - $jabatan->kebutuhan;
+                
+                if ($jabatan->asns->count() > 0) {
+                    foreach ($jabatan->asns as $asn) {
+                        $exportData[] = [
+                            $opd->nama,
+                            $bagian->nama,
+                            $jabatan->nama,
+                            $jabatan->jenis_jabatan,
+                            $jabatan->kelas ?? '-',
+                            $jabatan->kebutuhan,
+                            $bezetting,
+                            $selisih,
+                            $asn->nama,
+                            $asn->nip
+                        ];
+                    }
+                } else {
+                    $exportData[] = [
+                        $opd->nama,
+                        $bagian->nama,
+                        $jabatan->nama,
+                        $jabatan->jenis_jabatan,
+                        $jabatan->kelas ?? '-',
+                        $jabatan->kebutuhan,
+                        $bezetting,
+                        $selisih,
+                        '-',
+                        '-'
+                    ];
+                }
+            }
+        }
+
+        // Generate CSV
+        $filename = 'data_opd_' . str_replace(' ', '_', strtolower($opd->nama)) . '_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function() use ($exportData) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            foreach ($exportData as $row) {
+                fputcsv($file, $row, ';'); // Use semicolon as delimiter for better Excel compatibility
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

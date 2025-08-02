@@ -22,6 +22,7 @@ Route::get('/', function () {
 // Routes untuk OPD
 Route::get('/opds', [OpdController::class, 'index'])->name('opds.index');
 Route::get('/opds/{id}', [OpdController::class, 'show'])->name('opds.show');
+Route::get('/opds/{id}/export', [OpdController::class, 'export'])->name('opds.export');
 Route::put('/opds/{id}', [OpdController::class, 'update'])->name('opds.update');
 Route::delete('/opds/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');
 
