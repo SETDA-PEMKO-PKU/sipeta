@@ -43,3 +43,9 @@ Route::delete('/opds/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->na
 
 // API route untuk tree structure
 Route::get('/api/opds/{id}/tree', [OpdController::class, 'getOpdTree'])->name('api.opds.tree');
+
+// API route untuk get ASN list per jabatan
+Route::get('/api/jabatan/{id}/asns', [OpdController::class, 'getJabatanAsns'])->name('api.jabatan.asns');
+
+// API route untuk get bagian detail
+Route::get('/api/bagian/{id}/detail', [App\Http\Controllers\BagianController::class, 'getDetail'])->name('api.bagian.detail');

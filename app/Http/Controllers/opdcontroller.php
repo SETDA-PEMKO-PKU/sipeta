@@ -27,15 +27,15 @@ class OpdController extends Controller
     public function show($id)
     {
         $opd = Opd::with([
-            'bagians.jabatans.bagian', 
+            'bagians.jabatans.bagian',
             'bagians.children',
             'jabatans.bagian',
             'jabatans.asns'
         ])->findOrFail($id);
-        
+
         // Tambahkan semua jabatan (termasuk jabatan kepala OPD)
         $opd->allJabatans = $opd->getAllJabatans();
-        
+
         return view('opds.show', compact('opd'));
     }
 
@@ -49,6 +49,38 @@ class OpdController extends Controller
         }])->findOrFail($id);
 
         return response()->json($opd);
+    }
+
+    /**
+     * API endpoint untuk mendapatkan daftar ASN dalam jabatan tertentu
+     */
+    public function getJabatanAsns($id)
+    {
+        $jabatan = Jabatan::with(['asns', 'parentBagian'])->findOrFail($id);
+
+        // Build response data
+        $data = [
+            'jabatan_id' => $jabatan->id,
+            'nama' => $jabatan->nama,
+            'jenis_jabatan' => $jabatan->jenis_jabatan,
+            'kelas' => $jabatan->kelas,
+            'kebutuhan' => $jabatan->kebutuhan,
+            'bezetting' => $jabatan->asns->count(),
+            'bagian_id' => $jabatan->parent_id,
+            'bagian_nama' => $jabatan->parentBagian ? $jabatan->parentBagian->nama : null,
+            'asns' => $jabatan->asns->map(function($asn) {
+                return [
+                    'id' => $asn->id,
+                    'nama' => $asn->nama,
+                    'nip' => $asn->nip,
+                    'jabatan_id' => $asn->jabatan_id,
+                    'bagian_id' => $asn->bagian_id,
+                    'bagian_nama' => $asn->bagian ? $asn->bagian->nama : '-',
+                ];
+            })
+        ];
+
+        return response()->json($data);
     }
 
     /**
@@ -78,7 +110,7 @@ class OpdController extends Controller
             'kebutuhan' => $request->kebutuhan,
             'parent_id' => $request->bagian_id
         ];
-        
+
         // Jika tidak ada bagian_id, maka ini adalah jabatan kepala OPD
         if (!$request->bagian_id) {
             $jabatanData['opd_id'] = $opdId;
@@ -127,7 +159,7 @@ class OpdController extends Controller
             'kebutuhan' => $request->kebutuhan,
             'parent_id' => $request->bagian_id
         ];
-        
+
         // Jika tidak ada bagian_id, maka ini adalah jabatan kepala OPD
         if (!$request->bagian_id) {
             $updateData['opd_id'] = $opdId;
@@ -199,14 +231,14 @@ class OpdController extends Controller
     public function destroy($id)
     {
         $opd = Opd::findOrFail($id);
-        
+
         // Hapus semua jabatan yang terkait dengan OPD ini
         // (akan otomatis menghapus jabatan di semua bagian karena cascade)
         $opd->jabatans()->delete();
-        
+
         // Hapus semua bagian
         $opd->bagians()->delete();
-        
+
         // Hapus OPD
         $opd->delete();
 
@@ -228,7 +260,7 @@ class OpdController extends Controller
 
         // Validasi bahwa jabatan dan bagian (jika ada) milik OPD yang benar
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
-        
+
         // Cek apakah jabatan adalah kepala OPD atau jabatan dengan bagian
         if ($jabatan->opd_id) {
             // Jabatan kepala OPD
@@ -286,7 +318,7 @@ class OpdController extends Controller
 
         // Validasi jabatan dan bagian seperti di storeAsn
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
-        
+
         if ($jabatan->opd_id) {
             if ($jabatan->opd_id != $opdId) {
                 return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
@@ -330,7 +362,7 @@ class OpdController extends Controller
 
         $namaAsn = $asn->nama;
         $jabatan = $asn->jabatan;
-        
+
         $asn->delete();
 
         return redirect()->route('opds.show', $opdId)
@@ -343,13 +375,13 @@ class OpdController extends Controller
     public function export($id)
     {
         $opd = Opd::with([
-            'bagians.jabatans.asns', 
+            'bagians.jabatans.asns',
             'jabatanKepala.asns'
         ])->findOrFail($id);
 
         // Prepare data untuk export
         $exportData = [];
-        
+
         // Header CSV
         $exportData[] = [
             'OPD',
@@ -368,7 +400,7 @@ class OpdController extends Controller
         foreach ($opd->jabatanKepala as $jabatan) {
             $bezetting = $jabatan->asns->count();
             $selisih = $bezetting - $jabatan->kebutuhan;
-            
+
             if ($jabatan->asns->count() > 0) {
                 foreach ($jabatan->asns as $asn) {
                     $exportData[] = [
@@ -405,7 +437,7 @@ class OpdController extends Controller
             foreach ($bagian->jabatans as $jabatan) {
                 $bezetting = $jabatan->asns->count();
                 $selisih = $bezetting - $jabatan->kebutuhan;
-                
+
                 if ($jabatan->asns->count() > 0) {
                     foreach ($jabatan->asns as $asn) {
                         $exportData[] = [
@@ -440,7 +472,7 @@ class OpdController extends Controller
 
         // Generate CSV
         $filename = 'data_opd_' . str_replace(' ', '_', strtolower($opd->nama)) . '_' . date('Y-m-d_H-i-s') . '.csv';
-        
+
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -451,10 +483,10 @@ class OpdController extends Controller
 
         $callback = function() use ($exportData) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             foreach ($exportData as $row) {
                 fputcsv($file, $row, ';'); // Use semicolon as delimiter for better Excel compatibility
             }

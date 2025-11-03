@@ -132,14 +132,77 @@ class BagianController extends Controller
     private function isDescendant($ancestorId, $descendantId)
     {
         $descendant = Bagian::find($descendantId);
-        
+
         while ($descendant && $descendant->parent_id) {
             if ($descendant->parent_id == $ancestorId) {
                 return true;
             }
             $descendant = $descendant->parent;
         }
-        
+
         return false;
+    }
+
+    /**
+     * API endpoint untuk mendapatkan detail bagian dengan statistik
+     */
+    public function getDetail($id)
+    {
+        $bagian = Bagian::with([
+            'jabatans.asns',
+            'children.jabatans.asns'
+        ])->findOrFail($id);
+
+        // Calculate statistics
+        $totalAsn = 0;
+        $totalKebutuhan = 0;
+
+        // Count from direct jabatans
+        foreach ($bagian->jabatans as $jabatan) {
+            $totalAsn += $jabatan->asns->count();
+            $totalKebutuhan += $jabatan->kebutuhan;
+        }
+
+        // Count from sub-bagians
+        foreach ($bagian->children as $subBagian) {
+            foreach ($subBagian->jabatans as $jabatan) {
+                $totalAsn += $jabatan->asns->count();
+                $totalKebutuhan += $jabatan->kebutuhan;
+            }
+        }
+
+        // Build response
+        $data = [
+            'bagian_id' => $bagian->id,
+            'nama' => $bagian->nama,
+            'opd_id' => $bagian->opd_id,
+            'parent_id' => $bagian->parent_id,
+            'total_asn' => $totalAsn,
+            'total_kebutuhan' => $totalKebutuhan,
+            'jabatans' => $bagian->jabatans->map(function($jabatan) {
+                return [
+                    'id' => $jabatan->id,
+                    'nama' => $jabatan->nama,
+                    'jenis_jabatan' => $jabatan->jenis_jabatan,
+                    'kelas' => $jabatan->kelas,
+                    'kebutuhan' => $jabatan->kebutuhan,
+                    'bezetting' => $jabatan->asns->count(),
+                ];
+            }),
+            'sub_bagians' => $bagian->children->map(function($subBagian) {
+                $asnCount = 0;
+                foreach ($subBagian->jabatans as $jabatan) {
+                    $asnCount += $jabatan->asns->count();
+                }
+                return [
+                    'id' => $subBagian->id,
+                    'nama' => $subBagian->nama,
+                    'jabatan_count' => $subBagian->jabatans->count(),
+                    'asn_count' => $asnCount,
+                ];
+            })
+        ];
+
+        return response()->json($data);
     }
 }
