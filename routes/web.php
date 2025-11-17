@@ -24,6 +24,11 @@ Route::get('/', function () {
     return redirect()->route('admin.login');
 });
 
+// Redirect /home ke admin dashboard
+Route::get('/home', function () {
+    return redirect()->route('admin.dashboard');
+});
+
 // Admin Authentication Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     // Guest routes (not authenticated)
