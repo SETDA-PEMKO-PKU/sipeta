@@ -8,6 +8,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
     @stack('styles')
 </head>
 <body class="h-full" x-data="{ sidebarOpen: false }">
@@ -189,6 +190,39 @@
          class="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
          style="display: none;"></div>
 
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        // Initialize Tom Select for all select elements globally
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all select elements that don't have tom-select already initialized
+            const selects = document.querySelectorAll('select:not(.tomselected)');
+
+            selects.forEach(function(selectElement) {
+                // Skip if already initialized or has a specific class to exclude
+                if (selectElement.classList.contains('no-tom-select') || selectElement.tomselect) {
+                    return;
+                }
+
+                // Initialize Tom Select with default options
+                new TomSelect(selectElement, {
+                    allowEmptyOption: true,
+                    placeholder: selectElement.getAttribute('placeholder') || 'Pilih...',
+                    onInitialize: function() {
+                        // Check if select has onchange attribute and preserve it
+                        const onchangeAttr = selectElement.getAttribute('onchange');
+                        if (onchangeAttr) {
+                            this.on('change', function(value) {
+                                eval(onchangeAttr);
+                            });
+                        }
+                    }
+                });
+            });
+        });
+    </script>
     @stack('scripts')
 </body>
 </html>

@@ -55,9 +55,9 @@
             </div>
 
             <div class="flex items-end">
-                <button type="submit" class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                    <span class="iconify mr-2" data-icon="mdi:filter" data-width="18"></span>
-                    Terapkan Filter
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <span class="iconify" data-icon="mdi:filter" data-width="18"></span>
+                    <span>Terapkan Filter</span>
                 </button>
             </div>
         </form>

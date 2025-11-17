@@ -4,7 +4,6 @@
 @section('page-title', 'Analytics per OPD')
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
 <style>
     .chart-container {
         position: relative;
@@ -196,20 +195,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-<script>
-    // Initialize Tom Select for OPD dropdown
-    new TomSelect('#opd_id', {
-        placeholder: 'Cari OPD...',
-        allowEmptyOption: true,
-        onChange: function(value) {
-            if (value) {
-                document.getElementById('opdForm').submit();
-            }
-        }
-    });
-</script>
-
 @if($data && $bagianChartData && $distribusiPegawaiData)
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>

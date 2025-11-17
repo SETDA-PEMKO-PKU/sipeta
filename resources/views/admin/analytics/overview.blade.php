@@ -145,8 +145,8 @@
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">Top 10 Jabatan dengan Kekurangan Pegawai Terbesar</h3>
-            <a href="{{ route('admin.analytics.gap') }}" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                Lihat Semua
+            <a href="{{ route('admin.analytics.gap') }}" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium">
+                <span>Lihat Semua</span>
                 <span class="iconify" data-icon="mdi:arrow-right" data-width="16"></span>
             </a>
         </div>
