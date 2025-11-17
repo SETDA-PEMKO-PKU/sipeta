@@ -220,7 +220,8 @@ class PegawaiController extends Controller
                     'nama' => $jabatan->nama,
                     'type' => 'bagian',
                     'bagian_id' => $bagian->id,
-                    'bagian_nama' => $bagian->nama
+                    'bagian_nama' => $bagian->nama,
+                    'bagian_parent_id' => $bagian->parent_id
                 ];
             }
         }

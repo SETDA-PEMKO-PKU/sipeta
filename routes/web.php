@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\Admin\AnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +42,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Pegawai Management
         Route::resource('pegawai', PegawaiController::class);
+
+        // Analytics Routes
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('overview', [AnalyticsController::class, 'overview'])->name('overview');
+            Route::get('opd', [AnalyticsController::class, 'opdAnalytics'])->name('opd');
+            Route::get('kepegawaian', [AnalyticsController::class, 'kepegawaianAnalytics'])->name('kepegawaian');
+            Route::get('jabatan', [AnalyticsController::class, 'jabatanAnalytics'])->name('jabatan');
+            Route::get('gap', [AnalyticsController::class, 'gapAnalysis'])->name('gap');
+            Route::get('laporan', [AnalyticsController::class, 'laporan'])->name('laporan');
+
+            // Export routes
+            Route::get('export/excel', [AnalyticsController::class, 'exportExcel'])->name('export.excel');
+            Route::get('export/pdf', [AnalyticsController::class, 'exportPdf'])->name('export.pdf');
+
+            // API for charts
+            Route::get('api/chart-data', [AnalyticsController::class, 'getChartData'])->name('api.chart-data');
+        });
 
         // OPD Management (moved inside admin middleware)
         Route::prefix('opds')->group(function () {

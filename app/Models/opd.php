@@ -33,7 +33,7 @@ class Opd extends Model
         // Menggunakan hasManyThrough dengan parent_id yang sekarang mereferensikan bagians
         return $this->hasManyThrough(Jabatan::class, Bagian::class, 'opd_id', 'parent_id');
     }
-    
+
     /**
      * Mendapatkan jabatan kepala OPD (jabatan tanpa bagian)
      */
@@ -50,7 +50,7 @@ class Opd extends Model
         // Gabungkan jabatan kepala OPD dan jabatan dari bagian
         $jabatanKepala = $this->jabatanKepala()->get();
         $jabatanBagian = $this->jabatans()->get();
-        
+
         return $jabatanKepala->merge($jabatanBagian);
     }
 
@@ -59,8 +59,6 @@ class Opd extends Model
      */
     public function asns()
     {
-        return $this->hasManyThrough(Asn::class, Jabatan::class, 'parent_id', 'jabatan_id')
-                    ->join('bagians', 'jabatans.parent_id', '=', 'bagians.id')
-                    ->where('bagians.opd_id', $this->id);
+        return $this->hasMany(Asn::class, 'opd_id');
     }
 }

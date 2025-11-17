@@ -50,17 +50,25 @@ class Bagian extends Model
     }
 
     /**
+     * Relasi ke ASN dalam bagian ini
+     */
+    public function asns()
+    {
+        return $this->hasMany(Asn::class, 'bagian_id');
+    }
+
+    /**
      * Mendapatkan semua descendants (anak cucu) dari bagian ini
      */
     public function descendants()
     {
         $descendants = collect();
-        
+
         foreach ($this->children as $child) {
             $descendants->push($child);
             $descendants = $descendants->merge($child->descendants());
         }
-        
+
         return $descendants;
     }
 
@@ -71,12 +79,12 @@ class Bagian extends Model
     {
         $path = collect([$this]);
         $parent = $this->parent;
-        
+
         while ($parent) {
             $path->prepend($parent);
             $parent = $parent->parent;
         }
-        
+
         return $path;
     }
 }

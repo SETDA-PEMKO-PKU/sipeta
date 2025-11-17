@@ -104,21 +104,17 @@
                     </div>
 
                     <div x-show="!loadingJabatans && jabatans.length > 0" class="border border-gray-300 rounded-lg p-3 bg-white max-h-80 overflow-y-auto">
-                        <template x-for="item in groupedJabatans" :key="item.type + '-' + (item.bagian_id || 'kepala')">
-                            <div class="mb-3">
-                                <!-- Bagian Header -->
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded mb-1">
-                                    <span class="iconify"
-                                          :data-icon="item.type === 'kepala' ? 'mdi:account-star' : 'mdi:folder'"
-                                          :class="item.type === 'kepala' ? 'text-purple-600' : 'text-blue-500'"
-                                          data-width="14"
-                                          data-height="14"></span>
-                                    <span class="text-xs font-semibold text-gray-600" x-text="item.bagian_nama"></span>
-                                </div>
-
-                                <!-- Jabatan Items -->
-                                <template x-for="jabatan in item.jabatans" :key="jabatan.id">
-                                    <div @click="selectJabatan(jabatan.id, jabatan.nama, item.bagian_nama)"
+                        <div class="space-y-1">
+                            <!-- Jabatan Kepala -->
+                            <template x-for="jabatan in jabatans.filter(j => j.type === 'kepala')" :key="jabatan.id">
+                                <div>
+                                    <!-- Kepala Header -->
+                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded mb-1">
+                                        <span class="iconify text-purple-600" data-icon="mdi:account-star" data-width="14" data-height="14"></span>
+                                        <span class="text-xs font-semibold text-gray-600">Kepala OPD</span>
+                                    </div>
+                                    <!-- Jabatan Item -->
+                                    <div @click="selectJabatan(jabatan.id, jabatan.nama, 'Kepala OPD')"
                                          :class="selectedJabatanId == jabatan.id ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'"
                                          class="flex items-center gap-2 p-2 rounded cursor-pointer border-2 border-transparent transition-colors ml-4">
                                         <span class="iconify text-green-600" data-icon="mdi:account-tie" data-width="14" data-height="14"></span>
@@ -129,9 +125,14 @@
                                               data-width="16"
                                               data-height="16"></span>
                                     </div>
-                                </template>
-                            </div>
-                        </template>
+                                </div>
+                            </template>
+
+                            <!-- Bagian dan Jabatan Tree -->
+                            <template x-for="bagian in bagianTree" :key="bagian.id">
+                                <div x-html="renderBagianTree(bagian, 0)"></div>
+                            </template>
+                        </div>
                     </div>
 
                     <div x-show="!loadingJabatans && jabatans.length === 0 && selectedOpdId"
@@ -174,13 +175,15 @@ function pegawaiEditForm() {
         selectedJabatanName: '{{ $pegawai->jabatan ? $pegawai->jabatan->nama : '' }}',
         selectedBagianName: '{{ $pegawai->bagian ? $pegawai->bagian->nama : ($pegawai->jabatan && !$pegawai->jabatan->parent_id ? 'Kepala OPD' : '') }}',
         jabatans: [],
-        groupedJabatans: [],
+        bagians: [],
+        bagianTree: [],
         loadingJabatans: false,
 
         async loadJabatans() {
             if (!this.selectedOpdId) {
                 this.jabatans = [];
-                this.groupedJabatans = [];
+                this.bagians = [];
+                this.bagianTree = [];
                 return;
             }
 
@@ -191,7 +194,9 @@ function pegawaiEditForm() {
                 const response = await fetch(`/admin/api/opds/${this.selectedOpdId}/jabatans`);
                 const data = await response.json();
                 this.jabatans = data;
-                this.groupJabatans();
+
+                // Build bagian structure
+                this.buildBagianTree();
 
                 // Restore selected jabatan if same OPD
                 if (currentJabatanId && this.selectedOpdId === '{{ $pegawai->opd_id }}') {
@@ -208,25 +213,93 @@ function pegawaiEditForm() {
             }
         },
 
-        groupJabatans() {
-            const groups = {};
+        buildBagianTree() {
+            // Extract unique bagians from jabatans
+            const bagianMap = new Map();
 
             this.jabatans.forEach(jabatan => {
-                const key = jabatan.type === 'kepala' ? 'kepala' : `bagian-${jabatan.bagian_id}`;
-
-                if (!groups[key]) {
-                    groups[key] = {
-                        type: jabatan.type,
-                        bagian_id: jabatan.bagian_id,
-                        bagian_nama: jabatan.bagian_nama,
-                        jabatans: []
-                    };
+                if (jabatan.type === 'bagian' && jabatan.bagian_id) {
+                    if (!bagianMap.has(jabatan.bagian_id)) {
+                        bagianMap.set(jabatan.bagian_id, {
+                            id: jabatan.bagian_id,
+                            nama: jabatan.bagian_nama,
+                            parent_id: jabatan.bagian_parent_id,
+                            jabatans: [],
+                            children: []
+                        });
+                    }
+                    bagianMap.get(jabatan.bagian_id).jabatans.push(jabatan);
                 }
-
-                groups[key].jabatans.push(jabatan);
             });
 
-            this.groupedJabatans = Object.values(groups);
+            this.bagians = Array.from(bagianMap.values());
+
+            // Build tree structure
+            const buildTree = (parentId = null) => {
+                return this.bagians
+                    .filter(b => b.parent_id === parentId)
+                    .map(bagian => ({
+                        ...bagian,
+                        children: buildTree(bagian.id)
+                    }));
+            };
+
+            this.bagianTree = buildTree(null);
+        },
+
+        renderBagianTree(bagian, level) {
+            const indent = '─'.repeat(level * 2);
+            const marginLeft = level * 16; // 4 * level for ml-{level*4}
+
+            let html = '<div class="space-y-1">';
+
+            // Bagian Header
+            html += `<div class="flex items-center gap-2 p-2 bg-gray-50 rounded ${level > 0 ? 'mt-2' : ''}">`;
+            if (level > 0) {
+                html += `<span class="text-gray-400 text-xs" style="margin-left: ${marginLeft}px">${indent}</span>`;
+            }
+            html += `<span class="iconify text-blue-500" data-icon="mdi:folder" data-width="14" data-height="14"></span>`;
+            html += `<span class="text-xs font-semibold text-gray-600">${this.escapeHtml(bagian.nama)}</span>`;
+            html += '</div>';
+
+            // Jabatan Items
+            bagian.jabatans.forEach(jabatan => {
+                const indentJabatan = '─'.repeat((level + 1) * 2);
+                const marginLeftJabatan = (level + 1) * 16;
+                const isSelected = this.selectedJabatanId == jabatan.id;
+
+                html += `<div @click="selectJabatan(${jabatan.id}, '${this.escapeHtml(jabatan.nama)}', '${this.escapeHtml(bagian.nama)}')"
+                         class="flex items-center gap-2 p-2 rounded cursor-pointer border-2 border-transparent transition-colors ${isSelected ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}"
+                         style="margin-left: ${marginLeftJabatan}px">`;
+                html += `<span class="text-gray-400 text-xs">${indentJabatan}</span>`;
+                html += `<span class="iconify text-green-600" data-icon="mdi:account-tie" data-width="14" data-height="14"></span>`;
+                html += `<span class="text-sm text-gray-700">${this.escapeHtml(jabatan.nama)}</span>`;
+                if (isSelected) {
+                    html += `<span class="iconify text-blue-500 ml-auto" data-icon="mdi:check-circle" data-width="16" data-height="16"></span>`;
+                }
+                html += '</div>';
+            });
+
+            // Sub-bagian (Recursive)
+            if (bagian.children && bagian.children.length > 0) {
+                bagian.children.forEach(child => {
+                    html += this.renderBagianTree(child, level + 1);
+                });
+            }
+
+            html += '</div>';
+            return html;
+        },
+
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         },
 
         selectJabatan(id, nama, bagianNama) {

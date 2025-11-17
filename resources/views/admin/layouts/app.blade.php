@@ -59,6 +59,46 @@
                     <span class="iconify" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
                     <span class="font-medium">Kelola Admin</span>
                 </a>
+
+                <div class="pt-4 pb-2 px-4">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analytics</span>
+                </div>
+
+                <a href="{{ route('admin.analytics.overview') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.overview') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:chart-box" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Overview</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.opd') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.opd') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:office-building-outline" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Per OPD</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.kepegawaian') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.kepegawaian') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:account-details" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Kepegawaian</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.jabatan') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.jabatan') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:briefcase-outline" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Jabatan</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.gap') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.gap') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:chart-line" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Gap Analysis</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.laporan') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics.laporan') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:file-document-multiple" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Laporan</span>
+                </a>
             </nav>
 
             <!-- User Info & Logout -->
