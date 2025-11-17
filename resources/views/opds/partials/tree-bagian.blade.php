@@ -48,20 +48,22 @@
         </span>
 
         <!-- Actions -->
-        <div class="tree-actions" role="group" aria-label="Actions for {{ $bagian->nama }}">
+        <div class="tree-actions flex gap-1" role="group" aria-label="Actions for {{ $bagian->nama }}">
             <button @click.stop="$dispatch('edit-bagian', { id: {{ $bagian->id }}, nama: '{{ $bagian->nama }}' })"
-                    class="p-1.5 hover:bg-yellow-100 rounded-md text-yellow-600 transition-colors"
+                    class="flex items-center gap-1 px-2 py-1.5 hover:bg-yellow-100 rounded-md text-yellow-600 transition-colors text-xs font-medium"
                     title="Edit Bagian"
                     aria-label="Edit {{ $bagian->nama }}"
                     type="button">
                 <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
+                <span>Edit</span>
             </button>
             <button @click.stop="$dispatch('delete-bagian', { id: {{ $bagian->id }}, nama: '{{ $bagian->nama }}' })"
-                    class="p-1.5 hover:bg-red-100 rounded-md text-red-600 transition-colors"
+                    class="flex items-center gap-1 px-2 py-1.5 hover:bg-red-100 rounded-md text-red-600 transition-colors text-xs font-medium"
                     title="Hapus Bagian"
                     aria-label="Hapus {{ $bagian->nama }}"
                     type="button">
                 <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
+                <span>Hapus</span>
             </button>
         </div>
     </div>
