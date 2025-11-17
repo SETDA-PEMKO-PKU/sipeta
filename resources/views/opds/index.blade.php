@@ -240,8 +240,10 @@
                 <!-- No Results -->
                 <div x-show="searchResults === 0 && searchQuery"
                      class="p-8 text-center">
-                    <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
-                    <p class="text-sm text-gray-500 mt-2">Tidak ada hasil untuk "<span x-text="searchQuery"></span>"</p>
+                    <div class="flex justify-center mb-3">
+                        <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
+                    </div>
+                    <p class="text-sm text-gray-500">Tidak ada hasil untuk "<span x-text="searchQuery"></span>"</p>
                 </div>
             </div>
 
