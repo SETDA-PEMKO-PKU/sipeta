@@ -6,20 +6,117 @@
 @section('content')
 <div class="p-4 lg:p-8" x-data="opdIndex()">
     <!-- Header Actions -->
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-bold text-gray-900">Daftar OPD</h2>
             <p class="text-gray-600 mt-1">Kelola Organisasi Perangkat Daerah</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button class="btn btn-outline">
-                <span class="iconify" data-icon="mdi:download" data-width="16" data-height="16"></span>
+                <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
                 <span class="ml-2">Export Semua</span>
             </button>
             <button class="btn btn-primary">
-                <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
+                <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
                 <span class="ml-2">Tambah OPD</span>
             </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <!-- Total OPD -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Total OPD</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->count() }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Bagian -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Total Bagian</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->bagians->count(); }) }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-green-600" data-icon="mdi:folder-multiple" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Jabatan -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Total Jabatan</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }); }) }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-purple-600" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total ASN -->
+        @php
+            $totalAsn = $opds->sum(function($opd) {
+                return $opd->bagians->sum(function($bagian) {
+                    return $bagian->jabatans->sum(function($jabatan) {
+                        return $jabatan->asns->count();
+                    });
+                }) + $opd->jabatanKepala->sum(function($jabatan) {
+                    return $jabatan->asns->count();
+                });
+            });
+            $totalKebutuhan = $opds->sum(function($opd) {
+                return $opd->jabatanKepala->sum('kebutuhan') + $opd->bagians->sum(function($bagian) {
+                    return $bagian->jabatans->sum('kebutuhan');
+                });
+            });
+            $selisih = $totalAsn - $totalKebutuhan;
+        @endphp
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Total ASN</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $totalAsn }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-yellow-600" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selisih -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Selisih</p>
+                        <p class="text-2xl font-bold {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                            {{ $selisih >= 0 ? '+' : '' }}{{ $selisih }}
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 {{ $selisih >= 0 ? 'bg-green-100' : 'bg-red-100' }} rounded-lg flex items-center justify-center">
+                        <span class="iconify {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}" data-icon="{{ $selisih >= 0 ? 'mdi:trending-up' : 'mdi:trending-down' }}" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -78,79 +175,67 @@
                 </div>
             </div>
 
-            <!-- Compact Table List -->
-            <div class="card animate-fade-in overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">ID</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nama OPD</th>
-                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Bagian</th>
-                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Jabatan</th>
-                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">ASN</th>
-                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($opds->sortBy('nama') as $opd)
-                            <tr class="hover:bg-gray-50 transition-colors duration-150 opd-row"
-                                data-opd-id="{{ $opd->id }}"
-                                data-opd-name="{{ strtolower($opd->nama) }}">
-                                <td class="px-3 py-2 whitespace-nowrap">
-                                    <span class="badge badge-gray text-xs">{{ $opd->id }}</span>
-                                </td>
-                                <td class="px-3 py-2">
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded flex items-center justify-center text-white">
-                                            <span class="iconify" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
-                                        </div>
-                                        <div class="flex-1">
-                                            <div class="text-sm font-medium text-gray-900">{{ $opd->nama }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-3 py-2 text-center">
-                                    <span class="inline-flex items-center justify-center w-12 h-6 rounded-full bg-green-100 text-green-800 text-xs font-semibold">
-                                        {{ $opd->bagians->count() }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2 text-center">
-                                    <span class="inline-flex items-center justify-center w-12 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold">
-                                        {{ $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }) }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2 text-center">
-                                    <span class="inline-flex items-center justify-center w-12 h-6 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
-                                        {{ $opd->bagians->sum(function($bagian) { return $bagian->jabatans->sum(function($jabatan) { return $jabatan->asns->count(); }); }) + $opd->jabatanKepala->sum(function($jabatan) { return $jabatan->asns->count(); }) }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2">
-                                    <div class="flex items-center justify-center gap-1">
-                                        <a href="{{ route('admin.opds.show', $opd->id) }}"
-                                           class="inline-flex items-center px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs"
-                                           title="Lihat Detail">
-                                            <span class="iconify" data-icon="mdi:eye" data-width="14" data-height="14"></span>
-                                        </a>
-                                        <a href="{{ route('admin.api.opds.tree', $opd->id) }}"
-                                           class="inline-flex items-center px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-xs"
-                                           target="_blank"
-                                           title="Export JSON">
-                                            <span class="iconify" data-icon="mdi:download" data-width="14" data-height="14"></span>
-                                        </a>
-                                        <button class="inline-flex items-center px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-xs"
-                                                title="Edit">
-                                            <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
-                                        </button>
-                                        <button class="inline-flex items-center px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                                                title="Hapus">
-                                            <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
-                                        </button>
-                                    </div>
-                                </td>
+            <!-- OPD Table List -->
+            <div class="card">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nama OPD</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Bagian</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Jabatan</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ASN</th>
+                                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Aksi</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($opds->sortBy('nama') as $opd)
+                                <tr class="hover:bg-gray-50 transition-colors opd-row"
+                                    data-opd-id="{{ $opd->id }}"
+                                    data-opd-name="{{ strtolower($opd->nama) }}">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3 max-w-md">
+                                            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                                                <span class="iconify" data-icon="mdi:office-building" data-width="20" data-height="20"></span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 truncate">{{ $opd->nama }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="badge badge-success">{{ $opd->bagians->count() }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="badge badge-primary">{{ $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }) }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="badge badge-gray">{{ $opd->bagians->sum(function($bagian) { return $bagian->jabatans->sum(function($jabatan) { return $jabatan->asns->count(); }); }) + $opd->jabatanKepala->sum(function($jabatan) { return $jabatan->asns->count(); }) }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <a href="{{ route('admin.opds.show', $opd->id) }}"
+                                               class="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm whitespace-nowrap">
+                                                <span class="iconify" data-icon="mdi:eye" data-width="14" data-height="14"></span>
+                                                <span class="ml-1">Detail</span>
+                                            </a>
+                                            <a href="{{ route('admin.api.opds.tree', $opd->id) }}"
+                                               class="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm whitespace-nowrap"
+                                               target="_blank">
+                                                <span class="iconify" data-icon="mdi:download" data-width="14" data-height="14"></span>
+                                                <span class="ml-1">Export</span>
+                                            </a>
+                                            <button class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm whitespace-nowrap">
+                                                <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
+                                                <span class="ml-1">Hapus</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- No Results -->
                 <div x-show="searchResults === 0 && searchQuery"
@@ -160,15 +245,9 @@
                 </div>
             </div>
 
-            <!-- Compact Summary Footer -->
-            <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
-                <div class="flex items-center gap-4">
-                    <span>Total: <strong class="text-gray-900">{{ $opds->count() }}</strong> OPD</span>
-                    <span>•</span>
-                    <span><strong class="text-gray-900">{{ $opds->sum(function($opd) { return $opd->bagians->count(); }) }}</strong> Bagian</span>
-                    <span>•</span>
-                    <span><strong class="text-gray-900">{{ $opds->sum(function($opd) { return $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }); }) }}</strong> Jabatan</span>
-                </div>
+            <!-- Summary -->
+            <div class="mt-4 text-sm text-gray-600">
+                Total: <strong class="text-gray-900">{{ $opds->count() }}</strong> OPD
             </div>
 
         @else

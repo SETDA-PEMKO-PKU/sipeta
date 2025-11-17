@@ -13,11 +13,12 @@
 <body class="h-full" x-data="{ sidebarOpen: false }">
     <div class="min-h-screen flex">
         <!-- Sidebar -->
-        <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
-             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex-shrink-0 flex flex-col"
+             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+             style="width: 16rem;">
 
             <!-- Sidebar Header -->
-            <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-primary-600 to-primary-700">
+            <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-primary-600 to-primary-700 flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
                         <span class="iconify text-primary-600" data-icon="mdi:shield-account" data-width="20" data-height="20"></span>
@@ -30,7 +31,7 @@
             </div>
 
             <!-- Navigation -->
-            <nav class="px-4 py-6 space-y-1">
+            <nav class="px-4 py-6 space-y-1 flex-1 overflow-y-auto">
                 <a href="{{ route('admin.dashboard') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.dashboard') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <span class="iconify" data-icon="mdi:view-dashboard" data-width="20" data-height="20"></span>
@@ -55,7 +56,7 @@
             </nav>
 
             <!-- User Info & Logout -->
-            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -77,7 +78,7 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-h-screen">
+        <div class="flex-1 flex flex-col min-h-screen lg:ml-64">
             <!-- Top Bar -->
             <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center px-4 lg:px-8">
                 <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-600 mr-4">
