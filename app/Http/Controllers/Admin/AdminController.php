@@ -13,9 +13,17 @@ class AdminController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $admins = Admin::orderBy('created_at', 'desc')->get();
+        // Per page options
+        $perPage = $request->get('per_page', 10);
+        if (!in_array($perPage, [10, 15, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $admins = Admin::orderBy('created_at', 'desc')
+                       ->paginate($perPage)
+                       ->withQueryString();
         return view('admin.admins.index', compact('admins'));
     }
 

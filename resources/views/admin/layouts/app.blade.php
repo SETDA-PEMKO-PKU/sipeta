@@ -48,6 +48,12 @@
                     <span class="font-medium">Data OPD</span>
                 </a>
 
+                <a href="{{ route('admin.pegawai.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.pegawai.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:account-multiple" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Daftar Pegawai</span>
+                </a>
+
                 <a href="{{ route('admin.admins.index') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.admins.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <span class="iconify" data-icon="mdi:account-group" data-width="20" data-height="20"></span>

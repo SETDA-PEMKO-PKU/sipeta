@@ -13,11 +13,18 @@ class OpdController extends Controller
     /**
      * Menampilkan daftar semua OPD
      */
-    public function index()
+    public function index(Request $request)
     {
+        // Per page options
+        $perPage = $request->get('per_page', 10);
+        if (!in_array($perPage, [10, 15, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
         $opds = Opd::with(['bagians', 'jabatanKepala', 'bagians.jabatans.asns'])
                    ->orderBy('nama')
-                   ->get();
+                   ->paginate($perPage)
+                   ->withQueryString();
         return view('opds.index', compact('opds'));
     }
 

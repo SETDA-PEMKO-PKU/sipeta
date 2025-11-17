@@ -245,9 +245,29 @@
                 </div>
             </div>
 
-            <!-- Summary -->
-            <div class="mt-4 text-sm text-gray-600">
-                Total: <strong class="text-gray-900">{{ $opds->count() }}</strong> OPD
+            <!-- Pagination with Per Page Selector -->
+            <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600">Tampilkan:</label>
+                    <form method="GET" action="{{ route('admin.opds.index') }}" class="inline-block">
+                        <select name="per_page"
+                                onchange="this.form.submit()"
+                                class="input text-sm py-1 px-2 pr-8 w-auto">
+                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                            <option value="15" {{ request('per_page', 10) == 15 ? 'selected' : '' }}>15</option>
+                            <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                            <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+                    </form>
+                    <span class="text-sm text-gray-600">per halaman</span>
+                </div>
+
+                <!-- Pagination Links -->
+                <div class="flex-1 flex justify-end">
+                    {{ $opds->links('vendor.pagination.custom') }}
+                </div>
             </div>
 
         @else

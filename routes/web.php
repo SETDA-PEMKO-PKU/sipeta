@@ -5,6 +5,7 @@ use App\Http\Controllers\OpdController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\PegawaiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin Management
         Route::resource('admins', AdminController::class);
 
+        // Pegawai Management
+        Route::resource('pegawai', PegawaiController::class);
+
         // OPD Management (moved inside admin middleware)
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
@@ -67,6 +71,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/opds/{id}/tree', [OpdController::class, 'getOpdTree'])->name('api.opds.tree');
             Route::get('/jabatan/{id}/asns', [OpdController::class, 'getJabatanAsns'])->name('api.jabatan.asns');
             Route::get('/bagian/{id}/detail', [App\Http\Controllers\BagianController::class, 'getDetail'])->name('api.bagian.detail');
+            Route::get('/opds/{id}/jabatans', [PegawaiController::class, 'getJabatanByOpd'])->name('api.opds.jabatans');
         });
     });
 });
