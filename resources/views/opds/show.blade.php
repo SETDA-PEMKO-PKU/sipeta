@@ -26,6 +26,10 @@
                     <span class="iconify" data-icon="mdi:pencil" data-width="18" data-height="18"></span>
                     <span class="ml-2">Edit Nama</span>
                 </button>
+                <a href="{{ route('admin.opds.peta-jabatan', $opd->id) }}" class="btn" style="background-color: #8b5cf6; border-color: #8b5cf6; color: white;">
+                    <span class="iconify" data-icon="mdi:file-tree" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Peta Jabatan</span>
+                </a>
                 <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
                     <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
                     <span class="ml-2">Export</span>

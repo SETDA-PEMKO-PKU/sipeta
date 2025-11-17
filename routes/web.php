@@ -46,6 +46,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
             Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
+            Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
             Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');
             Route::put('/{id}', [OpdController::class, 'update'])->name('opds.update');
             Route::delete('/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');

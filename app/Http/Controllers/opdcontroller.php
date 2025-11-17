@@ -377,6 +377,20 @@ class OpdController extends Controller
     }
 
     /**
+     * Menampilkan peta jabatan (organizational chart)
+     */
+    public function petaJabatan($id)
+    {
+        $opd = Opd::with([
+            'bagians.jabatans.asns',
+            'bagians.children.jabatans.asns',
+            'jabatanKepala.asns'
+        ])->findOrFail($id);
+
+        return view('opds.peta-jabatan', compact('opd'));
+    }
+
+    /**
      * Export data OPD ke format CSV
      */
     public function export($id)
