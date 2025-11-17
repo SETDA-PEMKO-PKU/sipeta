@@ -1,61 +1,41 @@
-@extends('layouts.app')
+@extends('admin.layouts.app')
 
-@section('title', $opd->nama . ' - Detail OPD')
+@section('title', 'Detail OPD - ' . $opd->nama)
+@section('page-title', 'Detail OPD')
 
 @section('content')
-<div class="min-h-screen bg-gray-50" x-data="opdShow()">
-    <!-- Compact Header -->
-    <header class="bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <!-- Breadcrumb -->
-            <nav class="text-xs text-primary-100 mb-2">
-                <a href="{{ route('opds.index') }}" class="hover:text-white inline-flex items-center gap-1">
-                    <span class="iconify" data-icon="mdi:home" data-width="14" data-height="14"></span>
-                    <span>Daftar OPD</span>
+<div class="p-4 lg:p-8" x-data="opdShow()">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <a href="{{ route('admin.opds.index') }}" class="text-gray-600 hover:text-gray-900">
+                <span class="iconify" data-icon="mdi:arrow-left" data-width="20" data-height="20"></span>
+            </a>
+            <div class="flex-1">
+                <h2 class="text-2xl font-bold text-gray-900" x-show="!editingNama">{{ $opd->nama }}</h2>
+                <form action="{{ route('admin.opds.update', $opd->id) }}" method="POST" x-show="editingNama" @submit="editingNama = false" class="flex items-center gap-2">
+                    @csrf
+                    @method('PUT')
+                    <input type="text" name="nama" value="{{ $opd->nama }}" class="input text-gray-900" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+                    <button type="button" @click="editingNama = false" class="btn btn-outline btn-sm">Batal</button>
+                </form>
+            </div>
+            <div class="flex gap-2">
+                <button @click="editingNama = !editingNama" class="btn btn-outline" x-show="!editingNama">
+                    <span class="iconify" data-icon="mdi:pencil" data-width="16" data-height="16"></span>
+                    <span class="ml-2">Edit Nama</span>
+                </button>
+                <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
+                    <span class="iconify" data-icon="mdi:download" data-width="16" data-height="16"></span>
+                    <span class="ml-2">Export</span>
                 </a>
-                <span class="mx-2">/</span>
-                <span class="text-white">{{ $opd->nama }}</span>
-            </nav>
-
-            <!-- Header Content -->
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-white/10 rounded-lg">
-                        <span class="iconify" data-icon="mdi:office-building" data-width="20" data-height="20"></span>
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold" x-show="!editingNama">{{ $opd->nama }}</h1>
-                        <form action="{{ route('opds.update', $opd->id) }}" method="POST" x-show="editingNama" @submit="editingNama = false">
-                            @csrf
-                            @method('PUT')
-                            <input type="text" name="nama" value="{{ $opd->nama }}" class="input text-sm text-gray-900 w-64" required>
-                        </form>
-                        <p class="text-xs text-primary-100">ID: {{ $opd->id }}</p>
-                    </div>
-                    <div class="flex gap-1">
-                        <button @click="editingNama = !editingNama" class="p-1.5 hover:bg-white/10 rounded text-xs">
-                            <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
-                        </button>
-                        <button @click="$dispatch('open-modal', 'delete-opd')" class="p-1.5 hover:bg-red-500/20 rounded text-xs">
-                            <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <a href="{{ route('opds.index') }}" class="btn btn-sm bg-white/10 hover:bg-white/20 text-white border-0">
-                        <span class="iconify" data-icon="mdi:arrow-left" data-width="14" data-height="14"></span>
-                        <span class="ml-1">Kembali</span>
-                    </a>
-                    <a href="{{ route('opds.export', $opd->id) }}" class="btn btn-sm bg-yellow-500 hover:bg-yellow-600 text-white border-0">
-                        <span class="iconify" data-icon="mdi:download" data-width="14" data-height="14"></span>
-                        <span class="ml-1">Export</span>
-                    </a>
-                </div>
             </div>
         </div>
-    </header>
+        <p class="text-gray-600">ID: {{ $opd->id }}</p>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div>
         <!-- Alert Messages -->
         @if(session('success'))
             <div class="alert alert-success mb-4 flex items-center gap-2 animate-fade-in">
@@ -184,17 +164,7 @@
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- Compact Footer -->
-    <footer class="bg-gray-800 text-gray-300 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-                <span>&copy; {{ date('Y') }} Sistem Peta Jabatan</span>
-                <span class="text-gray-500">Laravel {{ app()->version() }}</span>
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <!-- Modals -->
     <x-modal name="delete-opd" title="Hapus OPD" maxWidth="md">
@@ -202,7 +172,7 @@
             <span class="iconify text-red-500 mx-auto" data-icon="mdi:alert-circle" data-width="48" data-height="48"></span>
             <h3 class="text-lg font-semibold text-gray-900 mt-3 mb-2">Hapus OPD?</h3>
             <p class="text-sm text-gray-600 mb-4">Apakah Anda yakin ingin menghapus <strong>{{ $opd->nama }}</strong>? Tindakan ini tidak dapat dibatalkan.</p>
-            <form action="{{ route('opds.destroy', $opd->id) }}" method="POST" class="flex gap-2 justify-center">
+            <form action="{{ route('admin.opds.destroy', $opd->id) }}" method="POST" class="flex gap-2 justify-center">
                 @csrf
                 @method('DELETE')
                 <button type="button" @click="$dispatch('close-modal', 'delete-opd')" class="btn btn-outline">
@@ -217,7 +187,7 @@
     </x-modal>
 
     <x-modal name="add-bagian" title="Tambah Bagian" maxWidth="lg">
-        <form action="{{ route('opds.bagian.store', $opd->id) }}" method="POST">
+        <form action="{{ route('admin.opds.bagian.store', $opd->id) }}" method="POST">
             @csrf
             <div class="space-y-3">
                 <div>
@@ -247,7 +217,7 @@
     </x-modal>
 
     <x-modal name="add-jabatan" title="Tambah Jabatan" maxWidth="lg">
-        <form action="{{ route('opds.jabatan.store', $opd->id) }}" method="POST">
+        <form action="{{ route('admin.opds.jabatan.store', $opd->id) }}" method="POST">
             @csrf
             <div class="space-y-3">
                 <div>
@@ -291,7 +261,7 @@
     </x-modal>
 
     <x-modal name="add-asn" title="Tambah Pegawai/ASN" maxWidth="lg">
-        <form action="{{ route('opds.asn.store', $opd->id) }}" method="POST">
+        <form action="{{ route('admin.opds.asn.store', $opd->id) }}" method="POST">
             @csrf
             <div class="space-y-3">
                 <div>

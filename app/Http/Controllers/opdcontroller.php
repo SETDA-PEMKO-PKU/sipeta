@@ -118,7 +118,7 @@ class OpdController extends Controller
 
         Jabatan::create($jabatanData);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Jabatan berhasil ditambahkan!');
     }
 
@@ -170,7 +170,7 @@ class OpdController extends Controller
 
         $jabatan->update($updateData);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Jabatan berhasil diperbarui!');
     }
 
@@ -191,19 +191,19 @@ class OpdController extends Controller
 
         // Cek apakah jabatan memiliki jabatan terkait dalam bagian yang sama
         if ($jabatan->siblings()->count() > 0) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Tidak dapat menghapus jabatan yang memiliki jabatan terkait dalam bagian yang sama!');
         }
 
         // Cek apakah jabatan memiliki ASN
         if ($jabatan->asns()->count() > 0) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Tidak dapat menghapus jabatan yang memiliki ASN!');
         }
 
         $jabatan->delete();
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Jabatan berhasil dihapus!');
     }
 
@@ -221,7 +221,7 @@ class OpdController extends Controller
             'nama' => $request->nama
         ]);
 
-        return redirect()->route('opds.show', $id)
+        return redirect()->route('admin.opds.show', $id)
                         ->with('success', 'Nama OPD berhasil diperbarui!');
     }
 
@@ -242,7 +242,7 @@ class OpdController extends Controller
         // Hapus OPD
         $opd->delete();
 
-        return redirect()->route('opds.index')
+        return redirect()->route('admin.opds.index')
                         ->with('success', 'OPD "' . $opd->nama . '" beserta semua bagian dan jabatan berhasil dihapus!');
     }
 
@@ -293,7 +293,7 @@ class OpdController extends Controller
             'opd_id' => $opdId
         ]);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'ASN berhasil ditambahkan!');
     }
 
@@ -347,7 +347,7 @@ class OpdController extends Controller
             'opd_id' => $opdId
         ]);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Data ASN berhasil diperbarui!');
     }
 
@@ -365,7 +365,7 @@ class OpdController extends Controller
 
         $asn->delete();
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'ASN "' . $namaAsn . '" berhasil dihapus!');
     }
 

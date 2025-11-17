@@ -31,7 +31,7 @@ class BagianController extends Controller
                                 ->first();
 
         if ($existingBagian) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Bagian dengan nama "' . $request->nama . '" sudah ada!');
         }
 
@@ -41,7 +41,7 @@ class BagianController extends Controller
             'parent_id' => $request->parent_id
         ]);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Bagian berhasil ditambahkan!');
     }
 
@@ -63,7 +63,7 @@ class BagianController extends Controller
         // Pastikan parent_id milik OPD ini dan bukan dirinya sendiri (jika ada)
         if ($request->parent_id) {
             if ($request->parent_id == $bagianId) {
-                return redirect()->route('opds.show', $opdId)
+                return redirect()->route('admin.opds.show', $opdId)
                                 ->with('error', 'Bagian tidak dapat menjadi parent dari dirinya sendiri!');
             }
 
@@ -73,7 +73,7 @@ class BagianController extends Controller
 
             // Cek apakah parent yang dipilih adalah child dari bagian ini (mencegah circular reference)
             if ($this->isDescendant($bagianId, $request->parent_id)) {
-                return redirect()->route('opds.show', $opdId)
+                return redirect()->route('admin.opds.show', $opdId)
                                 ->with('error', 'Tidak dapat memilih sub-bagian sebagai parent!');
             }
         }
@@ -85,7 +85,7 @@ class BagianController extends Controller
                                 ->first();
 
         if ($existingBagian) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Bagian dengan nama "' . $request->nama . '" sudah ada!');
         }
 
@@ -94,7 +94,7 @@ class BagianController extends Controller
             'parent_id' => $request->parent_id
         ]);
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Bagian berhasil diperbarui!');
     }
 
@@ -110,19 +110,19 @@ class BagianController extends Controller
 
         // Cek apakah bagian memiliki sub-bagian
         if ($bagian->children()->count() > 0) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Tidak dapat menghapus bagian yang memiliki sub-bagian!');
         }
 
         // Cek apakah bagian memiliki jabatan
         if ($bagian->jabatans()->count() > 0) {
-            return redirect()->route('opds.show', $opdId)
+            return redirect()->route('admin.opds.show', $opdId)
                             ->with('error', 'Tidak dapat menghapus bagian yang memiliki jabatan!');
         }
 
         $bagian->delete();
 
-        return redirect()->route('opds.show', $opdId)
+        return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Bagian berhasil dihapus!');
     }
 

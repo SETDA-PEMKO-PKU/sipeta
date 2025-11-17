@@ -1,33 +1,29 @@
-@extends('layouts.app')
+@extends('admin.layouts.app')
 
-@section('title', 'Daftar OPD - Sistem Peta Jabatan')
+@section('title', 'Daftar OPD')
+@section('page-title', 'Data OPD')
 
 @section('content')
-<div class="min-h-screen bg-gray-50" x-data="opdIndex()">
-    <!-- Minimal Header -->
-    <header class="bg-white border-b border-gray-200 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="iconify text-primary-600" data-icon="mdi:office-building" data-width="20" data-height="20"></span>
-                    <h1 class="text-lg font-semibold text-gray-900">Daftar OPD</h1>
-                    <span class="badge badge-gray ml-2">{{ $opds->count() }} OPD</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button class="btn btn-sm btn-outline">
-                        <span class="iconify" data-icon="mdi:download" data-width="14" data-height="14"></span>
-                        <span class="ml-1">Export Semua</span>
-                    </button>
-                    <button class="btn btn-sm btn-primary">
-                        <span class="iconify" data-icon="mdi:plus" data-width="14" data-height="14"></span>
-                        <span class="ml-1">Tambah OPD</span>
-                    </button>
-                </div>
-            </div>
+<div class="p-4 lg:p-8" x-data="opdIndex()">
+    <!-- Header Actions -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">Daftar OPD</h2>
+            <p class="text-gray-600 mt-1">Kelola Organisasi Perangkat Daerah</p>
         </div>
-    </header>
+        <div class="flex items-center gap-2">
+            <button class="btn btn-outline">
+                <span class="iconify" data-icon="mdi:download" data-width="16" data-height="16"></span>
+                <span class="ml-2">Export Semua</span>
+            </button>
+            <button class="btn btn-primary">
+                <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
+                <span class="ml-2">Tambah OPD</span>
+            </button>
+        </div>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div>
         <!-- Alert Messages -->
         @if(session('success'))
             <div class="alert alert-success mb-3 flex items-center gap-2 animate-fade-in">
@@ -130,12 +126,12 @@
                                 </td>
                                 <td class="px-3 py-2">
                                     <div class="flex items-center justify-center gap-1">
-                                        <a href="{{ route('opds.show', $opd->id) }}"
+                                        <a href="{{ route('admin.opds.show', $opd->id) }}"
                                            class="inline-flex items-center px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs"
                                            title="Lihat Detail">
                                             <span class="iconify" data-icon="mdi:eye" data-width="14" data-height="14"></span>
                                         </a>
-                                        <a href="{{ route('api.opds.tree', $opd->id) }}"
+                                        <a href="{{ route('admin.api.opds.tree', $opd->id) }}"
                                            class="inline-flex items-center px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-xs"
                                            target="_blank"
                                            title="Export JSON">
@@ -173,7 +169,6 @@
                     <span>•</span>
                     <span><strong class="text-gray-900">{{ $opds->sum(function($opd) { return $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }); }) }}</strong> Jabatan</span>
                 </div>
-                <span class="text-gray-400">&copy; {{ date('Y') }} Sistem Peta Jabatan</span>
             </div>
 
         @else
@@ -188,7 +183,7 @@
                 </button>
             </div>
         @endif
-    </main>
+    </div>
 </div>
 
 @push('scripts')
