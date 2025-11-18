@@ -44,7 +44,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:admins,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,super_admin',
+            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm',
             'is_active' => 'boolean',
         ]);
 
@@ -82,7 +82,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('admins')->ignore($admin->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|in:admin,super_admin',
+            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm',
             'is_active' => 'boolean',
         ]);
 

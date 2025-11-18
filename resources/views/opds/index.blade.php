@@ -12,10 +12,12 @@
             <p class="text-gray-600 mt-1">Kelola Organisasi Perangkat Daerah</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            @if(auth('admin')->user()->canManageOpdJabatan())
             <button @click="$dispatch('open-modal', 'add-opd')" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
                 <span class="ml-2">Tambah OPD</span>
             </button>
+            @endif
         </div>
     </div>
 
@@ -188,6 +190,7 @@
                                                 <span class="iconify" data-icon="mdi:eye" data-width="14" data-height="14"></span>
                                                 <span class="ml-1">Detail</span>
                                             </a>
+                                            @if(auth('admin')->user()->canManageOpdJabatan())
                                             <button @click="openEditModal({{ $opd->id }}, '{{ addslashes($opd->nama) }}')"
                                                     class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm whitespace-nowrap">
                                                 <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
@@ -198,6 +201,7 @@
                                                 <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
                                                 <span class="ml-1">Hapus</span>
                                             </button>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

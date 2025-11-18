@@ -53,8 +53,12 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($admin->isSuperAdmin())
                                     <span class="badge badge-primary">Super Admin</span>
+                                @elseif($admin->isAdminOrganisasi())
+                                    <span class="badge badge-success">Admin Organisasi</span>
+                                @elseif($admin->isAdminBkpsdm())
+                                    <span class="badge badge-info">Admin BKPSDM</span>
                                 @else
-                                    <span class="badge badge-gray">Admin</span>
+                                    <span class="badge badge-gray">{{ $admin->role }}</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">

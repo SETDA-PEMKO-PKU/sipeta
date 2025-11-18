@@ -44,11 +44,52 @@ class Admin extends Authenticatable
     ];
 
     /**
+     * Role constants
+     */
+    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_ADMIN_ORGANISASI = 'admin_organisasi';
+    const ROLE_ADMIN_BKPSDM = 'admin_bkpsdm';
+
+    /**
      * Check if admin is super admin
      */
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'super_admin';
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    /**
+     * Check if admin is admin organisasi
+     */
+    public function isAdminOrganisasi(): bool
+    {
+        return $this->role === self::ROLE_ADMIN_ORGANISASI;
+    }
+
+    /**
+     * Check if admin is admin BKPSDM
+     */
+    public function isAdminBkpsdm(): bool
+    {
+        return $this->role === self::ROLE_ADMIN_BKPSDM;
+    }
+
+    /**
+     * Check if admin can manage ASN (tambah ASN)
+     * Only super_admin and admin_bkpsdm can manage ASN
+     */
+    public function canManageAsn(): bool
+    {
+        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN_BKPSDM]);
+    }
+
+    /**
+     * Check if admin can manage OPD and Jabatan
+     * Only super_admin and admin_organisasi can manage OPD and Jabatan
+     */
+    public function canManageOpdJabatan(): bool
+    {
+        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN_ORGANISASI]);
     }
 
     /**

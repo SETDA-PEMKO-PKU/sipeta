@@ -62,8 +62,8 @@
 
         <!-- Actions -->
         <div class="flex-shrink-0 flex items-center gap-2">
-            <!-- Button Tambah Jabatan - hanya tampil jika bukan Pelaksana/Fungsional -->
-            @if(!in_array($jabatan->jenis_jabatan, ['Pelaksana', 'Fungsional']))
+            <!-- Button Tambah Jabatan - hanya tampil jika bukan Pelaksana/Fungsional dan user punya permission -->
+            @if(!in_array($jabatan->jenis_jabatan, ['Pelaksana', 'Fungsional']) && auth('admin')->user()->canManageOpdJabatan())
                 <button
                     @click="$dispatch('open-modal', 'add-sub-jabatan-{{ $jabatan->id }}')"
                     class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-0"
@@ -84,7 +84,8 @@
                 </button>
             @endif
 
-            <!-- Button Tambah ASN -->
+            <!-- Button Tambah ASN - hanya tampil jika user punya permission -->
+            @if(auth('admin')->user()->canManageAsn())
             <button
                 @click="$dispatch('open-modal', 'add-asn')"
                 class="btn btn-sm bg-green-500 hover:bg-green-600 text-white border-0"
@@ -92,8 +93,10 @@
                 <span class="iconify" data-icon="mdi:account-plus" data-width="14" data-height="14"></span>
                 <span class="ml-1">ASN</span>
             </button>
+            @endif
 
-            <!-- Button Edit -->
+            <!-- Button Edit - hanya tampil jika user punya permission -->
+            @if(auth('admin')->user()->canManageOpdJabatan())
             <button
                 @click="$dispatch('edit-jabatan', {{ json_encode([
                     'id' => $jabatan->id,
@@ -119,6 +122,7 @@
                     <span class="iconify" data-icon="mdi:delete" data-width="16" data-height="16"></span>
                 </button>
             </form>
+            @endif
         </div>
     </div>
 
@@ -195,6 +199,7 @@
                             </div>
                         </div>
                         <div class="flex gap-2">
+                            @if(auth('admin')->user()->canManageAsn())
                             <button
                                 @click="$dispatch('edit-asn', {{ json_encode([
                                     'id' => $asn->id,
@@ -216,6 +221,7 @@
                                     <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
                                 </button>
                             </form>
+                            @endif
                         </div>
                     </div>
                 @endforeach

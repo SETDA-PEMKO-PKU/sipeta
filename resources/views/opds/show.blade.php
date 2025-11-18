@@ -114,10 +114,12 @@
                     <span class="iconify text-blue-500" data-icon="mdi:file-tree" data-width="20" data-height="20"></span>
                     Struktur Organisasi
                 </h3>
+                @if(auth('admin')->user()->canManageOpdJabatan())
                 <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-sm btn-primary">
                     <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
                     <span class="ml-1">Jabatan</span>
                 </button>
+                @endif
             </div>
             <div class="card-body">
                 @if($opd->jabatanKepala->count() > 0)
@@ -137,12 +139,14 @@
                         <p class="mt-4 text-gray-500">
                             Mulai membangun struktur organisasi {{ $opd->nama }} dengan menambahkan jabatan
                         </p>
+                        @if(auth('admin')->user()->canManageOpdJabatan())
                         <div class="mt-6">
                             <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-primary">
                                 <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
                                 <span class="ml-2">Tambah Jabatan</span>
                             </button>
                         </div>
+                        @endif
                     </div>
                 @endif
             </div>

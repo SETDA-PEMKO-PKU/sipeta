@@ -94,12 +94,19 @@
                             id="role"
                             required
                             class="input w-full @error('role') border-red-300 @enderror">
-                        <option value="admin" {{ old('role', $admin->role) === 'admin' ? 'selected' : '' }}>Admin</option>
+                        <option value="">Pilih Role</option>
                         <option value="super_admin" {{ old('role', $admin->role) === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                        <option value="admin_organisasi" {{ old('role', $admin->role) === 'admin_organisasi' ? 'selected' : '' }}>Admin Organisasi</option>
+                        <option value="admin_bkpsdm" {{ old('role', $admin->role) === 'admin_bkpsdm' ? 'selected' : '' }}>Admin BKPSDM</option>
                     </select>
                     @error('role')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <div class="mt-2 text-xs text-gray-600 space-y-1">
+                        <p><strong>Super Admin:</strong> Akses penuh ke semua fitur</p>
+                        <p><strong>Admin Organisasi:</strong> Tidak bisa tambah ASN</p>
+                        <p><strong>Admin BKPSDM:</strong> Tidak bisa kelola OPD dan Jabatan</p>
+                    </div>
                 </div>
 
                 <!-- Status -->

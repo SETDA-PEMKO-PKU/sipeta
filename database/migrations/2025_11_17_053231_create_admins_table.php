@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('role')->default('admin'); // admin, super_admin
+            $table->string('role')->default('admin'); // super_admin, admin_organisasi, admin_bkpsdm
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
