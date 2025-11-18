@@ -23,83 +23,49 @@
 
     .org-node {
         background: white;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 16px;
+        border: 2px solid #374151;
+        border-radius: 4px;
+        padding: 12px;
         margin: 10px;
-        min-width: 200px;
+        min-width: 250px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         position: relative;
     }
 
-    .org-node.kepala {
-        border-color: #f59e0b;
-        background: #fffbeb;
-    }
-
-    .org-node.bagian {
-        border-color: #3b82f6;
-        background: #eff6ff;
-    }
-
-    .org-node.sub-bagian {
-        border-color: #8b5cf6;
-        background: #f5f3ff;
-    }
-
     .org-node-header {
+        background: #374151;
+        color: white;
         font-weight: 600;
-        font-size: 14px;
-        margin-bottom: 8px;
-        color: #111827;
+        font-size: 13px;
+        padding: 8px;
         text-align: center;
+        margin: -12px -12px 12px -12px;
+        border-radius: 2px 2px 0 0;
     }
 
     .org-node-kelas {
-        font-size: 12px;
-        color: #6b7280;
-        text-align: center;
-        margin-bottom: 8px;
-    }
-
-    .org-node-table {
-        width: 100%;
-        font-size: 11px;
-        margin-top: 8px;
-        border-collapse: collapse;
-    }
-
-    .org-node-table th {
         background: #f3f4f6;
-        padding: 4px 6px;
-        border: 1px solid #d1d5db;
-        font-weight: 600;
+        font-size: 12px;
+        padding: 6px 8px;
         text-align: center;
-    }
-
-    .org-node-table td {
-        padding: 4px 6px;
-        border: 1px solid #d1d5db;
-        text-align: left;
-    }
-
-    .org-node-table td.center {
-        text-align: center;
+        margin: -4px -12px 12px -12px;
+        border-bottom: 1px solid #d1d5db;
     }
 
     .org-level {
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        gap: 40px;
+        gap: 20px;
         position: relative;
         margin-top: 40px;
+        flex-wrap: wrap;
     }
 
     .org-line-v {
         width: 2px;
         height: 40px;
-        background: #9ca3af;
+        background: #6b7280;
         margin: 0 auto;
     }
 
@@ -108,6 +74,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        max-width: 400px;
     }
 
     /* Connector lines */
@@ -116,9 +83,9 @@
         position: absolute;
         top: -20px;
         height: 2px;
-        background: #9ca3af;
-        left: 0;
-        right: 0;
+        background: #6b7280;
+        left: 10%;
+        right: 10%;
     }
 
     .org-level.single::before {
@@ -131,52 +98,74 @@
         top: -20px;
         width: 2px;
         height: 20px;
-        background: #9ca3af;
+        background: #6b7280;
         left: 50%;
         transform: translateX(-50%);
     }
 
-    .total-row {
-        background: #fef3c7 !important;
+    /* Tables */
+    .jabatan-table {
+        width: 100%;
+        font-size: 11px;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+    }
+
+    .jabatan-table th {
+        background: #374151;
+        color: white;
+        padding: 6px 4px;
+        border: 1px solid #374151;
         font-weight: 600;
+        text-align: center;
+        font-size: 10px;
     }
 
-    .sub-bagian-wrapper {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 40px;
-        flex-wrap: wrap;
-        position: relative;
+    .jabatan-table td {
+        padding: 5px 6px;
+        border: 1px solid #9ca3af;
+        text-align: left;
+        background: white;
     }
 
-    .sub-bagian-wrapper::before {
-        content: '';
-        position: absolute;
-        top: -20px;
-        height: 2px;
-        background: #9ca3af;
-        left: 0;
-        right: 0;
+    .jabatan-table td.center {
+        text-align: center;
     }
 
-    .sub-bagian-wrapper.single::before {
-        display: none;
+    .jabatan-pelaksana-header {
+        background: #374151;
+        color: white;
+        font-weight: 600;
+        font-size: 11px;
+        padding: 6px 8px;
+        text-align: center;
+        margin: 0 -12px 8px -12px;
     }
 
-    .sub-bagian-item {
-        position: relative;
+    .pelaksana-table {
+        width: 100%;
+        font-size: 10px;
+        border-collapse: collapse;
     }
 
-    .sub-bagian-item::before {
-        content: '';
-        position: absolute;
-        top: -20px;
-        width: 2px;
-        height: 20px;
-        background: #9ca3af;
-        left: 50%;
-        transform: translateX(-50%);
+    .pelaksana-table th {
+        background: #374151;
+        color: white;
+        padding: 5px 4px;
+        border: 1px solid #374151;
+        font-weight: 600;
+        text-align: center;
+        font-size: 10px;
+    }
+
+    .pelaksana-table td {
+        padding: 4px 5px;
+        border: 1px solid #9ca3af;
+        background: white;
+    }
+
+    .pelaksana-table td.center {
+        text-align: center;
     }
 
     @media print {
@@ -195,6 +184,11 @@
 
         .org-node {
             page-break-inside: avoid;
+        }
+
+        @page {
+            size: A3 landscape;
+            margin: 1cm;
         }
     }
 </style>
@@ -224,34 +218,14 @@
     <!-- Organizational Chart -->
     <div class="org-chart-container card">
         <div class="org-chart">
-            <!-- Kepala OPD -->
+            <!-- Kepala OPD / Sekretaris Daerah -->
             @foreach($opd->jabatanKepala as $kepala)
-                <div class="org-node kepala">
-                    <div class="org-node-header">{{ $opd->nama }}</div>
-                    <div class="org-node-kelas">Kelas : {{ $kepala->kelas ?? '-' }}</div>
-
-                    @if($kepala->asns->count() > 0)
-                        <table class="org-node-table">
-                            <thead>
-                                <tr>
-                                    <th>Jabatan</th>
-                                    <th>KELAS</th>
-                                    <th>B</th>
-                                    <th>K</th>
-                                    <th>+/-</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ $kepala->nama }}</td>
-                                    <td class="center">{{ $kepala->kelas ?? '-' }}</td>
-                                    <td class="center">{{ $kepala->asns->count() }}</td>
-                                    <td class="center">{{ $kepala->kebutuhan }}</td>
-                                    <td class="center">{{ $kepala->asns->count() - $kepala->kebutuhan }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    @endif
+                <div class="org-node">
+                    <div class="org-node-header">Jabatan {{ $kepala->jenis_jabatan ?? 'Struktural' }}</div>
+                    <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
+                        {{ $kepala->nama }}
+                    </div>
+                    <div class="org-node-kelas">Kelas {{ $kepala->kelas ?? '-' }}</div>
                 </div>
 
                 @if($opd->bagians->where('parent_id', null)->count() > 0)
@@ -259,115 +233,90 @@
                 @endif
             @endforeach
 
-            <!-- Staf Ahli (jika ada) -->
+            <!-- Bagian/Asisten Level 1 -->
             @php
-                $stafAhli = $opd->bagians->where('parent_id', null)->filter(function($b) {
-                    return str_contains(strtoupper($b->nama), 'STAF AHLI');
-                })->first();
-            @endphp
-            @if($stafAhli && $stafAhli->jabatans->count() > 0)
-                <div class="org-node bagian">
-                    <div class="org-node-header">{{ $stafAhli->nama }}</div>
-
-                    <table class="org-node-table">
-                        <thead>
-                            <tr>
-                                <th>Jabatan</th>
-                                <th>KELAS</th>
-                                <th>B</th>
-                                <th>K</th>
-                                <th>+/-</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($stafAhli->jabatans as $jabatan)
-                                <tr>
-                                    <td>{{ $jabatan->nama }}</td>
-                                    <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                    <td class="center">{{ $jabatan->asns->count() }}</td>
-                                    <td class="center">{{ $jabatan->kebutuhan }}</td>
-                                    <td class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
-                                </tr>
-                            @endforeach
-                            <tr class="total-row">
-                                <td>Total</td>
-                                <td class="center">-</td>
-                                <td class="center">{{ $stafAhli->jabatans->sum(fn($j) => $j->asns->count()) }}</td>
-                                <td class="center">{{ $stafAhli->jabatans->sum('kebutuhan') }}</td>
-                                <td class="center">{{ $stafAhli->jabatans->sum(fn($j) => $j->asns->count()) - $stafAhli->jabatans->sum('kebutuhan') }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="org-line-v"></div>
-            @endif
-
-            <!-- Asisten/Bagian Level 1 -->
-            @php
-                $mainBagians = $opd->bagians->where('parent_id', null)->reject(function($b) {
-                    return str_contains(strtoupper($b->nama), 'STAF AHLI');
-                });
+                $mainBagians = $opd->bagians->where('parent_id', null);
             @endphp
 
             @if($mainBagians->count() > 0)
                 <div class="org-level {{ $mainBagians->count() == 1 ? 'single' : '' }}">
                     @foreach($mainBagians as $bagian)
                         <div class="org-branch">
-                            <div class="org-node bagian">
-                                <div class="org-node-header">{{ $bagian->nama }}</div>
-                                <div class="org-node-kelas">
-                                    @if($bagian->jabatans->first())
-                                        Kelas : {{ $bagian->jabatans->first()->kelas ?? '-' }}
-                                    @endif
-                                </div>
+                            @php
+                                $jabatanStruktural = $bagian->jabatans->whereIn('jenis_jabatan', ['Struktural', 'Staf Ahli']);
+                                $subBagians = $opd->bagians->where('parent_id', $bagian->id);
+                                $kepalaBagianKelas = $jabatanStruktural->first()->kelas ?? '-';
+                                $jenisJabatanBagian = $jabatanStruktural->first()->jenis_jabatan ?? 'Struktural';
+                            @endphp
 
-                                @php
-                                    $subBagians = $opd->bagians->where('parent_id', $bagian->id);
-                                @endphp
+                            <div class="org-node">
+                                <div class="org-node-header">Jabatan {{ $jenisJabatanBagian }}</div>
+                                <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
+                                    {{ $bagian->nama }}
+                                </div>
+                                <div class="org-node-kelas">Kelas {{ $kepalaBagianKelas }}</div>
 
                                 @if($subBagians->count() > 0)
-                                    <!-- Has Sub-Bagian -->
-                                    <div class="org-line-v"></div>
-                                    <div class="sub-bagian-wrapper {{ $subBagians->count() == 1 ? 'single' : '' }}">
+                                    <!-- Ada Sub-Bagian -->
+                                    <div class="org-line-v" style="margin: 12px auto;"></div>
+                                    <div class="org-level {{ $subBagians->count() == 1 ? 'single' : '' }}" style="margin-top: 0;">
                                         @foreach($subBagians as $subBagian)
-                                            <div class="sub-bagian-item">
-                                                <div class="org-node sub-bagian">
-                                                    <div class="org-node-header">{{ $subBagian->nama }}</div>
-                                                    <div class="org-node-kelas">
-                                                        @if($subBagian->jabatans->first())
-                                                            Kelas : {{ $subBagian->jabatans->first()->kelas ?? '-' }}
-                                                        @endif
-                                                    </div>
+                                            <div class="org-branch" style="max-width: none;">
+                                                @php
+                                                    $subJabatanStruktural = $subBagian->jabatans->whereIn('jenis_jabatan', ['Struktural', 'Staf Ahli']);
+                                                    $subJabatanPelaksana = $subBagian->jabatans->whereIn('jenis_jabatan', ['Fungsional', 'Pelaksana']);
+                                                    $kepalaSubBagianKelas = $subJabatanStruktural->first()->kelas ?? '-';
+                                                    $jenisJabatanSub = $subJabatanStruktural->first()->jenis_jabatan ?? 'Struktural';
+                                                @endphp
 
-                                                    @if($subBagian->jabatans->count() > 0)
-                                                        <table class="org-node-table">
+                                                <div class="org-node">
+                                                    <div class="org-node-header">Jabatan {{ $jenisJabatanSub }}</div>
+                                                    <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
+                                                        {{ $subBagian->nama }}
+                                                    </div>
+                                                    <div class="org-node-kelas">Kelas {{ $kepalaSubBagianKelas }}</div>
+
+                                                    <!-- Tabel Jabatan Pelaksana -->
+                                                    @if($subJabatanPelaksana->count() > 0)
+                                                        @php
+                                                            $jenisJabatanPelaksana = $subJabatanPelaksana->first()->jenis_jabatan ?? 'Pelaksana';
+                                                        @endphp
+                                                        <div class="jabatan-pelaksana-header">Jabatan {{ $jenisJabatanPelaksana }}</div>
+
+                                                        <table class="pelaksana-table">
                                                             <thead>
                                                                 <tr>
-                                                                    <th>Jabatan</th>
-                                                                    <th>KELAS</th>
-                                                                    <th>B</th>
-                                                                    <th>K</th>
-                                                                    <th>+/-</th>
+                                                                    <th style="width: 45%;">Nama Jabatan</th>
+                                                                    <th style="width: 15%;">Kelas</th>
+                                                                    <th style="width: 10%;">B</th>
+                                                                    <th style="width: 10%;">K</th>
+                                                                    <th style="width: 10%;">S</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                @foreach($subBagian->jabatans as $jabatan)
-                                                                <tr>
-                                                                    <td>{{ $jabatan->nama }}</td>
-                                                                    <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                                    <td class="center">{{ $jabatan->asns->count() }}</td>
-                                                                    <td class="center">{{ $jabatan->kebutuhan }}</td>
-                                                                    <td class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
-                                                                </tr>
+                                                                @foreach($subJabatanPelaksana as $jabatan)
+                                                                    @foreach($jabatan->asns as $index => $asn)
+                                                                        <tr>
+                                                                            @if($index == 0)
+                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}">{{ $jabatan->nama }}</td>
+                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kelas ?? '-' }}</td>
+                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() }}</td>
+                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kebutuhan }}</td>
+                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
+                                                                            @endif
+                                                                        </tr>
+                                                                    @endforeach
+
+                                                                    @if($jabatan->asns->count() == 0)
+                                                                        <tr>
+                                                                            <td>{{ $jabatan->nama }}</td>
+                                                                            <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
+                                                                            <td class="center">0</td>
+                                                                            <td class="center">{{ $jabatan->kebutuhan }}</td>
+                                                                            <td class="center">-{{ $jabatan->kebutuhan }}</td>
+                                                                        </tr>
+                                                                    @endif
                                                                 @endforeach
-                                                                <tr class="total-row">
-                                                                    <td>Total</td>
-                                                                    <td class="center">-</td>
-                                                                    <td class="center">{{ $subBagian->jabatans->sum(fn($j) => $j->asns->count()) }}</td>
-                                                                    <td class="center">{{ $subBagian->jabatans->sum('kebutuhan') }}</td>
-                                                                    <td class="center">{{ $subBagian->jabatans->sum(fn($j) => $j->asns->count()) - $subBagian->jabatans->sum('kebutuhan') }}</td>
-                                                                </tr>
                                                             </tbody>
                                                         </table>
                                                     @endif
@@ -376,35 +325,51 @@
                                         @endforeach
                                     </div>
                                 @else
-                                    <!-- No Sub-Bagian, show direct jabatan -->
-                                    @if($bagian->jabatans->count() > 0)
-                                        <table class="org-node-table">
+                                    <!-- Tidak ada Sub-Bagian, tampilkan jabatan langsung -->
+                                    @php
+                                        $jabatanPelaksana = $bagian->jabatans->whereIn('jenis_jabatan', ['Fungsional', 'Pelaksana']);
+                                    @endphp
+
+                                    @if($jabatanPelaksana->count() > 0)
+                                        @php
+                                            $jenisJabatanPelaksana = $jabatanPelaksana->first()->jenis_jabatan ?? 'Pelaksana';
+                                        @endphp
+                                        <div class="jabatan-pelaksana-header">Jabatan {{ $jenisJabatanPelaksana }}</div>
+
+                                        <table class="pelaksana-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Jabatan</th>
-                                                    <th>KELAS</th>
-                                                    <th>B</th>
-                                                    <th>K</th>
-                                                    <th>+/-</th>
+                                                    <th style="width: 45%;">Nama Jabatan</th>
+                                                    <th style="width: 15%;">Kelas</th>
+                                                    <th style="width: 10%;">B</th>
+                                                    <th style="width: 10%;">K</th>
+                                                    <th style="width: 10%;">S</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($bagian->jabatans as $jabatan)
-                                                <tr>
-                                                    <td>{{ $jabatan->nama }}</td>
-                                                    <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                    <td class="center">{{ $jabatan->asns->count() }}</td>
-                                                    <td class="center">{{ $jabatan->kebutuhan }}</td>
-                                                    <td class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
-                                                </tr>
+                                                @foreach($jabatanPelaksana as $jabatan)
+                                                    @foreach($jabatan->asns as $index => $asn)
+                                                        <tr>
+                                                            @if($index == 0)
+                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}">{{ $jabatan->nama }}</td>
+                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kelas ?? '-' }}</td>
+                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() }}</td>
+                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kebutuhan }}</td>
+                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
+                                                            @endif
+                                                        </tr>
+                                                    @endforeach
+
+                                                    @if($jabatan->asns->count() == 0)
+                                                        <tr>
+                                                            <td>{{ $jabatan->nama }}</td>
+                                                            <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
+                                                            <td class="center">0</td>
+                                                            <td class="center">{{ $jabatan->kebutuhan }}</td>
+                                                            <td class="center">-{{ $jabatan->kebutuhan }}</td>
+                                                        </tr>
+                                                    @endif
                                                 @endforeach
-                                                <tr class="total-row">
-                                                    <td>Total</td>
-                                                    <td class="center">-</td>
-                                                    <td class="center">{{ $bagian->jabatans->sum(fn($j) => $j->asns->count()) }}</td>
-                                                    <td class="center">{{ $bagian->jabatans->sum('kebutuhan') }}</td>
-                                                    <td class="center">{{ $bagian->jabatans->sum(fn($j) => $j->asns->count()) - $bagian->jabatans->sum('kebutuhan') }}</td>
-                                                </tr>
                                             </tbody>
                                         </table>
                                     @endif
