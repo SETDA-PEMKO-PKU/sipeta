@@ -5,107 +5,64 @@
 
 @push('styles')
 <style>
-    .org-chart {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 2rem;
-        overflow-x: auto;
-    }
-
-    .org-level {
-        display: flex;
-        gap: 2rem;
-        margin-bottom: 3rem;
-        justify-content: center;
-        position: relative;
-    }
-
-    .org-node {
-        background: white;
-        border: 2px solid #e5e7eb;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        min-width: 200px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        position: relative;
-    }
-
-    .org-node.kepala {
-        border-color: #3b82f6;
-        background: linear-gradient(135deg, #eff6ff 0%, white 100%);
-    }
-
-    .org-node.struktural {
-        border-color: #8b5cf6;
-        background: linear-gradient(135deg, #f5f3ff 0%, white 100%);
-    }
-
-    .org-node.fungsional {
-        border-color: #10b981;
-        background: linear-gradient(135deg, #ecfdf5 0%, white 100%);
-    }
-
-    .org-node-header {
-        font-size: 0.75rem;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-    }
-
-    .org-node-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 0.25rem;
-    }
-
-    .org-node-kelas {
-        font-size: 0.8rem;
-        color: #6b7280;
-        margin-top: 0.25rem;
-    }
-
-    .org-node-stats {
-        margin-top: 0.75rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #e5e7eb;
-        display: flex;
-        justify-content: space-around;
-        font-size: 0.75rem;
-    }
-
-    .org-node-stat {
-        text-align: center;
-    }
-
-    .org-node-stat-value {
-        font-weight: 700;
-        font-size: 1rem;
-    }
-
-    .org-node-stat-label {
-        color: #6b7280;
-        margin-top: 0.125rem;
-    }
-
-    .org-connector {
-        position: absolute;
-        border-left: 2px solid #d1d5db;
-        height: 2rem;
-        top: -2rem;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .org-horizontal-line {
-        position: absolute;
-        border-top: 2px solid #d1d5db;
+    #canvas-container {
         width: 100%;
-        top: -2rem;
-        left: 0;
+        height: calc(100vh - 250px);
+        min-height: 600px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        cursor: grab;
+    }
+
+    #canvas-container.grabbing {
+        cursor: grabbing;
+    }
+
+    .canvas-controls {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 10;
+    }
+
+    .canvas-controls button {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #d1d5db;
+        background: white;
+        border-radius: 0.375rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .canvas-controls button:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+    }
+
+    .canvas-controls button:active {
+        transform: scale(0.95);
+    }
+
+    .zoom-level {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        background: white;
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+        z-index: 10;
     }
 
     @media print {
@@ -115,8 +72,14 @@
         .no-print {
             display: none !important;
         }
-        .org-chart {
-            padding: 1rem;
+        #canvas-container {
+            height: auto;
+            min-height: 800px;
+            page-break-inside: avoid;
+        }
+        .canvas-controls,
+        .zoom-level {
+            display: none !important;
         }
     }
 </style>
@@ -141,24 +104,30 @@
                 <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
                 <span class="ml-2">Cetak</span>
             </button>
-            <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
+            <button onclick="exportCanvas()" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
-                <span class="ml-2">Export</span>
-            </a>
+                <span class="ml-2">Export PNG</span>
+            </button>
         </div>
     </div>
 
-    <!-- Organizational Chart -->
+    <!-- Organizational Chart Canvas -->
     <div class="bg-white rounded-lg shadow-sm p-6">
         @if($opd->jabatanKepala->count() > 0)
-            <div class="org-chart">
-                @foreach($opd->jabatanKepala as $kepala)
-                    @include('opds.partials.peta-jabatan-node', [
-                        'jabatan' => $kepala,
-                        'level' => 0,
-                        'isFirst' => $loop->first
-                    ])
-                @endforeach
+            <div id="canvas-container">
+                <div class="canvas-controls no-print">
+                    <button onclick="zoomIn()" title="Zoom In">
+                        <span class="iconify" data-icon="mdi:plus" data-width="20" data-height="20"></span>
+                    </button>
+                    <button onclick="zoomOut()" title="Zoom Out">
+                        <span class="iconify" data-icon="mdi:minus" data-width="20" data-height="20"></span>
+                    </button>
+                    <button onclick="resetZoom()" title="Reset View">
+                        <span class="iconify" data-icon="mdi:fit-to-screen" data-width="20" data-height="20"></span>
+                    </button>
+                </div>
+                <div class="zoom-level no-print">Zoom: <span id="zoom-text">100%</span></div>
+                <div id="konva-stage"></div>
             </div>
         @else
             <div class="text-center py-12">
@@ -175,24 +144,590 @@
             </div>
         @endif
     </div>
-
-    <!-- Legend -->
-    <div class="mt-6 bg-white rounded-lg shadow-sm p-4 no-print">
-        <h3 class="font-semibold text-gray-900 mb-3">Keterangan:</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #eff6ff 0%, white 100%); border: 2px solid #3b82f6;"></div>
-                <span class="text-sm text-gray-700">Jabatan Kepala/Root</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #f5f3ff 0%, white 100%); border: 2px solid #8b5cf6;"></div>
-                <span class="text-sm text-gray-700">Jabatan Struktural</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #ecfdf5 0%, white 100%); border: 2px solid #10b981;"></div>
-                <span class="text-sm text-gray-700">Jabatan Fungsional</span>
-            </div>
-        </div>
-    </div>
 </div>
 @endsection
+
+@push('scripts')
+<!-- Konva.js -->
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
+
+<script>
+// Data dari Laravel
+const orgData = @json($opd->jabatanKepala);
+
+// Configuration
+const CONFIG = {
+    boxWidth: 200,
+    boxHeight: 80, // header(25) + nama(30) + kelas(25)
+    tableRowHeight: 25,
+    horizontalGap: 50,
+    verticalGap: 80,
+    fontSize: 12,
+    headerFontSize: 11,
+    tableFontSize: 10,
+    padding: 10,
+    minZoom: 0.3,
+    maxZoom: 2,
+    zoomStep: 0.1
+};
+
+let stage, layer;
+let currentScale = 1;
+
+// Initialize Konva Stage
+function initStage() {
+    const container = document.getElementById('canvas-container');
+    const width = container.offsetWidth;
+    const height = container.offsetHeight;
+
+    stage = new Konva.Stage({
+        container: 'konva-stage',
+        width: width,
+        height: height,
+        draggable: true
+    });
+
+    layer = new Konva.Layer();
+    stage.add(layer);
+
+    // Add event listeners
+    setupEventListeners();
+}
+
+// Setup event listeners for dragging
+function setupEventListeners() {
+    const container = document.getElementById('canvas-container');
+
+    stage.on('dragstart', () => {
+        container.classList.add('grabbing');
+    });
+
+    stage.on('dragend', () => {
+        container.classList.remove('grabbing');
+    });
+
+    // Mouse wheel zoom
+    stage.on('wheel', (e) => {
+        e.evt.preventDefault();
+
+        const oldScale = stage.scaleX();
+        const pointer = stage.getPointerPosition();
+
+        const mousePointTo = {
+            x: (pointer.x - stage.x()) / oldScale,
+            y: (pointer.y - stage.y()) / oldScale
+        };
+
+        const direction = e.evt.deltaY > 0 ? -1 : 1;
+        const newScale = direction > 0 ? oldScale * 1.1 : oldScale / 1.1;
+
+        if (newScale >= CONFIG.minZoom && newScale <= CONFIG.maxZoom) {
+            currentScale = newScale;
+            stage.scale({ x: newScale, y: newScale });
+
+            const newPos = {
+                x: pointer.x - mousePointTo.x * newScale,
+                y: pointer.y - mousePointTo.y * newScale
+            };
+
+            stage.position(newPos);
+            updateZoomText();
+        }
+    });
+}
+
+// Zoom functions
+function zoomIn() {
+    const newScale = Math.min(currentScale + CONFIG.zoomStep, CONFIG.maxZoom);
+    setZoom(newScale);
+}
+
+function zoomOut() {
+    const newScale = Math.max(currentScale - CONFIG.zoomStep, CONFIG.minZoom);
+    setZoom(newScale);
+}
+
+function setZoom(scale) {
+    const center = {
+        x: stage.width() / 2,
+        y: stage.height() / 2
+    };
+
+    const oldScale = stage.scaleX();
+    const mousePointTo = {
+        x: (center.x - stage.x()) / oldScale,
+        y: (center.y - stage.y()) / oldScale
+    };
+
+    currentScale = scale;
+    stage.scale({ x: scale, y: scale });
+
+    const newPos = {
+        x: center.x - mousePointTo.x * scale,
+        y: center.y - mousePointTo.y * scale
+    };
+
+    stage.position(newPos);
+    updateZoomText();
+}
+
+function resetZoom() {
+    currentScale = 1;
+    stage.scale({ x: 1, y: 1 });
+    stage.position({ x: stage.width() / 2, y: 50 });
+    updateZoomText();
+}
+
+function updateZoomText() {
+    document.getElementById('zoom-text').textContent = Math.round(currentScale * 100) + '%';
+}
+
+// Process organization data
+function processOrgData(nodes, parentNode = null) {
+    const processed = [];
+
+    nodes.forEach(node => {
+        const processedNode = {
+            id: node.id,
+            nama: node.nama,
+            jenis_jabatan: node.jenis_jabatan,
+            kelas: node.kelas,
+            kebutuhan: node.kebutuhan,
+            bezetting: node.asns ? node.asns.length : 0,
+            selisih: (node.asns ? node.asns.length : 0) - node.kebutuhan,
+            parent: parentNode,
+            children: []
+        };
+
+        if (node.children && node.children.length > 0) {
+            processedNode.children = processOrgData(node.children, processedNode);
+        }
+
+        processed.push(processedNode);
+    });
+
+    return processed;
+}
+
+// Group pelaksana/fungsional nodes
+function groupNodes(nodes) {
+    const grouped = [];
+    const pelaksanaFungsional = {
+        pelaksana: [],
+        fungsional: []
+    };
+
+    nodes.forEach(node => {
+        if (node.jenis_jabatan === 'Pelaksana') {
+            pelaksanaFungsional.pelaksana.push(node);
+        } else if (node.jenis_jabatan === 'Fungsional') {
+            pelaksanaFungsional.fungsional.push(node);
+        } else {
+            grouped.push(node);
+        }
+    });
+
+    // Add grouped pelaksana as single table node
+    if (pelaksanaFungsional.pelaksana.length > 0) {
+        grouped.push({
+            type: 'table',
+            jenis_jabatan: 'Pelaksana',
+            items: pelaksanaFungsional.pelaksana
+        });
+    }
+
+    // Add grouped fungsional as single table node
+    if (pelaksanaFungsional.fungsional.length > 0) {
+        grouped.push({
+            type: 'table',
+            jenis_jabatan: 'Fungsional',
+            items: pelaksanaFungsional.fungsional
+        });
+    }
+
+    return grouped;
+}
+
+// Calculate tree layout
+function calculateLayout(nodes, x = 0, y = 0, level = 0) {
+    const groupedNodes = groupNodes(nodes);
+    const positions = [];
+    let totalWidth = 0;
+
+    // Calculate width for each node
+    groupedNodes.forEach((node, index) => {
+        let nodeWidth = CONFIG.boxWidth;
+
+        if (node.type === 'table') {
+            nodeWidth = CONFIG.boxWidth + 100; // Wider for tables
+        }
+
+        if (node.children && node.children.length > 0) {
+            const childLayout = calculateLayout(node.children, 0, 0, level + 1);
+            node.childLayout = childLayout;
+            nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
+        }
+
+        node.layoutWidth = nodeWidth;
+        totalWidth += nodeWidth;
+
+        if (index > 0) {
+            totalWidth += CONFIG.horizontalGap;
+        }
+    });
+
+    // Position nodes
+    let currentX = x - totalWidth / 2;
+
+    groupedNodes.forEach((node, index) => {
+        if (index > 0) {
+            currentX += CONFIG.horizontalGap;
+        }
+
+        const nodeX = currentX + node.layoutWidth / 2;
+        const nodeY = y;
+
+        positions.push({
+            node: node,
+            x: nodeX,
+            y: nodeY
+        });
+
+        // Position children
+        if (node.childLayout) {
+            const childY = y + CONFIG.verticalGap + (node.type === 'table' ? node.items.length * CONFIG.tableRowHeight + 60 : CONFIG.boxHeight);
+            node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
+        }
+
+        currentX += node.layoutWidth;
+    });
+
+    return {
+        positions: positions,
+        totalWidth: totalWidth
+    };
+}
+
+// Draw box node (Format: Header hitam + Nama + Kelas)
+function drawBoxNode(node, x, y) {
+    const headerHeight = 25;
+    const namaHeight = 30;
+    const kelasHeight = 25;
+    const totalHeight = headerHeight + namaHeight + kelasHeight;
+    const group = new Konva.Group({ x: x - CONFIG.boxWidth / 2, y: y });
+
+    // Main box border
+    const box = new Konva.Rect({
+        width: CONFIG.boxWidth,
+        height: totalHeight,
+        stroke: '#000000',
+        strokeWidth: 2,
+        fill: '#FFFFFF'
+    });
+    group.add(box);
+
+    // Header: Jenis Jabatan (background hitam, text putih)
+    const header = new Konva.Rect({
+        width: CONFIG.boxWidth,
+        height: headerHeight,
+        fill: '#000000'
+    });
+    group.add(header);
+
+    const headerText = new Konva.Text({
+        x: CONFIG.padding,
+        y: 0,
+        width: CONFIG.boxWidth - CONFIG.padding * 2,
+        height: headerHeight,
+        text: 'Jabatan ' + node.jenis_jabatan,
+        fontSize: CONFIG.fontSize,
+        fontFamily: 'Arial',
+        fill: '#FFFFFF',
+        align: 'center',
+        verticalAlign: 'middle',
+        fontStyle: 'bold'
+    });
+    group.add(headerText);
+
+    // Line separator after header
+    const headerLine = new Konva.Line({
+        points: [0, headerHeight, CONFIG.boxWidth, headerHeight],
+        stroke: '#000000',
+        strokeWidth: 1
+    });
+    group.add(headerLine);
+
+    // Nama Jabatan
+    const namaText = new Konva.Text({
+        x: CONFIG.padding,
+        y: headerHeight,
+        width: CONFIG.boxWidth - CONFIG.padding * 2,
+        height: namaHeight,
+        text: node.nama,
+        fontSize: CONFIG.fontSize,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        align: 'center',
+        verticalAlign: 'middle'
+    });
+    group.add(namaText);
+
+    // Line separator before kelas
+    const kelasLine = new Konva.Line({
+        points: [0, headerHeight + namaHeight, CONFIG.boxWidth, headerHeight + namaHeight],
+        stroke: '#000000',
+        strokeWidth: 1
+    });
+    group.add(kelasLine);
+
+    // Kelas
+    const kelasText = new Konva.Text({
+        x: CONFIG.padding,
+        y: headerHeight + namaHeight,
+        width: CONFIG.boxWidth - CONFIG.padding * 2,
+        height: kelasHeight,
+        text: node.kelas ? 'Kelas ' + node.kelas : '-',
+        fontSize: CONFIG.fontSize,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        align: 'center',
+        verticalAlign: 'middle'
+    });
+    group.add(kelasText);
+
+    layer.add(group);
+    return { width: CONFIG.boxWidth, height: totalHeight, centerX: x, bottomY: y + totalHeight };
+}
+
+// Draw table node
+function drawTableNode(jenis, items, x, y) {
+    const tableWidth = 400;
+    const headerHeight = 25;
+    const columnHeaderHeight = 25;
+    const rowHeight = CONFIG.tableRowHeight;
+    const totalHeight = headerHeight + columnHeaderHeight + (items.length * rowHeight);
+
+    const group = new Konva.Group({ x: x - tableWidth / 2, y: y });
+
+    // Main border
+    const border = new Konva.Rect({
+        width: tableWidth,
+        height: totalHeight,
+        stroke: '#000000',
+        strokeWidth: 2,
+        fill: '#FFFFFF'
+    });
+    group.add(border);
+
+    // Header
+    const header = new Konva.Rect({
+        width: tableWidth,
+        height: headerHeight,
+        fill: '#000000'
+    });
+    group.add(header);
+
+    const headerText = new Konva.Text({
+        width: tableWidth,
+        height: headerHeight,
+        text: 'Jabatan ' + jenis,
+        fontSize: CONFIG.headerFontSize,
+        fontFamily: 'Arial',
+        fill: '#FFFFFF',
+        align: 'center',
+        verticalAlign: 'middle',
+        fontStyle: 'bold'
+    });
+    group.add(headerText);
+
+    // Column headers
+    const colHeaderY = headerHeight;
+    const colHeaderBg = new Konva.Rect({
+        y: colHeaderY,
+        width: tableWidth,
+        height: columnHeaderHeight,
+        fill: '#F3F4F6',
+        stroke: '#000000',
+        strokeWidth: 1
+    });
+    group.add(colHeaderBg);
+
+    // Column widths
+    const colWidths = {
+        nama: 200,
+        kelas: 60,
+        k: 45,
+        b: 45,
+        s: 50
+    };
+
+    let colX = 0;
+    const columns = [
+        { label: 'Nama Jabatan', width: colWidths.nama },
+        { label: 'Kelas', width: colWidths.kelas },
+        { label: 'K', width: colWidths.k },
+        { label: 'B', width: colWidths.b },
+        { label: 'S', width: colWidths.s }
+    ];
+
+    columns.forEach((col, idx) => {
+        if (idx > 0) {
+            const line = new Konva.Line({
+                points: [colX, colHeaderY, colX, totalHeight],
+                stroke: '#000000',
+                strokeWidth: 1
+            });
+            group.add(line);
+        }
+
+        const colText = new Konva.Text({
+            x: colX + 5,
+            y: colHeaderY,
+            width: col.width - 10,
+            height: columnHeaderHeight,
+            text: col.label,
+            fontSize: CONFIG.tableFontSize,
+            fontFamily: 'Arial',
+            fill: '#000000',
+            align: 'center',
+            verticalAlign: 'middle',
+            fontStyle: 'bold'
+        });
+        group.add(colText);
+
+        colX += col.width;
+    });
+
+    // Data rows
+    items.forEach((item, idx) => {
+        const rowY = headerHeight + columnHeaderHeight + (idx * rowHeight);
+
+        // Horizontal line
+        if (idx > 0) {
+            const hLine = new Konva.Line({
+                points: [0, rowY, tableWidth, rowY],
+                stroke: '#000000',
+                strokeWidth: 1
+            });
+            group.add(hLine);
+        }
+
+        // Row data
+        let cellX = 0;
+        const rowData = [
+            { text: item.nama, width: colWidths.nama, align: 'left' },
+            { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
+            { text: item.kebutuhan.toString(), width: colWidths.k, align: 'center' },
+            { text: item.bezetting.toString(), width: colWidths.b, align: 'center' },
+            { text: (item.selisih >= 0 ? '+' : '') + item.selisih.toString(), width: colWidths.s, align: 'center' }
+        ];
+
+        rowData.forEach((cell) => {
+            const cellText = new Konva.Text({
+                x: cellX + 5,
+                y: rowY,
+                width: cell.width - 10,
+                height: rowHeight,
+                text: cell.text,
+                fontSize: CONFIG.tableFontSize,
+                fontFamily: 'Arial',
+                fill: '#000000',
+                align: cell.align,
+                verticalAlign: 'middle'
+            });
+            group.add(cellText);
+
+            cellX += cell.width;
+        });
+    });
+
+    layer.add(group);
+    return { width: tableWidth, height: totalHeight, centerX: x, bottomY: y + totalHeight };
+}
+
+// Draw connector lines
+function drawConnector(fromX, fromY, toX, toY) {
+    const midY = (fromY + toY) / 2;
+
+    const line = new Konva.Line({
+        points: [
+            fromX, fromY,
+            fromX, midY,
+            toX, midY,
+            toX, toY
+        ],
+        stroke: '#000000',
+        strokeWidth: 2,
+        lineCap: 'square',
+        lineJoin: 'miter'
+    });
+
+    layer.add(line);
+    line.moveToBottom();
+}
+
+// Render the tree
+function renderTree(positions) {
+    positions.forEach(pos => {
+        const { node, x, y } = pos;
+        let nodeInfo;
+
+        if (node.type === 'table') {
+            nodeInfo = drawTableNode(node.jenis_jabatan, node.items, x, y);
+        } else {
+            nodeInfo = drawBoxNode(node, x, y);
+        }
+
+        // Draw connectors to children
+        if (node.childPositions) {
+            node.childPositions.forEach(childPos => {
+                const childNodeInfo = childPos.node.type === 'table'
+                    ? { centerX: childPos.x, bottomY: childPos.y }
+                    : { centerX: childPos.x, bottomY: childPos.y };
+
+                drawConnector(nodeInfo.centerX, nodeInfo.bottomY, childPos.x, childPos.y);
+            });
+
+            renderTree(node.childPositions);
+        }
+    });
+}
+
+// Export canvas to PNG
+function exportCanvas() {
+    const uri = stage.toDataURL({ pixelRatio: 2 });
+    const link = document.createElement('a');
+    link.download = 'peta-jabatan-{{ Str::slug($opd->nama) }}.png';
+    link.href = uri;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Initialize everything
+document.addEventListener('DOMContentLoaded', function() {
+    if (orgData && orgData.length > 0) {
+        initStage();
+
+        const processedData = processOrgData(orgData);
+        const layout = calculateLayout(processedData, stage.width() / 2, 50, 0);
+
+        renderTree(layout.positions);
+
+        layer.draw();
+
+        // Center the view
+        resetZoom();
+    }
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (stage) {
+        const container = document.getElementById('canvas-container');
+        stage.width(container.offsetWidth);
+        stage.height(container.offsetHeight);
+    }
+});
+</script>
+@endpush
