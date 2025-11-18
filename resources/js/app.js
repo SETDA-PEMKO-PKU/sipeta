@@ -65,6 +65,12 @@ document.addEventListener("alpine:init", () => {
             this.messages = this.messages.filter((m) => m.id !== id);
         },
     });
+
+    // Edit Jabatan store
+    Alpine.store("editJabatan", null);
+
+    // Edit ASN store
+    Alpine.store("editAsn", null);
 });
 
 // Alpine.js components

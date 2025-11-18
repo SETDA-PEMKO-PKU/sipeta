@@ -235,53 +235,55 @@
 
     <!-- Modal: Edit Jabatan -->
     <x-modal name="edit-jabatan" title="Edit Jabatan" maxWidth="lg">
-        <form :action="`{{ route('admin.opds.show', $opd->id) }}/jabatan/${editJabatan.id}`" method="POST" x-show="editJabatan">
-            @csrf
-            @method('PUT')
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Jabatan</label>
-                    <input type="text" name="nama" x-model="editJabatan.nama" required class="input w-full">
+        <template x-if="editJabatan">
+            <form :action="`{{ route('admin.opds.show', $opd->id) }}/jabatan/${editJabatan.id}`" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Jabatan</label>
+                        <input type="text" name="nama" x-model="editJabatan.nama" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Parent Jabatan</label>
+                        <select name="parent_jabatan_id" x-model="editJabatan.parent_id" class="input w-full">
+                            <option value="">Tidak ada (Jabatan Root/Kepala)</option>
+                            @foreach($opd->getAllJabatans() as $j)
+                                <option value="{{ $j->id }}" x-bind:disabled="editJabatan && editJabatan.id == {{ $j->id }}">
+                                    {{ str_repeat('—', $j->getPath()->count() - 1) }} {{ $j->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
+                        <select name="jenis_jabatan" x-model="editJabatan.jenis_jabatan" required class="input w-full">
+                            <option value="Staf Ahli">Staf Ahli</option>
+                            <option value="Struktural">Struktural</option>
+                            <option value="Fungsional">Fungsional</option>
+                            <option value="Pelaksana">Pelaksana</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas Jabatan</label>
+                        <input type="number" name="kelas" x-model="editJabatan.kelas" class="input w-full" min="1" max="17">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kebutuhan</label>
+                        <input type="number" name="kebutuhan" x-model="editJabatan.kebutuhan" required class="input w-full" min="0">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Parent Jabatan</label>
-                    <select name="parent_jabatan_id" x-model="editJabatan.parent_id" class="input w-full">
-                        <option value="">Tidak ada (Jabatan Root/Kepala)</option>
-                        @foreach($opd->getAllJabatans() as $j)
-                            <option value="{{ $j->id }}" x-bind:disabled="editJabatan.id == {{ $j->id }}">
-                                {{ str_repeat('—', $j->getPath()->count() - 1) }} {{ $j->nama }}
-                            </option>
-                        @endforeach
-                    </select>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="$dispatch('close-modal', 'edit-jabatan')" class="btn btn-outline">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                 </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
-                    <select name="jenis_jabatan" x-model="editJabatan.jenis_jabatan" required class="input w-full">
-                        <option value="Staf Ahli">Staf Ahli</option>
-                        <option value="Struktural">Struktural</option>
-                        <option value="Fungsional">Fungsional</option>
-                        <option value="Pelaksana">Pelaksana</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kelas Jabatan</label>
-                    <input type="number" name="kelas" x-model="editJabatan.kelas" class="input w-full" min="1" max="17">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kebutuhan</label>
-                    <input type="number" name="kebutuhan" x-model="editJabatan.kebutuhan" required class="input w-full" min="0">
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end gap-3">
-                <button type="button" @click="$dispatch('close-modal', 'edit-jabatan')" class="btn btn-outline">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-            </div>
-        </form>
+            </form>
+        </template>
     </x-modal>
 
     <!-- Modal: Add ASN -->
@@ -318,6 +320,44 @@
             </div>
         </form>
     </x-modal>
+
+    <!-- Modal: Edit ASN -->
+    <x-modal name="edit-asn" title="Edit ASN" maxWidth="lg">
+        <template x-if="editAsn">
+            <form :action="`{{ route('admin.opds.show', $opd->id) }}/asn/${editAsn.id}`" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama</label>
+                        <input type="text" name="nama" x-model="editAsn.nama" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NIP</label>
+                        <input type="text" name="nip" x-model="editAsn.nip" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
+                        <select name="jabatan_id" x-model="editAsn.jabatan_id" required class="input w-full">
+                            <option value="">Pilih Jabatan</option>
+                            @foreach($opd->getAllJabatans() as $jabatan)
+                                <option value="{{ $jabatan->id }}">
+                                    {{ str_repeat('—', $jabatan->getPath()->count() - 1) }} {{ $jabatan->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="$dispatch('close-modal', 'edit-asn')" class="btn btn-outline">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </template>
+    </x-modal>
 </div>
 
 @push('scripts')
@@ -326,14 +366,19 @@ function opdShow() {
     return {
         editingNama: false,
         editJabatan: null,
+        editAsn: null,
 
         init() {
             // Listen for edit jabatan event
-            this.$watch('$store.editJabatan', (jabatan) => {
-                if (jabatan) {
-                    this.editJabatan = jabatan;
-                    this.$dispatch('open-modal', 'edit-jabatan');
-                }
+            this.$el.addEventListener('edit-jabatan', (e) => {
+                this.editJabatan = e.detail;
+                this.$dispatch('open-modal', 'edit-jabatan');
+            });
+
+            // Listen for edit asn event
+            this.$el.addEventListener('edit-asn', (e) => {
+                this.editAsn = e.detail;
+                this.$dispatch('open-modal', 'edit-asn');
             });
         }
     }
