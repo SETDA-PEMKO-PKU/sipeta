@@ -160,7 +160,7 @@ const CONFIG = {
     boxWidth: 200,
     boxHeight: 80, // header(25) + nama(30) + kelas(25)
     tableRowHeight: 25,
-    horizontalGap: 50,
+    horizontalGap: 100, // Increased from 50 to prevent table overlap
     verticalGap: 40, // Reduced from 80 to make connectors shorter
     fontSize: 12,
     headerFontSize: 11,
@@ -354,7 +354,7 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
     const positions = [];
     let totalWidth = 0;
 
-    // Calculate width for struktural nodes only
+    // Calculate width for struktural nodes including tables
     strukturalNodes.forEach((node, index) => {
         let nodeWidth = CONFIG.boxWidth;
 
@@ -371,6 +371,13 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
             totalWidth += CONFIG.horizontalGap;
         }
     });
+
+    // Add table widths to total if they exist (tables are 280px wide each)
+    if (tableNodes.pelaksana || tableNodes.fungsional) {
+        const TABLE_WIDTH = 280;
+        // Ensure total width can accommodate the table width plus some padding
+        totalWidth = Math.max(totalWidth, TABLE_WIDTH + 40);
+    }
 
     // Position struktural nodes horizontally
     let currentX = x - totalWidth / 2;
