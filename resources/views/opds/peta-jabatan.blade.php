@@ -525,10 +525,10 @@ function drawBoxNode(node, x, y) {
 
 // Draw table node (single column, vertical layout)
 function drawTableNode(jenis, items, x, y) {
-    const tableWidth = 500;
-    const headerHeight = 25;
-    const columnHeaderHeight = 25;
-    const rowHeight = CONFIG.tableRowHeight;
+    const tableWidth = 280; // Reduced from 500 to make it more compact
+    const headerHeight = 20;
+    const columnHeaderHeight = 20;
+    const rowHeight = 20; // Reduced row height
     const totalHeight = headerHeight + columnHeaderHeight + (items.length * rowHeight);
 
     const group = new Konva.Group({ x: x - tableWidth / 2, y: y });
@@ -538,7 +538,7 @@ function drawTableNode(jenis, items, x, y) {
         width: tableWidth,
         height: totalHeight,
         stroke: '#000000',
-        strokeWidth: 2,
+        strokeWidth: 1.5,
         fill: '#FFFFFF'
     });
     group.add(border);
@@ -555,7 +555,7 @@ function drawTableNode(jenis, items, x, y) {
         width: tableWidth,
         height: headerHeight,
         text: 'Jabatan ' + jenis,
-        fontSize: CONFIG.headerFontSize,
+        fontSize: 10,
         fontFamily: 'Arial',
         fill: '#FFFFFF',
         align: 'center',
@@ -576,19 +576,19 @@ function drawTableNode(jenis, items, x, y) {
     });
     group.add(colHeaderBg);
 
-    // Column widths
+    // Column widths - more compact
     const colWidths = {
-        nama: 275,
-        kelas: 75,
-        k: 50,
-        b: 50,
-        s: 50
+        nama: 150,
+        kelas: 45,
+        k: 30,
+        b: 30,
+        s: 25
     };
 
     let colX = 0;
     const columns = [
         { label: 'Nama Jabatan', width: colWidths.nama },
-        { label: 'Kelas', width: colWidths.kelas },
+        { label: 'Kls', width: colWidths.kelas },
         { label: 'B', width: colWidths.b },
         { label: 'K', width: colWidths.k },
         { label: 'S', width: colWidths.s }
@@ -605,12 +605,12 @@ function drawTableNode(jenis, items, x, y) {
         }
 
         const colText = new Konva.Text({
-            x: colX + 5,
+            x: colX + 3,
             y: colHeaderY,
-            width: col.width - 10,
+            width: col.width - 6,
             height: columnHeaderHeight,
             text: col.label,
-            fontSize: CONFIG.tableFontSize,
+            fontSize: 9,
             fontFamily: 'Arial',
             fill: '#000000',
             align: 'center',
@@ -631,15 +631,19 @@ function drawTableNode(jenis, items, x, y) {
             const hLine = new Konva.Line({
                 points: [0, rowY, tableWidth, rowY],
                 stroke: '#000000',
-                strokeWidth: 1
+                strokeWidth: 0.5
             });
             group.add(hLine);
         }
 
         // Row data
         let cellX = 0;
+
+        // Truncate nama if too long
+        const namaText = item.nama.length > 25 ? item.nama.substring(0, 22) + '...' : item.nama;
+
         const rowData = [
-            { text: item.nama, width: colWidths.nama, align: 'left' },
+            { text: namaText, width: colWidths.nama, align: 'left' },
             { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
             { text: item.bezetting.toString(), width: colWidths.b, align: 'center' },
             { text: item.kebutuhan.toString(), width: colWidths.k, align: 'center' },
@@ -648,12 +652,12 @@ function drawTableNode(jenis, items, x, y) {
 
         rowData.forEach((cell) => {
             const cellText = new Konva.Text({
-                x: cellX + 5,
+                x: cellX + 2,
                 y: rowY,
-                width: cell.width - 10,
+                width: cell.width - 4,
                 height: rowHeight,
                 text: cell.text,
-                fontSize: CONFIG.tableFontSize,
+                fontSize: 8,
                 fontFamily: 'Arial',
                 fill: '#000000',
                 align: cell.align,
