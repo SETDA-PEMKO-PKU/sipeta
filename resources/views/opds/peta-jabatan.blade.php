@@ -161,7 +161,7 @@ const CONFIG = {
     boxHeight: 80, // header(25) + nama(30) + kelas(25)
     tableRowHeight: 25,
     horizontalGap: 50,
-    verticalGap: 80,
+    verticalGap: 40, // Reduced from 80 to make connectors shorter
     fontSize: 12,
     headerFontSize: 11,
     tableFontSize: 10,
