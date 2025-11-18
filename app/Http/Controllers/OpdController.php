@@ -305,6 +305,21 @@ class OpdController extends Controller
     {
         $opd = Opd::findOrFail($id);
 
+        // Cek apakah OPD masih memiliki ASN
+        if ($opd->asns()->count() > 0) {
+            return redirect()->route('admin.opds.index')
+                            ->with('error', 'Tidak dapat menghapus OPD "' . $opd->nama . '" karena masih memiliki ' . $opd->asns()->count() . ' ASN. Hapus semua ASN terlebih dahulu!');
+        }
+
+        // Cek apakah ada jabatan yang masih memiliki ASN
+        $allJabatans = $opd->getAllJabatans();
+        foreach ($allJabatans as $jabatan) {
+            if ($jabatan->asns()->count() > 0) {
+                return redirect()->route('admin.opds.index')
+                                ->with('error', 'Tidak dapat menghapus OPD "' . $opd->nama . '" karena jabatan "' . $jabatan->nama . '" masih memiliki ASN!');
+            }
+        }
+
         // Hapus semua jabatan yang terkait dengan OPD ini
         // (akan otomatis menghapus child jabatan karena cascade)
         $opd->jabatans()->delete();
