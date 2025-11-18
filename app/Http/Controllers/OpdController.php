@@ -29,6 +29,27 @@ class OpdController extends Controller
     }
 
     /**
+     * Menyimpan OPD baru ke database
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255|unique:opds,nama'
+        ], [
+            'nama.required' => 'Nama OPD harus diisi',
+            'nama.max' => 'Nama OPD maksimal 255 karakter',
+            'nama.unique' => 'Nama OPD sudah terdaftar dalam sistem'
+        ]);
+
+        $opd = Opd::create([
+            'nama' => $request->nama
+        ]);
+
+        return redirect()->route('admin.opds.index')
+                        ->with('success', 'OPD "' . $opd->nama . '" berhasil ditambahkan!');
+    }
+
+    /**
      * Menampilkan detail OPD beserta bagian dan jabatan
      */
     public function show($id)
@@ -221,15 +242,20 @@ class OpdController extends Controller
     {
         $request->validate([
             'nama' => 'required|string|max:255|unique:opds,nama,' . $id
+        ], [
+            'nama.required' => 'Nama OPD harus diisi',
+            'nama.max' => 'Nama OPD maksimal 255 karakter',
+            'nama.unique' => 'Nama OPD sudah terdaftar dalam sistem'
         ]);
 
         $opd = Opd::findOrFail($id);
+        $oldNama = $opd->nama;
         $opd->update([
             'nama' => $request->nama
         ]);
 
-        return redirect()->route('admin.opds.show', $id)
-                        ->with('success', 'Nama OPD berhasil diperbarui!');
+        return redirect()->route('admin.opds.index')
+                        ->with('success', 'OPD "' . $oldNama . '" berhasil diubah menjadi "' . $opd->nama . '"');
     }
 
     /**

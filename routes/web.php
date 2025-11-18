@@ -68,6 +68,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // OPD Management (moved inside admin middleware)
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
+            Route::post('/', [OpdController::class, 'store'])->name('opds.store');
             Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
             Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
             Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');

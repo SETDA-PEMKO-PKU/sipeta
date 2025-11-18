@@ -12,11 +12,7 @@
             <p class="text-gray-600 mt-1">Kelola Organisasi Perangkat Daerah</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <button class="btn btn-outline">
-                <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
-                <span class="ml-2">Export Semua</span>
-            </button>
-            <button class="btn btn-primary">
+            <button @click="$dispatch('open-modal', 'add-opd')" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
                 <span class="ml-2">Tambah OPD</span>
             </button>
@@ -219,13 +215,13 @@
                                                 <span class="iconify" data-icon="mdi:eye" data-width="14" data-height="14"></span>
                                                 <span class="ml-1">Detail</span>
                                             </a>
-                                            <a href="{{ route('admin.api.opds.tree', $opd->id) }}"
-                                               class="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm whitespace-nowrap"
-                                               target="_blank">
-                                                <span class="iconify" data-icon="mdi:download" data-width="14" data-height="14"></span>
-                                                <span class="ml-1">Export</span>
-                                            </a>
-                                            <button class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm whitespace-nowrap">
+                                            <button @click="openEditModal({{ $opd->id }}, '{{ addslashes($opd->nama) }}')"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm whitespace-nowrap">
+                                                <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
+                                                <span class="ml-1">Edit</span>
+                                            </button>
+                                            <button @click="openDeleteModal({{ $opd->id }}, '{{ addslashes($opd->nama) }}')"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm whitespace-nowrap">
                                                 <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
                                                 <span class="ml-1">Hapus</span>
                                             </button>
@@ -278,13 +274,110 @@
                 <span class="iconify text-gray-300" data-icon="mdi:office-building" data-width="64" data-height="64"></span>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 mt-4">Belum Ada Data OPD</h3>
                 <p class="text-sm text-gray-500 mb-4">Sistem belum memiliki data Organisasi Perangkat Daerah</p>
-                <button class="btn btn-primary">
+                <button @click="$dispatch('open-modal', 'add-opd')" class="btn btn-primary">
                     <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
                     <span class="ml-2">Tambah OPD Pertama</span>
                 </button>
             </div>
         @endif
     </div>
+
+    <!-- Modals -->
+    <!-- Modal Tambah OPD -->
+    <x-modal name="add-opd" title="Tambah OPD Baru" maxWidth="md">
+        <form action="{{ route('admin.opds.store') }}" method="POST">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label for="nama_opd" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nama OPD <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="nama_opd"
+                        name="nama"
+                        required
+                        class="input w-full"
+                        placeholder="Contoh: Dinas Pendidikan"
+                        autofocus
+                    >
+                    <p class="mt-1 text-xs text-gray-500">
+                        Masukkan nama lengkap Organisasi Perangkat Daerah
+                    </p>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" @click="$dispatch('close-modal', 'add-opd')" class="btn btn-outline">
+                        Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
+                        <span class="ml-2">Tambah OPD</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </x-modal>
+
+    <!-- Modal Edit OPD -->
+    <x-modal name="edit-opd" title="Edit OPD" maxWidth="md">
+        <form id="editOpdForm" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="space-y-4">
+                <div>
+                    <label for="edit_nama_opd" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nama OPD <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="edit_nama_opd"
+                        name="nama"
+                        required
+                        class="input w-full"
+                        placeholder="Contoh: Dinas Pendidikan"
+                    >
+                    <p class="mt-1 text-xs text-gray-500">
+                        Masukkan nama lengkap Organisasi Perangkat Daerah
+                    </p>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" @click="$dispatch('close-modal', 'edit-opd')" class="btn btn-outline">
+                        Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="iconify" data-icon="mdi:content-save" data-width="16" data-height="16"></span>
+                        <span class="ml-2">Simpan Perubahan</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </x-modal>
+
+    <!-- Modal Delete OPD -->
+    <x-modal name="delete-opd" title="Hapus OPD" maxWidth="md">
+        <div class="text-center">
+            <span class="iconify text-red-500 mx-auto" data-icon="mdi:alert-circle" data-width="48" data-height="48"></span>
+            <h3 class="text-lg font-semibold text-gray-900 mt-3 mb-2">Hapus OPD?</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                Apakah Anda yakin ingin menghapus <strong id="delete_opd_nama"></strong>?<br>
+                Semua data bagian, jabatan, dan ASN di dalamnya akan ikut terhapus.<br>
+                <span class="text-red-600 font-semibold">Tindakan ini tidak dapat dibatalkan!</span>
+            </p>
+            <form id="deleteOpdForm" method="POST" class="flex gap-2 justify-center">
+                @csrf
+                @method('DELETE')
+                <button type="button" @click="$dispatch('close-modal', 'delete-opd')" class="btn btn-outline">
+                    Batal
+                </button>
+                <button type="submit" class="btn btn-danger">
+                    <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
+                    <span class="ml-1">Ya, Hapus</span>
+                </button>
+            </form>
+        </div>
+    </x-modal>
 </div>
 
 @push('scripts')
@@ -337,6 +430,18 @@ function opdIndex() {
             });
 
             rows.forEach(row => tbody.appendChild(row));
+        },
+
+        openEditModal(opdId, opdNama) {
+            document.getElementById('edit_nama_opd').value = opdNama;
+            document.getElementById('editOpdForm').action = '{{ route("admin.opds.update", ":id") }}'.replace(':id', opdId);
+            this.$dispatch('open-modal', 'edit-opd');
+        },
+
+        openDeleteModal(opdId, opdNama) {
+            document.getElementById('delete_opd_nama').textContent = opdNama;
+            document.getElementById('deleteOpdForm').action = '{{ route("admin.opds.destroy", ":id") }}'.replace(':id', opdId);
+            this.$dispatch('open-modal', 'delete-opd');
         }
     }
 }
