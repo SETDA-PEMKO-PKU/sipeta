@@ -52,27 +52,30 @@
             <!-- Button Tambah Jabatan -->
             <button
                 @click="$dispatch('open-modal', 'add-sub-jabatan-{{ $jabatan->id }}')"
-                class="btn btn-sm btn-outline btn-primary">
-                <span class="iconify" data-icon="mdi:plus-circle" data-width="16" data-height="16"></span>
-                Tambah Jabatan
+                class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-0"
+                title="Tambah Sub-Jabatan">
+                <span class="iconify" data-icon="mdi:plus-circle" data-width="14" data-height="14"></span>
+                <span class="ml-1">Jabatan</span>
             </button>
 
             <!-- Button Lihat Pegawai -->
             @if($jabatan->asns->count() > 0)
                 <button
                     @click="$dispatch('open-modal', 'view-asn-{{ $jabatan->id }}')"
-                    class="btn btn-sm btn-outline">
-                    <span class="iconify" data-icon="mdi:account-group" data-width="16" data-height="16"></span>
-                    Lihat Pegawai ({{ $jabatan->asns->count() }})
+                    class="btn btn-sm bg-purple-500 hover:bg-purple-600 text-white border-0"
+                    title="Lihat Daftar Pegawai">
+                    <span class="iconify" data-icon="mdi:account-group" data-width="14" data-height="14"></span>
+                    <span class="ml-1">Pegawai ({{ $jabatan->asns->count() }})</span>
                 </button>
             @endif
 
             <!-- Button Tambah ASN -->
             <button
                 @click="$dispatch('open-modal', 'add-asn')"
-                class="btn btn-sm btn-outline btn-success">
-                <span class="iconify" data-icon="mdi:account-plus" data-width="16" data-height="16"></span>
-                Tambah ASN
+                class="btn btn-sm bg-green-500 hover:bg-green-600 text-white border-0"
+                title="Tambah Pegawai/ASN">
+                <span class="iconify" data-icon="mdi:account-plus" data-width="14" data-height="14"></span>
+                <span class="ml-1">ASN</span>
             </button>
 
             <!-- Button Edit -->
@@ -85,9 +88,10 @@
                     'kebutuhan' => $jabatan->kebutuhan,
                     'parent_id' => $jabatan->parent_id
                 ]) }})"
-                class="btn btn-sm btn-outline">
-                <span class="iconify" data-icon="mdi:pencil" data-width="16" data-height="16"></span>
-                Edit
+                class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white border-0"
+                title="Edit Jabatan">
+                <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
+                <span class="ml-1">Edit</span>
             </button>
 
             <!-- Button Hapus -->
@@ -97,9 +101,9 @@
                   class="inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-sm btn-outline btn-error">
-                    <span class="iconify" data-icon="mdi:delete" data-width="16" data-height="16"></span>
-                    Hapus
+                <button type="submit" class="btn btn-sm bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Jabatan">
+                    <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
+                    <span class="ml-1">Hapus</span>
                 </button>
             </form>
         </div>
@@ -186,9 +190,10 @@
                                     'nip' => $asn->nip,
                                     'jabatan_id' => $asn->jabatan_id
                                 ]) }})"
-                                class="btn btn-xs btn-outline">
+                                class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+                                title="Edit Pegawai">
                                 <span class="iconify" data-icon="mdi:pencil" data-width="12" data-height="12"></span>
-                                Edit
+                                <span class="ml-1">Edit</span>
                             </button>
                             <form action="{{ route('admin.opds.asn.destroy', [$opd->id, $asn->id]) }}"
                                   method="POST"
@@ -196,9 +201,9 @@
                                   class="inline">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-xs btn-outline btn-error">
+                                <button type="submit" class="btn btn-xs bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Pegawai">
                                     <span class="iconify" data-icon="mdi:delete" data-width="12" data-height="12"></span>
-                                    Hapus
+                                    <span class="ml-1">Hapus</span>
                                 </button>
                             </form>
                         </div>
