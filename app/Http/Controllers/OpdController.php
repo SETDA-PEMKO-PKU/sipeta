@@ -10,6 +10,19 @@ use Illuminate\Http\Request;
 class OpdController extends Controller
 {
     /**
+     * Apply middleware untuk permission check
+     */
+    public function __construct()
+    {
+        // Methods yang perlu permission manage_opd_jabatan
+        $this->middleware('admin.permission:manage_opd_jabatan')
+             ->only(['store', 'update', 'destroy', 'storeJabatan', 'updateJabatan', 'destroyJabatan']);
+
+        // Methods yang perlu permission manage_asn
+        $this->middleware('admin.permission:manage_asn')
+             ->only(['storeAsn', 'updateAsn', 'destroyAsn']);
+    }
+    /**
      * Menampilkan daftar semua OPD
      */
     public function index(Request $request)

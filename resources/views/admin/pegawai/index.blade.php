@@ -12,10 +12,12 @@
             <p class="text-gray-600 mt-1">Kelola Data Pegawai/ASN</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            @if(auth('admin')->user()->canManageAsn())
             <a href="{{ route('admin.pegawai.create') }}" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:account-plus" data-width="18" data-height="18"></span>
                 <span class="ml-2">Tambah Pegawai</span>
             </a>
+            @endif
         </div>
     </div>
 
@@ -311,6 +313,7 @@
                                     </td>
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex items-center justify-center gap-2">
+                                            @if(auth('admin')->user()->canManageAsn())
                                             <a href="{{ route('admin.pegawai.edit', $pegawai->id) }}"
                                                class="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm whitespace-nowrap">
                                                 <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
@@ -321,6 +324,9 @@
                                                 <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
                                                 <span class="ml-1">Hapus</span>
                                             </button>
+                                            @else
+                                            <span class="text-xs text-gray-500 italic">Lihat saja</span>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -378,10 +384,12 @@
                 <span class="iconify text-gray-300" data-icon="mdi:account-group" data-width="64" data-height="64"></span>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 mt-4">Belum Ada Data Pegawai</h3>
                 <p class="text-sm text-gray-500 mb-4">Sistem belum memiliki data pegawai/ASN</p>
+                @if(auth('admin')->user()->canManageAsn())
                 <a href="{{ route('admin.pegawai.create') }}" class="btn btn-primary">
                     <span class="iconify" data-icon="mdi:account-plus" data-width="16" data-height="16"></span>
                     <span class="ml-2">Tambah Pegawai Pertama</span>
                 </a>
+                @endif
             </div>
         @endif
     </div>

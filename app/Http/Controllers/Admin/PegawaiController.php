@@ -11,6 +11,15 @@ use Illuminate\Http\Request;
 class PegawaiController extends Controller
 {
     /**
+     * Apply middleware untuk permission check
+     */
+    public function __construct()
+    {
+        // Only super_admin and admin_bkpsdm can create, edit, and delete ASN
+        $this->middleware('admin.permission:manage_asn')
+             ->except(['index', 'getJabatanByOpd']);
+    }
+    /**
      * Menampilkan daftar semua pegawai
      */
     public function index(Request $request)
