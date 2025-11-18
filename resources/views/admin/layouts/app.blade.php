@@ -55,11 +55,13 @@
                     <span class="font-medium">Daftar Pegawai</span>
                 </a>
 
+                @if(auth('admin')->user()->isSuperAdmin())
                 <a href="{{ route('admin.admins.index') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.admins.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <span class="iconify" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
                     <span class="font-medium">Kelola Admin</span>
                 </a>
+                @endif
 
                 <div class="pt-4 pb-2 px-4">
                     <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analisis</span>
