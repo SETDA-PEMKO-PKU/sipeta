@@ -19,10 +19,10 @@ use App\Http\Controllers\Admin\AnalyticsController;
 |
 */
 
-// Redirect root ke login admin
+// Landing page
 Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+    return view('landing');
+})->name('landing');
 
 // Redirect /home ke admin dashboard
 Route::get('/home', function () {

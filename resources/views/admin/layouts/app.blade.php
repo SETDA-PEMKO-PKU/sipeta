@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin Panel') - Sistem Peta Jabatan</title>
+    <title>@yield('title', 'Admin Panel') - AKUPETA</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
@@ -174,7 +174,7 @@
             <!-- Footer -->
             <footer class="bg-white border-t border-gray-200 py-4 px-4 lg:px-8">
                 <div class="text-center text-sm text-gray-600">
-                    &copy; {{ date('Y') }} Sistem Peta Jabatan. All rights reserved.
+                    &copy; {{ date('Y') }} AKUPETA - Aplikasi Kendali Utama Peta Jabatan. All rights reserved.
                 </div>
             </footer>
         </div>
