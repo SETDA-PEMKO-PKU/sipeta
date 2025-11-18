@@ -62,7 +62,7 @@
                 </a>
 
                 <div class="pt-4 pb-2 px-4">
-                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analytics</span>
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analisis</span>
                 </div>
 
                 <a href="{{ route('admin.analytics.overview') }}"
