@@ -575,10 +575,10 @@ function drawTableNode(jenis, items, x, y) {
 
     // Draw each column
     columnData.forEach((columnItems, colIndex) => {
-        const colX = colIndex * (tableWidth + 20);
+        const colGroupX = colIndex * (tableWidth + 20);
         const totalHeight = headerHeight + columnHeaderHeight + (columnItems.length * rowHeight);
 
-        const colGroup = new Konva.Group({ x: colX, y: 0 });
+        const colGroup = new Konva.Group({ x: colGroupX, y: 0 });
 
         // Main border
         const border = new Konva.Rect({
