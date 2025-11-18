@@ -208,7 +208,6 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
                     <select name="jenis_jabatan" required class="input w-full">
                         <option value="">Pilih Jenis Jabatan</option>
-                        <option value="Staf Ahli">Staf Ahli</option>
                         <option value="Struktural">Struktural</option>
                         <option value="Fungsional">Fungsional</option>
                         <option value="Pelaksana">Pelaksana</option>
@@ -260,7 +259,6 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
                         <select name="jenis_jabatan" x-model="editJabatan.jenis_jabatan" required class="input w-full">
-                            <option value="Staf Ahli">Staf Ahli</option>
                             <option value="Struktural">Struktural</option>
                             <option value="Fungsional">Fungsional</option>
                             <option value="Pelaksana">Pelaksana</option>

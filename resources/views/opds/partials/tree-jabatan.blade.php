@@ -3,10 +3,24 @@
     $bezetting = $jabatan->asns->count();
     $gap = $bezetting - $jabatan->kebutuhan;
     $statusClass = $gap < 0 ? 'text-red-600' : ($gap > 0 ? 'text-green-600' : 'text-gray-600');
+    $hasChildren = $jabatan->children->count() > 0;
 @endphp
 
-<div class="tree-item" style="margin-left: {{ $indent }}px;">
+<div class="tree-item" style="margin-left: {{ $indent }}px;" x-data="{ expanded: true }">
     <div class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow mb-2">
+        <!-- Collapse Button -->
+        @if($hasChildren)
+            <button @click="expanded = !expanded" class="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors" title="Expand/Collapse">
+                <span class="iconify text-gray-600 transition-transform duration-200"
+                      :class="expanded ? '' : '-rotate-90'"
+                      data-icon="mdi:chevron-down"
+                      data-width="20"
+                      data-height="20"></span>
+            </button>
+        @else
+            <div class="flex-shrink-0 w-7"></div>
+        @endif
+
         <!-- Icon -->
         <div class="flex-shrink-0">
             @if($jabatan->isRoot())
@@ -22,8 +36,7 @@
                 <h4 class="font-semibold text-gray-900 truncate">{{ $jabatan->nama }}</h4>
                 <span class="badge badge-sm {{
                     $jabatan->jenis_jabatan == 'Struktural' ? 'badge-primary' :
-                    ($jabatan->jenis_jabatan == 'Fungsional' ? 'badge-success' :
-                    ($jabatan->jenis_jabatan == 'Staf Ahli' ? 'badge-warning' : 'badge-info'))
+                    ($jabatan->jenis_jabatan == 'Fungsional' ? 'badge-success' : 'badge-info')
                 }}">
                     {{ $jabatan->jenis_jabatan }}
                 </span>
@@ -49,14 +62,16 @@
 
         <!-- Actions -->
         <div class="flex-shrink-0 flex items-center gap-2">
-            <!-- Button Tambah Jabatan -->
-            <button
-                @click="$dispatch('open-modal', 'add-sub-jabatan-{{ $jabatan->id }}')"
-                class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-0"
-                title="Tambah Sub-Jabatan">
-                <span class="iconify" data-icon="mdi:plus-circle" data-width="14" data-height="14"></span>
-                <span class="ml-1">Jabatan</span>
-            </button>
+            <!-- Button Tambah Jabatan - hanya tampil jika bukan Pelaksana/Fungsional -->
+            @if(!in_array($jabatan->jenis_jabatan, ['Pelaksana', 'Fungsional']))
+                <button
+                    @click="$dispatch('open-modal', 'add-sub-jabatan-{{ $jabatan->id }}')"
+                    class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-0"
+                    title="Tambah Sub-Jabatan">
+                    <span class="iconify" data-icon="mdi:plus-circle" data-width="14" data-height="14"></span>
+                    <span class="ml-1">Jabatan</span>
+                </button>
+            @endif
 
             <!-- Button Lihat Pegawai -->
             @if($jabatan->asns->count() > 0)
@@ -88,10 +103,9 @@
                     'kebutuhan' => $jabatan->kebutuhan,
                     'parent_id' => $jabatan->parent_id
                 ]) }})"
-                class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white border-0"
+                class="btn btn-sm btn-square bg-amber-500 hover:bg-amber-600 text-white border-0"
                 title="Edit Jabatan">
-                <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
-                <span class="ml-1">Edit</span>
+                <span class="iconify" data-icon="mdi:pencil" data-width="16" data-height="16"></span>
             </button>
 
             <!-- Button Hapus -->
@@ -101,9 +115,8 @@
                   class="inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-sm bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Jabatan">
-                    <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
-                    <span class="ml-1">Hapus</span>
+                <button type="submit" class="btn btn-sm btn-square bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Jabatan">
+                    <span class="iconify" data-icon="mdi:delete" data-width="16" data-height="16"></span>
                 </button>
             </form>
         </div>
@@ -135,7 +148,6 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
                     <select name="jenis_jabatan" required class="input w-full">
                         <option value="">Pilih Jenis Jabatan</option>
-                        <option value="Staf Ahli">Staf Ahli</option>
                         <option value="Struktural">Struktural</option>
                         <option value="Fungsional">Fungsional</option>
                         <option value="Pelaksana">Pelaksana</option>
@@ -190,10 +202,9 @@
                                     'nip' => $asn->nip,
                                     'jabatan_id' => $asn->jabatan_id
                                 ]) }})"
-                                class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+                                class="btn btn-xs btn-square bg-amber-500 hover:bg-amber-600 text-white border-0"
                                 title="Edit Pegawai">
-                                <span class="iconify" data-icon="mdi:pencil" data-width="12" data-height="12"></span>
-                                <span class="ml-1">Edit</span>
+                                <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
                             </button>
                             <form action="{{ route('admin.opds.asn.destroy', [$opd->id, $asn->id]) }}"
                                   method="POST"
@@ -201,9 +212,8 @@
                                   class="inline">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-xs bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Pegawai">
-                                    <span class="iconify" data-icon="mdi:delete" data-width="12" data-height="12"></span>
-                                    <span class="ml-1">Hapus</span>
+                                <button type="submit" class="btn btn-xs btn-square bg-red-500 hover:bg-red-600 text-white border-0" title="Hapus Pegawai">
+                                    <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
                                 </button>
                             </form>
                         </div>
@@ -221,7 +231,9 @@
 
     <!-- Child Jabatan (Recursive) -->
     @if($jabatan->children->count() > 0)
-        <div class="ml-6">
+        <div x-show="expanded"
+             x-collapse
+             class="ml-6">
             @foreach($jabatan->children as $childJabatan)
                 @include('opds.partials.tree-jabatan', [
                     'jabatan' => $childJabatan,

@@ -114,7 +114,7 @@ class OpdController extends Controller
     {
         $request->validate([
             'nama' => 'required|string|max:255',
-            'jenis_jabatan' => 'required|in:Staf Ahli,Struktural,Fungsional,Pelaksana',
+            'jenis_jabatan' => 'required|in:Struktural,Fungsional,Pelaksana',
             'kelas' => 'nullable|string|max:50',
             'kebutuhan' => 'required|integer|min:0',
             'parent_jabatan_id' => 'nullable|exists:jabatans,id'
@@ -157,7 +157,7 @@ class OpdController extends Controller
     {
         $request->validate([
             'nama' => 'required|string|max:255',
-            'jenis_jabatan' => 'required|in:Staf Ahli,Struktural,Fungsional,Pelaksana',
+            'jenis_jabatan' => 'required|in:Struktural,Fungsional,Pelaksana',
             'kelas' => 'nullable|string|max:50',
             'kebutuhan' => 'required|integer|min:0',
             'parent_jabatan_id' => 'nullable|exists:jabatans,id'

@@ -433,9 +433,6 @@ class AnalyticsService
             case 'Fungsional':
                 $typeScore = 20;
                 break;
-            case 'Staf Ahli':
-                $typeScore = 25;
-                break;
             case 'Pelaksana':
                 $typeScore = 10;
                 break;

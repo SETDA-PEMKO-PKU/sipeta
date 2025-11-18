@@ -105,7 +105,7 @@ class AnalyticsController extends Controller
         );
 
         $opds = Opd::orderBy('nama')->get();
-        $jenisJabatanList = ['Struktural', 'Fungsional', 'Pelaksana', 'Staf Ahli'];
+        $jenisJabatanList = ['Struktural', 'Fungsional', 'Pelaksana'];
         $kelasList = range(1, 17);
 
         return view('admin.analytics.kepegawaian', compact(

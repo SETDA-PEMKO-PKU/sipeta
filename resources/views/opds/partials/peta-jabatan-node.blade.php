@@ -5,7 +5,7 @@
     $nodeClass = 'org-node ';
     if ($jabatan->isRoot()) {
         $nodeClass .= 'kepala';
-    } elseif (in_array($jabatan->jenis_jabatan, ['Struktural', 'Staf Ahli'])) {
+    } elseif ($jabatan->jenis_jabatan == 'Struktural') {
         $nodeClass .= 'struktural';
     } else {
         $nodeClass .= 'fungsional';
