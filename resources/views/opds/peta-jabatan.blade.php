@@ -398,59 +398,31 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         currentX += node.layoutWidth;
     });
 
-    // Add table nodes - place them side by side if both exist
+    // Add table nodes - stack vertically (pelaksana first, then fungsional)
     if (tableNodes.pelaksana || tableNodes.fungsional) {
         let tableY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-        const maxItemsPerColumn = 5;
-        const tableWidth = 400;
-        const tableGap = 50; // Gap between pelaksana and fungsional tables
+        const tableGap = 30; // Gap between pelaksana and fungsional tables
 
-        const hasBoth = tableNodes.pelaksana && tableNodes.fungsional;
-
-        if (hasBoth) {
-            // Calculate widths for both tables
-            const pelaksanaColumns = Math.ceil(tableNodes.pelaksana.items.length / maxItemsPerColumn);
-            const fungsionalColumns = Math.ceil(tableNodes.fungsional.items.length / maxItemsPerColumn);
-
-            const pelaksanaWidth = tableWidth * pelaksanaColumns + (pelaksanaColumns - 1) * 20;
-            const fungsionalWidth = tableWidth * fungsionalColumns + (fungsionalColumns - 1) * 20;
-
-            const totalTablesWidth = pelaksanaWidth + tableGap + fungsionalWidth;
-
-            // Position pelaksana on the left
+        if (tableNodes.pelaksana) {
             positions.push({
                 node: tableNodes.pelaksana,
-                x: x - totalTablesWidth / 2 + pelaksanaWidth / 2,
+                x: x,
                 y: tableY,
                 isTable: true
             });
 
-            // Position fungsional on the right
+            // Calculate pelaksana table height
+            const pelaksanaHeight = 25 + 25 + (tableNodes.pelaksana.items.length * CONFIG.tableRowHeight);
+            tableY += pelaksanaHeight + tableGap;
+        }
+
+        if (tableNodes.fungsional) {
             positions.push({
                 node: tableNodes.fungsional,
-                x: x - totalTablesWidth / 2 + pelaksanaWidth + tableGap + fungsionalWidth / 2,
+                x: x,
                 y: tableY,
                 isTable: true
             });
-        } else {
-            // Only one table exists, center it
-            if (tableNodes.pelaksana) {
-                positions.push({
-                    node: tableNodes.pelaksana,
-                    x: x,
-                    y: tableY,
-                    isTable: true
-                });
-            }
-
-            if (tableNodes.fungsional) {
-                positions.push({
-                    node: tableNodes.fungsional,
-                    x: x,
-                    y: tableY,
-                    isTable: true
-                });
-            }
         }
     }
 
@@ -551,196 +523,183 @@ function drawBoxNode(node, x, y) {
     return { width: CONFIG.boxWidth, height: totalHeight, centerX: x, bottomY: y + totalHeight };
 }
 
-// Draw table node with multi-column support
+// Draw table node (single column, vertical layout)
 function drawTableNode(jenis, items, x, y) {
-    const maxItemsPerColumn = 5; // Maximum items per column
-    const tableWidth = 400;
+    const tableWidth = 500;
     const headerHeight = 25;
     const columnHeaderHeight = 25;
     const rowHeight = CONFIG.tableRowHeight;
+    const totalHeight = headerHeight + columnHeaderHeight + (items.length * rowHeight);
 
-    // Calculate how many columns we need
-    const numColumns = Math.ceil(items.length / maxItemsPerColumn);
-    const actualTableWidth = tableWidth * numColumns + (numColumns - 1) * 20; // Add gap between tables
+    const group = new Konva.Group({ x: x - tableWidth / 2, y: y });
 
-    const group = new Konva.Group({ x: x - actualTableWidth / 2, y: y });
+    // Main border
+    const border = new Konva.Rect({
+        width: tableWidth,
+        height: totalHeight,
+        stroke: '#000000',
+        strokeWidth: 2,
+        fill: '#FFFFFF'
+    });
+    group.add(border);
 
-    // Split items into columns
-    const columnData = [];
-    for (let i = 0; i < numColumns; i++) {
-        const start = i * maxItemsPerColumn;
-        const end = Math.min(start + maxItemsPerColumn, items.length);
-        columnData.push(items.slice(start, end));
-    }
+    // Header
+    const header = new Konva.Rect({
+        width: tableWidth,
+        height: headerHeight,
+        fill: '#000000'
+    });
+    group.add(header);
 
-    // Draw each column
-    columnData.forEach((columnItems, colIndex) => {
-        const colGroupX = colIndex * (tableWidth + 20);
-        const totalHeight = headerHeight + columnHeaderHeight + (columnItems.length * rowHeight);
+    const headerText = new Konva.Text({
+        width: tableWidth,
+        height: headerHeight,
+        text: 'Jabatan ' + jenis,
+        fontSize: CONFIG.headerFontSize,
+        fontFamily: 'Arial',
+        fill: '#FFFFFF',
+        align: 'center',
+        verticalAlign: 'middle',
+        fontStyle: 'bold'
+    });
+    group.add(headerText);
 
-        const colGroup = new Konva.Group({ x: colGroupX, y: 0 });
+    // Column headers
+    const colHeaderY = headerHeight;
+    const colHeaderBg = new Konva.Rect({
+        y: colHeaderY,
+        width: tableWidth,
+        height: columnHeaderHeight,
+        fill: '#F3F4F6',
+        stroke: '#000000',
+        strokeWidth: 1
+    });
+    group.add(colHeaderBg);
 
-        // Main border
-        const border = new Konva.Rect({
-            width: tableWidth,
-            height: totalHeight,
-            stroke: '#000000',
-            strokeWidth: 2,
-            fill: '#FFFFFF'
-        });
-        colGroup.add(border);
+    // Column widths
+    const colWidths = {
+        nama: 275,
+        kelas: 75,
+        k: 50,
+        b: 50,
+        s: 50
+    };
 
-        // Header
-        const header = new Konva.Rect({
-            width: tableWidth,
-            height: headerHeight,
-            fill: '#000000'
-        });
-        colGroup.add(header);
+    let colX = 0;
+    const columns = [
+        { label: 'Nama Jabatan', width: colWidths.nama },
+        { label: 'Kelas', width: colWidths.kelas },
+        { label: 'B', width: colWidths.b },
+        { label: 'K', width: colWidths.k },
+        { label: 'S', width: colWidths.s }
+    ];
 
-        const headerText = new Konva.Text({
-            width: tableWidth,
-            height: headerHeight,
-            text: 'Jabatan ' + jenis + (numColumns > 1 ? ' (' + (colIndex + 1) + '/' + numColumns + ')' : ''),
-            fontSize: CONFIG.headerFontSize,
+    columns.forEach((col, idx) => {
+        if (idx > 0) {
+            const line = new Konva.Line({
+                points: [colX, colHeaderY, colX, totalHeight],
+                stroke: '#000000',
+                strokeWidth: 1
+            });
+            group.add(line);
+        }
+
+        const colText = new Konva.Text({
+            x: colX + 5,
+            y: colHeaderY,
+            width: col.width - 10,
+            height: columnHeaderHeight,
+            text: col.label,
+            fontSize: CONFIG.tableFontSize,
             fontFamily: 'Arial',
-            fill: '#FFFFFF',
+            fill: '#000000',
             align: 'center',
             verticalAlign: 'middle',
             fontStyle: 'bold'
         });
-        colGroup.add(headerText);
+        group.add(colText);
 
-        // Column headers
-        const colHeaderY = headerHeight;
-        const colHeaderBg = new Konva.Rect({
-            y: colHeaderY,
-            width: tableWidth,
-            height: columnHeaderHeight,
-            fill: '#F3F4F6',
-            stroke: '#000000',
-            strokeWidth: 1
-        });
-        colGroup.add(colHeaderBg);
+        colX += col.width;
+    });
 
-        // Column widths
-        const colWidths = {
-            nama: 200,
-            kelas: 60,
-            k: 45,
-            b: 45,
-            s: 50
-        };
+    // Data rows
+    items.forEach((item, idx) => {
+        const rowY = headerHeight + columnHeaderHeight + (idx * rowHeight);
 
-        let colX = 0;
-        const columns = [
-            { label: 'Nama Jabatan', width: colWidths.nama },
-            { label: 'Kelas', width: colWidths.kelas },
-            { label: 'K', width: colWidths.k },
-            { label: 'B', width: colWidths.b },
-            { label: 'S', width: colWidths.s }
+        // Horizontal line
+        if (idx > 0) {
+            const hLine = new Konva.Line({
+                points: [0, rowY, tableWidth, rowY],
+                stroke: '#000000',
+                strokeWidth: 1
+            });
+            group.add(hLine);
+        }
+
+        // Row data
+        let cellX = 0;
+        const rowData = [
+            { text: item.nama, width: colWidths.nama, align: 'left' },
+            { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
+            { text: item.bezetting.toString(), width: colWidths.b, align: 'center' },
+            { text: item.kebutuhan.toString(), width: colWidths.k, align: 'center' },
+            { text: (item.selisih >= 0 ? '+' : '') + item.selisih.toString(), width: colWidths.s, align: 'center' }
         ];
 
-        columns.forEach((col, idx) => {
-            if (idx > 0) {
-                const line = new Konva.Line({
-                    points: [colX, colHeaderY, colX, totalHeight],
-                    stroke: '#000000',
-                    strokeWidth: 1
-                });
-                colGroup.add(line);
-            }
-
-            const colText = new Konva.Text({
-                x: colX + 5,
-                y: colHeaderY,
-                width: col.width - 10,
-                height: columnHeaderHeight,
-                text: col.label,
+        rowData.forEach((cell) => {
+            const cellText = new Konva.Text({
+                x: cellX + 5,
+                y: rowY,
+                width: cell.width - 10,
+                height: rowHeight,
+                text: cell.text,
                 fontSize: CONFIG.tableFontSize,
                 fontFamily: 'Arial',
                 fill: '#000000',
-                align: 'center',
-                verticalAlign: 'middle',
-                fontStyle: 'bold'
+                align: cell.align,
+                verticalAlign: 'middle'
             });
-            colGroup.add(colText);
+            group.add(cellText);
 
-            colX += col.width;
+            cellX += cell.width;
         });
-
-        // Data rows
-        columnItems.forEach((item, idx) => {
-            const rowY = headerHeight + columnHeaderHeight + (idx * rowHeight);
-
-            // Horizontal line
-            if (idx > 0) {
-                const hLine = new Konva.Line({
-                    points: [0, rowY, tableWidth, rowY],
-                    stroke: '#000000',
-                    strokeWidth: 1
-                });
-                colGroup.add(hLine);
-            }
-
-            // Row data
-            cellX = 0;
-            const rowData = [
-                { text: item.nama, width: colWidths.nama, align: 'left' },
-                { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
-                { text: item.kebutuhan.toString(), width: colWidths.k, align: 'center' },
-                { text: item.bezetting.toString(), width: colWidths.b, align: 'center' },
-                { text: (item.selisih >= 0 ? '+' : '') + item.selisih.toString(), width: colWidths.s, align: 'center' }
-            ];
-
-            rowData.forEach((cell) => {
-                const cellText = new Konva.Text({
-                    x: cellX + 5,
-                    y: rowY,
-                    width: cell.width - 10,
-                    height: rowHeight,
-                    text: cell.text,
-                    fontSize: CONFIG.tableFontSize,
-                    fontFamily: 'Arial',
-                    fill: '#000000',
-                    align: cell.align,
-                    verticalAlign: 'middle'
-                });
-                colGroup.add(cellText);
-
-                cellX += cell.width;
-            });
-        });
-
-        group.add(colGroup);
     });
 
     layer.add(group);
-
-    // Return the maximum height among all columns
-    const maxHeight = Math.max(...columnData.map(col => headerHeight + columnHeaderHeight + (col.length * rowHeight)));
-    return { width: actualTableWidth, height: maxHeight, centerX: x, bottomY: y + maxHeight };
+    return { width: tableWidth, height: totalHeight, centerX: x, bottomY: y + totalHeight };
 }
 
-// Draw connector lines
+// Draw connector lines (straight line from parent to child)
 function drawConnector(fromX, fromY, toX, toY) {
-    const midY = (fromY + toY) / 2;
+    // Draw a simple straight vertical line if they're aligned
+    if (Math.abs(fromX - toX) < 5) {
+        const line = new Konva.Line({
+            points: [fromX, fromY, toX, toY],
+            stroke: '#000000',
+            strokeWidth: 2
+        });
+        layer.add(line);
+        line.moveToBottom();
+    } else {
+        // Draw L-shaped connector if not aligned
+        const midY = fromY + 20; // Small offset from parent
 
-    const line = new Konva.Line({
-        points: [
-            fromX, fromY,
-            fromX, midY,
-            toX, midY,
-            toX, toY
-        ],
-        stroke: '#000000',
-        strokeWidth: 2,
-        lineCap: 'square',
-        lineJoin: 'miter'
-    });
+        const line = new Konva.Line({
+            points: [
+                fromX, fromY,
+                fromX, midY,
+                toX, midY,
+                toX, toY
+            ],
+            stroke: '#000000',
+            strokeWidth: 2,
+            lineCap: 'square',
+            lineJoin: 'miter'
+        });
 
-    layer.add(line);
-    line.moveToBottom();
+        layer.add(line);
+        line.moveToBottom();
+    }
 }
 
 // Render the tree
