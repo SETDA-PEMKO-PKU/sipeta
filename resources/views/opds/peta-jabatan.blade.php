@@ -684,7 +684,7 @@ function drawTableNode(jenis, items, x, y) {
             }
 
             // Row data
-            let cellX = 0;
+            cellX = 0;
             const rowData = [
                 { text: item.nama, width: colWidths.nama, align: 'left' },
                 { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
