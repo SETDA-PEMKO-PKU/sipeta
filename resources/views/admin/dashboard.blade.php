@@ -21,7 +21,7 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Total OPD -->
         <div class="card">
             <div class="p-6">
@@ -32,21 +32,6 @@
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="24" data-height="24"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Bagian -->
-        <div class="card">
-            <div class="p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Total Bagian</p>
-                        <p class="text-3xl font-bold text-gray-900">{{ $stats['total_bagian'] }}</p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span class="iconify text-green-600" data-icon="mdi:folder-multiple" data-width="24" data-height="24"></span>
                     </div>
                 </div>
             </div>

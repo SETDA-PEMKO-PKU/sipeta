@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Asn;
 use App\Models\Opd;
 use App\Models\Jabatan;
-use App\Models\Bagian;
 use Illuminate\Http\Request;
 
 class PegawaiController extends Controller
@@ -16,16 +15,11 @@ class PegawaiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Asn::with(['jabatan', 'bagian', 'opd']);
+        $query = Asn::with(['jabatan.parent', 'opd']);
 
         // Filter berdasarkan OPD
         if ($request->filled('opd_id')) {
             $query->where('opd_id', $request->opd_id);
-        }
-
-        // Filter berdasarkan Bagian
-        if ($request->filled('bagian_id')) {
-            $query->where('bagian_id', $request->bagian_id);
         }
 
         // Filter berdasarkan Jabatan
@@ -57,7 +51,6 @@ class PegawaiController extends Controller
 
         // Data untuk filter dropdown
         $opds = Opd::orderBy('nama')->get();
-        $bagians = Bagian::orderBy('nama')->get();
         $jabatans = Jabatan::orderBy('nama')->get();
 
         // Daftar jenis jabatan yang unik
@@ -82,7 +75,6 @@ class PegawaiController extends Controller
             'totalPegawai',
             'totalOpd',
             'opds',
-            'bagians',
             'jabatans',
             'jenisJabatans',
             'kelasJabatans'
@@ -94,7 +86,7 @@ class PegawaiController extends Controller
      */
     public function create()
     {
-        $opds = Opd::with(['bagians.jabatans', 'jabatanKepala'])->orderBy('nama')->get();
+        $opds = Opd::with(['jabatanKepala.children.children'])->orderBy('nama')->get();
 
         return view('admin.pegawai.create', compact('opds'));
     }
@@ -111,21 +103,10 @@ class PegawaiController extends Controller
             'opd_id' => 'required|exists:opds,id'
         ]);
 
-        // Ambil data jabatan untuk mendapatkan bagian_id
-        $jabatan = Jabatan::findOrFail($request->jabatan_id);
-
-        // Tentukan bagian_id
-        $bagianId = null;
-        if ($jabatan->parent_id) {
-            // Jika jabatan memiliki parent_id, berarti itu adalah bagian
-            $bagianId = $jabatan->parent_id;
-        }
-
         Asn::create([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'bagian_id' => $bagianId,
             'opd_id' => $request->opd_id
         ]);
 
@@ -138,8 +119,8 @@ class PegawaiController extends Controller
      */
     public function edit($id)
     {
-        $pegawai = Asn::with(['jabatan', 'bagian', 'opd'])->findOrFail($id);
-        $opds = Opd::with(['bagians.jabatans', 'jabatanKepala'])->orderBy('nama')->get();
+        $pegawai = Asn::with(['jabatan', 'opd'])->findOrFail($id);
+        $opds = Opd::with(['jabatanKepala.children.children'])->orderBy('nama')->get();
 
         return view('admin.pegawai.edit', compact('pegawai', 'opds'));
     }
@@ -158,20 +139,10 @@ class PegawaiController extends Controller
 
         $pegawai = Asn::findOrFail($id);
 
-        // Ambil data jabatan untuk mendapatkan bagian_id
-        $jabatan = Jabatan::findOrFail($request->jabatan_id);
-
-        // Tentukan bagian_id
-        $bagianId = null;
-        if ($jabatan->parent_id) {
-            $bagianId = $jabatan->parent_id;
-        }
-
         $pegawai->update([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'bagian_id' => $bagianId,
             'opd_id' => $request->opd_id
         ]);
 
@@ -198,32 +169,31 @@ class PegawaiController extends Controller
      */
     public function getJabatanByOpd($opdId)
     {
-        $opd = Opd::with(['bagians.jabatans', 'jabatanKepala'])->findOrFail($opdId);
+        $opd = Opd::with(['jabatanKepala.children.children.children'])->findOrFail($opdId);
 
         $jabatans = [];
 
-        // Jabatan Kepala
-        foreach ($opd->jabatanKepala as $jabatan) {
+        // Recursive function untuk mendapatkan semua jabatan
+        $addJabatan = function($jabatan, $level = 0) use (&$jabatans, &$addJabatan) {
+            $prefix = str_repeat('— ', $level);
+
             $jabatans[] = [
                 'id' => $jabatan->id,
-                'nama' => $jabatan->nama,
-                'type' => 'kepala',
-                'bagian_nama' => 'Kepala OPD'
+                'nama' => $prefix . $jabatan->nama,
+                'type' => $jabatan->isRoot() ? 'kepala' : 'sub',
+                'parent_id' => $jabatan->parent_id,
+                'level' => $level
             ];
-        }
 
-        // Jabatan per Bagian
-        foreach ($opd->bagians as $bagian) {
-            foreach ($bagian->jabatans as $jabatan) {
-                $jabatans[] = [
-                    'id' => $jabatan->id,
-                    'nama' => $jabatan->nama,
-                    'type' => 'bagian',
-                    'bagian_id' => $bagian->id,
-                    'bagian_nama' => $bagian->nama,
-                    'bagian_parent_id' => $bagian->parent_id
-                ];
+            // Rekursif untuk children
+            foreach ($jabatan->children as $child) {
+                $addJabatan($child, $level + 1);
             }
+        };
+
+        // Proses semua jabatan kepala
+        foreach ($opd->jabatanKepala as $jabatan) {
+            $addJabatan($jabatan);
         }
 
         return response()->json($jabatans);

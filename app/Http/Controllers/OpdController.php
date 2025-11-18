@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Opd;
-use App\Models\Bagian;
 use App\Models\Jabatan;
 use App\Models\Asn;
 use Illuminate\Http\Request;
@@ -21,7 +20,7 @@ class OpdController extends Controller
             $perPage = 10;
         }
 
-        $opds = Opd::with(['bagians', 'jabatanKepala', 'bagians.jabatans.asns'])
+        $opds = Opd::with(['jabatanKepala.asns', 'asns'])
                    ->orderBy('nama')
                    ->paginate($perPage)
                    ->withQueryString();
@@ -50,15 +49,14 @@ class OpdController extends Controller
     }
 
     /**
-     * Menampilkan detail OPD beserta bagian dan jabatan
+     * Menampilkan detail OPD beserta hierarki jabatan
      */
     public function show($id)
     {
         $opd = Opd::with([
-            'bagians.jabatans.bagian',
-            'bagians.children',
-            'jabatans.bagian',
-            'jabatans.asns'
+            'jabatanKepala.children.children.children',
+            'jabatanKepala.asns',
+            'asns.jabatan'
         ])->findOrFail($id);
 
         // Tambahkan semua jabatan (termasuk jabatan kepala OPD)
@@ -72,8 +70,8 @@ class OpdController extends Controller
      */
     public function getOpdTree($id)
     {
-        $opd = Opd::with(['bagians' => function($query) {
-            $query->whereNull('parent_id')->with('children.jabatans');
+        $opd = Opd::with(['jabatanKepala' => function($query) {
+            $query->with('children.children.children');
         }])->findOrFail($id);
 
         return response()->json($opd);
@@ -84,7 +82,7 @@ class OpdController extends Controller
      */
     public function getJabatanAsns($id)
     {
-        $jabatan = Jabatan::with(['asns', 'parentBagian'])->findOrFail($id);
+        $jabatan = Jabatan::with(['asns', 'parent'])->findOrFail($id);
 
         // Build response data
         $data = [
@@ -94,16 +92,14 @@ class OpdController extends Controller
             'kelas' => $jabatan->kelas,
             'kebutuhan' => $jabatan->kebutuhan,
             'bezetting' => $jabatan->asns->count(),
-            'bagian_id' => $jabatan->parent_id,
-            'bagian_nama' => $jabatan->parentBagian ? $jabatan->parentBagian->nama : null,
+            'parent_id' => $jabatan->parent_id,
+            'parent_nama' => $jabatan->parent ? $jabatan->parent->nama : null,
             'asns' => $jabatan->asns->map(function($asn) {
                 return [
                     'id' => $asn->id,
                     'nama' => $asn->nama,
                     'nip' => $asn->nip,
                     'jabatan_id' => $asn->jabatan_id,
-                    'bagian_id' => $asn->bagian_id,
-                    'bagian_nama' => $asn->bagian ? $asn->bagian->nama : '-',
                 ];
             })
         ];
@@ -121,14 +117,18 @@ class OpdController extends Controller
             'jenis_jabatan' => 'required|in:Staf Ahli,Struktural,Fungsional,Pelaksana',
             'kelas' => 'nullable|string|max:50',
             'kebutuhan' => 'required|integer|min:0',
-            'bagian_id' => 'nullable|exists:bagians,id'
+            'parent_jabatan_id' => 'nullable|exists:jabatans,id'
         ]);
 
-        // Pastikan bagian_id milik OPD ini (jika ada)
-        if ($request->bagian_id) {
-            $bagian = Bagian::where('id', $request->bagian_id)
-                           ->where('opd_id', $opdId)
-                           ->firstOrFail();
+        // Pastikan parent_jabatan_id milik OPD ini (jika ada)
+        if ($request->parent_jabatan_id) {
+            $parentJabatan = Jabatan::findOrFail($request->parent_jabatan_id);
+
+            // Validasi parent jabatan milik OPD yang sama
+            $parentOpdId = $parentJabatan->getOpdId();
+            if ($parentOpdId != $opdId) {
+                return back()->withErrors(['parent_jabatan_id' => 'Parent jabatan tidak valid untuk OPD ini.']);
+            }
         }
 
         $jabatanData = [
@@ -136,11 +136,11 @@ class OpdController extends Controller
             'jenis_jabatan' => $request->jenis_jabatan,
             'kelas' => $request->kelas,
             'kebutuhan' => $request->kebutuhan,
-            'parent_id' => $request->bagian_id
+            'parent_id' => $request->parent_jabatan_id
         ];
 
-        // Jika tidak ada bagian_id, maka ini adalah jabatan kepala OPD
-        if (!$request->bagian_id) {
+        // Jika tidak ada parent_jabatan_id, maka ini adalah jabatan kepala OPD
+        if (!$request->parent_jabatan_id) {
             $jabatanData['opd_id'] = $opdId;
         }
 
@@ -160,24 +160,35 @@ class OpdController extends Controller
             'jenis_jabatan' => 'required|in:Staf Ahli,Struktural,Fungsional,Pelaksana',
             'kelas' => 'nullable|string|max:50',
             'kebutuhan' => 'required|integer|min:0',
-            'bagian_id' => 'nullable|exists:bagians,id'
+            'parent_jabatan_id' => 'nullable|exists:jabatans,id'
         ]);
 
-        // Cari jabatan berdasarkan ID dan OPD (bisa jabatan kepala OPD atau jabatan dengan bagian)
-        $jabatan = Jabatan::where('id', $jabatanId)
-                          ->where(function($query) use ($opdId) {
-                              $query->where('opd_id', $opdId) // Jabatan kepala OPD
-                                    ->orWhereHas('parentBagian', function($subQuery) use ($opdId) {
-                                        $subQuery->where('opd_id', $opdId); // Jabatan dengan bagian
-                                    });
-                          })
-                          ->firstOrFail();
+        // Cari jabatan dan validasi
+        $jabatan = Jabatan::findOrFail($jabatanId);
 
-        // Pastikan bagian_id milik OPD ini (jika ada)
-        if ($request->bagian_id) {
-            $bagian = Bagian::where('id', $request->bagian_id)
-                           ->where('opd_id', $opdId)
-                           ->firstOrFail();
+        // Validasi jabatan milik OPD ini
+        $jabatanOpdId = $jabatan->getOpdId();
+        if ($jabatanOpdId != $opdId) {
+            return back()->withErrors(['error' => 'Jabatan tidak valid untuk OPD ini.']);
+        }
+
+        // Pastikan parent_jabatan_id milik OPD ini (jika ada)
+        if ($request->parent_jabatan_id) {
+            // Tidak boleh set parent ke diri sendiri
+            if ($request->parent_jabatan_id == $jabatanId) {
+                return back()->withErrors(['parent_jabatan_id' => 'Jabatan tidak bisa menjadi parent dari dirinya sendiri.']);
+            }
+
+            $parentJabatan = Jabatan::findOrFail($request->parent_jabatan_id);
+            $parentOpdId = $parentJabatan->getOpdId();
+            if ($parentOpdId != $opdId) {
+                return back()->withErrors(['parent_jabatan_id' => 'Parent jabatan tidak valid untuk OPD ini.']);
+            }
+
+            // Cek circular reference
+            if ($this->wouldCreateCircularReference($jabatanId, $request->parent_jabatan_id)) {
+                return back()->withErrors(['parent_jabatan_id' => 'Tidak dapat membuat circular reference dalam hierarki jabatan.']);
+            }
         }
 
         $updateData = [
@@ -185,11 +196,11 @@ class OpdController extends Controller
             'jenis_jabatan' => $request->jenis_jabatan,
             'kelas' => $request->kelas,
             'kebutuhan' => $request->kebutuhan,
-            'parent_id' => $request->bagian_id
+            'parent_id' => $request->parent_jabatan_id
         ];
 
-        // Jika tidak ada bagian_id, maka ini adalah jabatan kepala OPD
-        if (!$request->bagian_id) {
+        // Jika tidak ada parent_jabatan_id, maka ini adalah jabatan kepala OPD
+        if (!$request->parent_jabatan_id) {
             $updateData['opd_id'] = $opdId;
             $updateData['parent_id'] = null;
         } else {
@@ -203,24 +214,40 @@ class OpdController extends Controller
     }
 
     /**
+     * Check apakah akan membuat circular reference
+     */
+    private function wouldCreateCircularReference($jabatanId, $proposedParentId)
+    {
+        $currentParent = Jabatan::find($proposedParentId);
+
+        while ($currentParent) {
+            if ($currentParent->id == $jabatanId) {
+                return true;
+            }
+            $currentParent = $currentParent->parent;
+        }
+
+        return false;
+    }
+
+    /**
      * Menghapus jabatan
      */
     public function destroyJabatan($opdId, $jabatanId)
     {
-        // Cari jabatan berdasarkan ID dan OPD (bisa jabatan kepala OPD atau jabatan dengan bagian)
-        $jabatan = Jabatan::where('id', $jabatanId)
-                          ->where(function($query) use ($opdId) {
-                              $query->where('opd_id', $opdId) // Jabatan kepala OPD
-                                    ->orWhereHas('parentBagian', function($subQuery) use ($opdId) {
-                                        $subQuery->where('opd_id', $opdId); // Jabatan dengan bagian
-                                    });
-                          })
-                          ->firstOrFail();
+        $jabatan = Jabatan::findOrFail($jabatanId);
 
-        // Cek apakah jabatan memiliki jabatan terkait dalam bagian yang sama
-        if ($jabatan->siblings()->count() > 0) {
+        // Validasi jabatan milik OPD ini
+        $jabatanOpdId = $jabatan->getOpdId();
+        if ($jabatanOpdId != $opdId) {
             return redirect()->route('admin.opds.show', $opdId)
-                            ->with('error', 'Tidak dapat menghapus jabatan yang memiliki jabatan terkait dalam bagian yang sama!');
+                            ->with('error', 'Jabatan tidak valid untuk OPD ini!');
+        }
+
+        // Cek apakah jabatan memiliki child jabatan
+        if ($jabatan->children()->count() > 0) {
+            return redirect()->route('admin.opds.show', $opdId)
+                            ->with('error', 'Tidak dapat menghapus jabatan yang memiliki sub-jabatan!');
         }
 
         // Cek apakah jabatan memiliki ASN
@@ -259,24 +286,21 @@ class OpdController extends Controller
     }
 
     /**
-     * Hapus OPD beserta semua bagian dan jabatan di dalamnya
+     * Hapus OPD beserta semua jabatan di dalamnya
      */
     public function destroy($id)
     {
         $opd = Opd::findOrFail($id);
 
         // Hapus semua jabatan yang terkait dengan OPD ini
-        // (akan otomatis menghapus jabatan di semua bagian karena cascade)
+        // (akan otomatis menghapus child jabatan karena cascade)
         $opd->jabatans()->delete();
-
-        // Hapus semua bagian
-        $opd->bagians()->delete();
 
         // Hapus OPD
         $opd->delete();
 
         return redirect()->route('admin.opds.index')
-                        ->with('success', 'OPD "' . $opd->nama . '" beserta semua bagian dan jabatan berhasil dihapus!');
+                        ->with('success', 'OPD "' . $opd->nama . '" beserta semua jabatan berhasil dihapus!');
     }
 
     /**
@@ -287,42 +311,21 @@ class OpdController extends Controller
         $request->validate([
             'nama' => 'required|string|max:255',
             'nip' => 'required|string|max:30|unique:asns,nip',
-            'jabatan_id' => 'required|exists:jabatans,id',
-            'bagian_id' => 'nullable|exists:bagians,id'
+            'jabatan_id' => 'required|exists:jabatans,id'
         ]);
 
-        // Validasi bahwa jabatan dan bagian (jika ada) milik OPD yang benar
+        // Validasi bahwa jabatan milik OPD yang benar
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
+        $jabatanOpdId = $jabatan->getOpdId();
 
-        // Cek apakah jabatan adalah kepala OPD atau jabatan dengan bagian
-        if ($jabatan->opd_id) {
-            // Jabatan kepala OPD
-            if ($jabatan->opd_id != $opdId) {
-                return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
-            }
-            $bagianId = null;
-        } else {
-            // Jabatan dengan bagian
-            if (!$jabatan->parentBagian || $jabatan->parentBagian->opd_id != $opdId) {
-                return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
-            }
-            $bagianId = $jabatan->parent_id;
-        }
-
-        // Validasi bagian_id jika disediakan
-        if ($request->bagian_id) {
-            $bagian = Bagian::findOrFail($request->bagian_id);
-            if ($bagian->opd_id != $opdId) {
-                return back()->withErrors(['bagian_id' => 'Bagian tidak valid untuk OPD ini.']);
-            }
-            $bagianId = $request->bagian_id;
+        if ($jabatanOpdId != $opdId) {
+            return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
         }
 
         Asn::create([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'bagian_id' => $bagianId,
             'opd_id' => $opdId
         ]);
 
@@ -338,45 +341,25 @@ class OpdController extends Controller
         $request->validate([
             'nama' => 'required|string|max:255',
             'nip' => 'required|string|max:30|unique:asns,nip,' . $asnId,
-            'jabatan_id' => 'required|exists:jabatans,id',
-            'bagian_id' => 'nullable|exists:bagians,id'
+            'jabatan_id' => 'required|exists:jabatans,id'
         ]);
 
         $asn = Asn::where('id', $asnId)
                   ->where('opd_id', $opdId)
                   ->firstOrFail();
 
-        // Simpan jabatan lama jika jabatan berubah
-        $jabatanLama = $asn->jabatan;
-
-        // Validasi jabatan dan bagian seperti di storeAsn
+        // Validasi jabatan
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
+        $jabatanOpdId = $jabatan->getOpdId();
 
-        if ($jabatan->opd_id) {
-            if ($jabatan->opd_id != $opdId) {
-                return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
-            }
-            $bagianId = null;
-        } else {
-            if (!$jabatan->parentBagian || $jabatan->parentBagian->opd_id != $opdId) {
-                return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
-            }
-            $bagianId = $jabatan->parent_id;
-        }
-
-        if ($request->bagian_id) {
-            $bagian = Bagian::findOrFail($request->bagian_id);
-            if ($bagian->opd_id != $opdId) {
-                return back()->withErrors(['bagian_id' => 'Bagian tidak valid untuk OPD ini.']);
-            }
-            $bagianId = $request->bagian_id;
+        if ($jabatanOpdId != $opdId) {
+            return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
         }
 
         $asn->update([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'bagian_id' => $bagianId,
             'opd_id' => $opdId
         ]);
 
@@ -394,8 +377,6 @@ class OpdController extends Controller
                   ->firstOrFail();
 
         $namaAsn = $asn->nama;
-        $jabatan = $asn->jabatan;
-
         $asn->delete();
 
         return redirect()->route('admin.opds.show', $opdId)
@@ -408,8 +389,7 @@ class OpdController extends Controller
     public function petaJabatan($id)
     {
         $opd = Opd::with([
-            'bagians.jabatans.asns',
-            'bagians.children.jabatans.asns',
+            'jabatanKepala.children.children.children.asns',
             'jabatanKepala.asns'
         ])->findOrFail($id);
 
@@ -422,9 +402,11 @@ class OpdController extends Controller
     public function export($id)
     {
         $opd = Opd::with([
-            'bagians.jabatans.asns',
             'jabatanKepala.asns'
         ])->findOrFail($id);
+
+        // Get all jabatan
+        $allJabatans = $opd->getAllJabatans();
 
         // Prepare data untuk export
         $exportData = [];
@@ -432,7 +414,7 @@ class OpdController extends Controller
         // Header CSV
         $exportData[] = [
             'OPD',
-            'Bagian',
+            'Hierarki Jabatan',
             'Jabatan',
             'Jenis Jabatan',
             'Kelas',
@@ -443,16 +425,20 @@ class OpdController extends Controller
             'ASN - NIP'
         ];
 
-        // Data Jabatan Kepala OPD
-        foreach ($opd->jabatanKepala as $jabatan) {
+        // Data Jabatan
+        foreach ($allJabatans as $jabatan) {
             $bezetting = $jabatan->asns->count();
             $selisih = $bezetting - $jabatan->kebutuhan;
+
+            // Build hierarki path
+            $path = $jabatan->getPath();
+            $hierarki = $path->pluck('nama')->implode(' → ');
 
             if ($jabatan->asns->count() > 0) {
                 foreach ($jabatan->asns as $asn) {
                     $exportData[] = [
                         $opd->nama,
-                        'Kepala OPD',
+                        $hierarki,
                         $jabatan->nama,
                         $jabatan->jenis_jabatan,
                         $jabatan->kelas ?? '-',
@@ -466,7 +452,7 @@ class OpdController extends Controller
             } else {
                 $exportData[] = [
                     $opd->nama,
-                    'Kepala OPD',
+                    $hierarki,
                     $jabatan->nama,
                     $jabatan->jenis_jabatan,
                     $jabatan->kelas ?? '-',
@@ -476,44 +462,6 @@ class OpdController extends Controller
                     '-',
                     '-'
                 ];
-            }
-        }
-
-        // Data Bagian dan Jabatan
-        foreach ($opd->bagians as $bagian) {
-            foreach ($bagian->jabatans as $jabatan) {
-                $bezetting = $jabatan->asns->count();
-                $selisih = $bezetting - $jabatan->kebutuhan;
-
-                if ($jabatan->asns->count() > 0) {
-                    foreach ($jabatan->asns as $asn) {
-                        $exportData[] = [
-                            $opd->nama,
-                            $bagian->nama,
-                            $jabatan->nama,
-                            $jabatan->jenis_jabatan,
-                            $jabatan->kelas ?? '-',
-                            $jabatan->kebutuhan,
-                            $bezetting,
-                            $selisih,
-                            $asn->nama,
-                            $asn->nip
-                        ];
-                    }
-                } else {
-                    $exportData[] = [
-                        $opd->nama,
-                        $bagian->nama,
-                        $jabatan->nama,
-                        $jabatan->jenis_jabatan,
-                        $jabatan->kelas ?? '-',
-                        $jabatan->kebutuhan,
-                        $bezetting,
-                        $selisih,
-                        '-',
-                        '-'
-                    ];
-                }
             }
         }
 

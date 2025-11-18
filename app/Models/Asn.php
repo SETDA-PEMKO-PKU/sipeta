@@ -15,7 +15,6 @@ class Asn extends Model
         'nama',
         'nip',
         'jabatan_id',
-        'bagian_id',
         'opd_id'
     ];
 
@@ -28,27 +27,11 @@ class Asn extends Model
     }
 
     /**
-     * Relasi langsung ke bagian
-     */
-    public function bagian()
-    {
-        return $this->belongsTo(Bagian::class, 'bagian_id');
-    }
-
-    /**
      * Relasi langsung ke OPD
      */
     public function opd()
     {
         return $this->belongsTo(Opd::class, 'opd_id');
-    }
-
-    /**
-     * Mendapatkan bagian melalui jabatan (fallback)
-     */
-    public function bagianMelaluiJabatan()
-    {
-        return $this->hasOneThrough(Bagian::class, Jabatan::class, 'id', 'id', 'jabatan_id', 'parent_id');
     }
 
     /**

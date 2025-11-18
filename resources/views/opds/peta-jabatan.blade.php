@@ -5,190 +5,118 @@
 
 @push('styles')
 <style>
-    .org-chart-container {
-        overflow-x: auto;
-        overflow-y: auto;
-        padding: 40px;
-        background: #f9fafb;
-        min-height: calc(100vh - 200px);
-    }
-
     .org-chart {
         display: flex;
         flex-direction: column;
         align-items: center;
-        position: relative;
-        min-width: fit-content;
-    }
-
-    .org-node {
-        background: white;
-        border: 2px solid #374151;
-        border-radius: 4px;
-        padding: 12px;
-        margin: 10px;
-        min-width: 250px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        position: relative;
-    }
-
-    .org-node-header {
-        background: #374151;
-        color: white;
-        font-weight: 600;
-        font-size: 13px;
-        padding: 8px;
-        text-align: center;
-        margin: -12px -12px 12px -12px;
-        border-radius: 2px 2px 0 0;
-    }
-
-    .org-node-kelas {
-        background: #f3f4f6;
-        font-size: 12px;
-        padding: 6px 8px;
-        text-align: center;
-        margin: -4px -12px 12px -12px;
-        border-bottom: 1px solid #d1d5db;
+        padding: 2rem;
+        overflow-x: auto;
     }
 
     .org-level {
         display: flex;
+        gap: 2rem;
+        margin-bottom: 3rem;
         justify-content: center;
-        align-items: flex-start;
-        gap: 20px;
         position: relative;
-        margin-top: 40px;
-        flex-wrap: wrap;
     }
 
-    .org-line-v {
-        width: 2px;
-        height: 40px;
-        background: #6b7280;
-        margin: 0 auto;
+    .org-node {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        min-width: 200px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        position: relative;
     }
 
-    .org-branch {
-        position: relative;
+    .org-node.kepala {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #eff6ff 0%, white 100%);
+    }
+
+    .org-node.struktural {
+        border-color: #8b5cf6;
+        background: linear-gradient(135deg, #f5f3ff 0%, white 100%);
+    }
+
+    .org-node.fungsional {
+        border-color: #10b981;
+        background: linear-gradient(135deg, #ecfdf5 0%, white 100%);
+    }
+
+    .org-node-header {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .org-node-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .org-node-kelas {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .org-node-stats {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e5e7eb;
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        max-width: 400px;
+        justify-content: space-around;
+        font-size: 0.75rem;
     }
 
-    /* Connector lines */
-    .org-level::before {
-        content: '';
+    .org-node-stat {
+        text-align: center;
+    }
+
+    .org-node-stat-value {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .org-node-stat-label {
+        color: #6b7280;
+        margin-top: 0.125rem;
+    }
+
+    .org-connector {
         position: absolute;
-        top: -20px;
-        height: 2px;
-        background: #6b7280;
-        left: 10%;
-        right: 10%;
-    }
-
-    .org-level.single::before {
-        display: none;
-    }
-
-    .org-branch::before {
-        content: '';
-        position: absolute;
-        top: -20px;
-        width: 2px;
-        height: 20px;
-        background: #6b7280;
+        border-left: 2px solid #d1d5db;
+        height: 2rem;
+        top: -2rem;
         left: 50%;
         transform: translateX(-50%);
     }
 
-    /* Tables */
-    .jabatan-table {
+    .org-horizontal-line {
+        position: absolute;
+        border-top: 2px solid #d1d5db;
         width: 100%;
-        font-size: 11px;
-        border-collapse: collapse;
-        margin-bottom: 12px;
-    }
-
-    .jabatan-table th {
-        background: #374151;
-        color: white;
-        padding: 6px 4px;
-        border: 1px solid #374151;
-        font-weight: 600;
-        text-align: center;
-        font-size: 10px;
-    }
-
-    .jabatan-table td {
-        padding: 5px 6px;
-        border: 1px solid #9ca3af;
-        text-align: left;
-        background: white;
-    }
-
-    .jabatan-table td.center {
-        text-align: center;
-    }
-
-    .jabatan-pelaksana-header {
-        background: #374151;
-        color: white;
-        font-weight: 600;
-        font-size: 11px;
-        padding: 6px 8px;
-        text-align: center;
-        margin: 0 -12px 8px -12px;
-    }
-
-    .pelaksana-table {
-        width: 100%;
-        font-size: 10px;
-        border-collapse: collapse;
-    }
-
-    .pelaksana-table th {
-        background: #374151;
-        color: white;
-        padding: 5px 4px;
-        border: 1px solid #374151;
-        font-weight: 600;
-        text-align: center;
-        font-size: 10px;
-    }
-
-    .pelaksana-table td {
-        padding: 4px 5px;
-        border: 1px solid #9ca3af;
-        background: white;
-    }
-
-    .pelaksana-table td.center {
-        text-align: center;
+        top: -2rem;
+        left: 0;
     }
 
     @media print {
-        .back-btn, .btn {
+        body {
+            background: white;
+        }
+        .no-print {
             display: none !important;
         }
-
-        .org-chart-container {
-            overflow: visible;
-            padding: 20px;
-        }
-
-        body {
-            background: white !important;
-        }
-
-        .org-node {
-            page-break-inside: avoid;
-        }
-
-        @page {
-            size: A3 landscape;
-            margin: 1cm;
+        .org-chart {
+            padding: 1rem;
         }
     }
 </style>
@@ -197,188 +125,73 @@
 @section('content')
 <div class="p-4 lg:p-8">
     <!-- Header -->
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex justify-between items-center no-print">
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.opds.show', $opd->id) }}" class="back-btn text-gray-600 hover:text-gray-900">
+            <a href="{{ route('admin.opds.show', $opd->id) }}" class="text-gray-600 hover:text-gray-900">
                 <span class="iconify" data-icon="mdi:arrow-left" data-width="20" data-height="20"></span>
             </a>
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Peta Jabatan</h2>
-                <p class="text-sm text-gray-600">{{ $opd->nama }}</p>
+                <p class="text-gray-600">{{ $opd->nama }}</p>
             </div>
         </div>
+
         <div class="flex gap-2">
-            <button onclick="window.print()" class="btn btn-primary">
+            <button onclick="window.print()" class="btn btn-outline">
                 <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
                 <span class="ml-2">Cetak</span>
             </button>
+            <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
+                <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
+                <span class="ml-2">Export</span>
+            </a>
         </div>
     </div>
 
     <!-- Organizational Chart -->
-    <div class="org-chart-container card">
-        <div class="org-chart">
-            <!-- Kepala OPD / Sekretaris Daerah -->
-            @foreach($opd->jabatanKepala as $kepala)
-                <div class="org-node">
-                    <div class="org-node-header">Jabatan {{ $kepala->jenis_jabatan ?? 'Struktural' }}</div>
-                    <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
-                        {{ $kepala->nama }}
-                    </div>
-                    <div class="org-node-kelas">Kelas {{ $kepala->kelas ?? '-' }}</div>
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        @if($opd->jabatanKepala->count() > 0)
+            <div class="org-chart">
+                @foreach($opd->jabatanKepala as $kepala)
+                    @include('opds.partials.peta-jabatan-node', [
+                        'jabatan' => $kepala,
+                        'level' => 0,
+                        'isFirst' => $loop->first
+                    ])
+                @endforeach
+            </div>
+        @else
+            <div class="text-center py-12">
+                <span class="iconify text-gray-300" data-icon="mdi:file-tree" data-width="64" data-height="64"></span>
+                <p class="mt-4 text-gray-500">
+                    Belum ada struktur organisasi untuk {{ $opd->nama }}
+                </p>
+                <div class="mt-6 no-print">
+                    <a href="{{ route('admin.opds.show', $opd->id) }}" class="btn btn-primary">
+                        <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
+                        <span class="ml-2">Tambah Jabatan</span>
+                    </a>
                 </div>
+            </div>
+        @endif
+    </div>
 
-                @if($opd->bagians->where('parent_id', null)->count() > 0)
-                    <div class="org-line-v"></div>
-                @endif
-            @endforeach
-
-            <!-- Bagian/Asisten Level 1 -->
-            @php
-                $mainBagians = $opd->bagians->where('parent_id', null);
-            @endphp
-
-            @if($mainBagians->count() > 0)
-                <div class="org-level {{ $mainBagians->count() == 1 ? 'single' : '' }}">
-                    @foreach($mainBagians as $bagian)
-                        <div class="org-branch">
-                            @php
-                                $jabatanStruktural = $bagian->jabatans->whereIn('jenis_jabatan', ['Struktural', 'Staf Ahli']);
-                                $subBagians = $opd->bagians->where('parent_id', $bagian->id);
-                                $kepalaBagianKelas = $jabatanStruktural->first()->kelas ?? '-';
-                                $jenisJabatanBagian = $jabatanStruktural->first()->jenis_jabatan ?? 'Struktural';
-                            @endphp
-
-                            <div class="org-node">
-                                <div class="org-node-header">Jabatan {{ $jenisJabatanBagian }}</div>
-                                <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
-                                    {{ $bagian->nama }}
-                                </div>
-                                <div class="org-node-kelas">Kelas {{ $kepalaBagianKelas }}</div>
-
-                                @if($subBagians->count() > 0)
-                                    <!-- Ada Sub-Bagian -->
-                                    <div class="org-line-v" style="margin: 12px auto;"></div>
-                                    <div class="org-level {{ $subBagians->count() == 1 ? 'single' : '' }}" style="margin-top: 0;">
-                                        @foreach($subBagians as $subBagian)
-                                            <div class="org-branch" style="max-width: none;">
-                                                @php
-                                                    $subJabatanStruktural = $subBagian->jabatans->whereIn('jenis_jabatan', ['Struktural', 'Staf Ahli']);
-                                                    $subJabatanPelaksana = $subBagian->jabatans->whereIn('jenis_jabatan', ['Fungsional', 'Pelaksana']);
-                                                    $kepalaSubBagianKelas = $subJabatanStruktural->first()->kelas ?? '-';
-                                                    $jenisJabatanSub = $subJabatanStruktural->first()->jenis_jabatan ?? 'Struktural';
-                                                @endphp
-
-                                                <div class="org-node">
-                                                    <div class="org-node-header">Jabatan {{ $jenisJabatanSub }}</div>
-                                                    <div style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 13px;">
-                                                        {{ $subBagian->nama }}
-                                                    </div>
-                                                    <div class="org-node-kelas">Kelas {{ $kepalaSubBagianKelas }}</div>
-
-                                                    <!-- Tabel Jabatan Pelaksana -->
-                                                    @if($subJabatanPelaksana->count() > 0)
-                                                        @php
-                                                            $jenisJabatanPelaksana = $subJabatanPelaksana->first()->jenis_jabatan ?? 'Pelaksana';
-                                                        @endphp
-                                                        <div class="jabatan-pelaksana-header">Jabatan {{ $jenisJabatanPelaksana }}</div>
-
-                                                        <table class="pelaksana-table">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th style="width: 45%;">Nama Jabatan</th>
-                                                                    <th style="width: 15%;">Kelas</th>
-                                                                    <th style="width: 10%;">B</th>
-                                                                    <th style="width: 10%;">K</th>
-                                                                    <th style="width: 10%;">S</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach($subJabatanPelaksana as $jabatan)
-                                                                    @foreach($jabatan->asns as $index => $asn)
-                                                                        <tr>
-                                                                            @if($index == 0)
-                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}">{{ $jabatan->nama }}</td>
-                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() }}</td>
-                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kebutuhan }}</td>
-                                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
-                                                                            @endif
-                                                                        </tr>
-                                                                    @endforeach
-
-                                                                    @if($jabatan->asns->count() == 0)
-                                                                        <tr>
-                                                                            <td>{{ $jabatan->nama }}</td>
-                                                                            <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                                            <td class="center">0</td>
-                                                                            <td class="center">{{ $jabatan->kebutuhan }}</td>
-                                                                            <td class="center">-{{ $jabatan->kebutuhan }}</td>
-                                                                        </tr>
-                                                                    @endif
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <!-- Tidak ada Sub-Bagian, tampilkan jabatan langsung -->
-                                    @php
-                                        $jabatanPelaksana = $bagian->jabatans->whereIn('jenis_jabatan', ['Fungsional', 'Pelaksana']);
-                                    @endphp
-
-                                    @if($jabatanPelaksana->count() > 0)
-                                        @php
-                                            $jenisJabatanPelaksana = $jabatanPelaksana->first()->jenis_jabatan ?? 'Pelaksana';
-                                        @endphp
-                                        <div class="jabatan-pelaksana-header">Jabatan {{ $jenisJabatanPelaksana }}</div>
-
-                                        <table class="pelaksana-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 45%;">Nama Jabatan</th>
-                                                    <th style="width: 15%;">Kelas</th>
-                                                    <th style="width: 10%;">B</th>
-                                                    <th style="width: 10%;">K</th>
-                                                    <th style="width: 10%;">S</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($jabatanPelaksana as $jabatan)
-                                                    @foreach($jabatan->asns as $index => $asn)
-                                                        <tr>
-                                                            @if($index == 0)
-                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}">{{ $jabatan->nama }}</td>
-                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() }}</td>
-                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->kebutuhan }}</td>
-                                                                <td rowspan="{{ max(1, $jabatan->asns->count()) }}" class="center">{{ $jabatan->asns->count() - $jabatan->kebutuhan }}</td>
-                                                            @endif
-                                                        </tr>
-                                                    @endforeach
-
-                                                    @if($jabatan->asns->count() == 0)
-                                                        <tr>
-                                                            <td>{{ $jabatan->nama }}</td>
-                                                            <td class="center">{{ $jabatan->kelas ?? '-' }}</td>
-                                                            <td class="center">0</td>
-                                                            <td class="center">{{ $jabatan->kebutuhan }}</td>
-                                                            <td class="center">-{{ $jabatan->kebutuhan }}</td>
-                                                        </tr>
-                                                    @endif
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    @endif
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+    <!-- Legend -->
+    <div class="mt-6 bg-white rounded-lg shadow-sm p-4 no-print">
+        <h3 class="font-semibold text-gray-900 mb-3">Keterangan:</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #eff6ff 0%, white 100%); border: 2px solid #3b82f6;"></div>
+                <span class="text-sm text-gray-700">Jabatan Kepala/Root</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #f5f3ff 0%, white 100%); border: 2px solid #8b5cf6;"></div>
+                <span class="text-sm text-gray-700">Jabatan Struktural</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded" style="background: linear-gradient(135deg, #ecfdf5 0%, white 100%); border: 2px solid #10b981;"></div>
+                <span class="text-sm text-gray-700">Jabatan Fungsional</span>
+            </div>
         </div>
     </div>
 </div>

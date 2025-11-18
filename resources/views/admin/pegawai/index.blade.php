@@ -98,7 +98,7 @@
             </div>
         @endif
 
-        @if($pegawais->count() > 0 || request()->hasAny(['opd_id', 'bagian_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
+        @if($pegawais->count() > 0 || request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
             <!-- Filter Panel -->
             <div class="card mb-3 animate-slide-up">
                 <div class="card-body p-4">
@@ -127,8 +127,8 @@
                                     class="btn btn-outline flex items-center gap-2">
                                 <span class="iconify" data-icon="mdi:filter-variant" data-width="16" data-height="16"></span>
                                 <span>Filter</span>
-                                @if(request()->hasAny(['opd_id', 'bagian_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
-                                    <span class="badge badge-primary badge-sm">{{ collect(['opd_id', 'bagian_id', 'jabatan_id', 'jenis_jabatan', 'kelas'])->filter(fn($key) => request()->filled($key))->count() }}</span>
+                                @if(request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
+                                    <span class="badge badge-primary badge-sm">{{ collect(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas'])->filter(fn($key) => request()->filled($key))->count() }}</span>
                                 @endif
                             </button>
                             <div class="text-xs text-gray-500" x-text="searchResults + ' Pegawai'"></div>
@@ -149,19 +149,6 @@
                                     @foreach($opds as $opd)
                                         <option value="{{ $opd->id }}" {{ request('opd_id') == $opd->id ? 'selected' : '' }}>
                                             {{ $opd->nama }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <!-- Filter Bagian -->
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Bagian</label>
-                                <select name="bagian_id" class="input text-sm w-full">
-                                    <option value="">Semua Bagian</option>
-                                    @foreach($bagians as $bagian)
-                                        <option value="{{ $bagian->id }}" {{ request('bagian_id') == $bagian->id ? 'selected' : '' }}>
-                                            {{ $bagian->nama }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -221,7 +208,7 @@
                     </form>
 
                     <!-- Active Filters Display -->
-                    @if(request()->hasAny(['opd_id', 'bagian_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
+                    @if(request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
                         <div class="mt-3 pt-3 border-t border-gray-200">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-xs font-medium text-gray-600">Filter Aktif:</span>
@@ -230,13 +217,6 @@
                                     <span class="badge badge-primary">
                                         OPD: {{ $opds->find(request('opd_id'))->nama ?? '' }}
                                         <a href="{{ route('admin.pegawai.index', array_filter(request()->except('opd_id'))) }}" class="ml-1 hover:text-white">×</a>
-                                    </span>
-                                @endif
-
-                                @if(request('bagian_id'))
-                                    <span class="badge badge-success">
-                                        Bagian: {{ $bagians->find(request('bagian_id'))->nama ?? '' }}
-                                        <a href="{{ route('admin.pegawai.index', array_filter(request()->except('bagian_id'))) }}" class="ml-1 hover:text-white">×</a>
                                     </span>
                                 @endif
 
@@ -434,7 +414,7 @@ function pegawaiIndex() {
         searchQuery: '',
         searchResults: {{ $pegawais->total() }},
         totalPegawais: {{ $pegawais->total() }},
-        showFilters: {{ request()->hasAny(['opd_id', 'bagian_id', 'jabatan_id', 'jenis_jabatan', 'kelas']) ? 'true' : 'false' }},
+        showFilters: {{ request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']) ? 'true' : 'false' }},
 
         performSearch() {
             const rows = document.querySelectorAll('.pegawai-row');

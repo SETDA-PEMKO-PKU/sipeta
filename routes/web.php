@@ -80,11 +80,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{opd}/jabatan/{jabatan}', [OpdController::class, 'updateJabatan'])->name('opds.jabatan.update');
             Route::delete('/{opd}/jabatan/{jabatan}', [OpdController::class, 'destroyJabatan'])->name('opds.jabatan.destroy');
 
-            // CRUD Bagian dalam OPD
-            Route::post('/{opd}/bagian', [App\Http\Controllers\BagianController::class, 'store'])->name('opds.bagian.store');
-            Route::put('/{opd}/bagian/{bagian}', [App\Http\Controllers\BagianController::class, 'update'])->name('opds.bagian.update');
-            Route::delete('/{opd}/bagian/{bagian}', [App\Http\Controllers\BagianController::class, 'destroy'])->name('opds.bagian.destroy');
-
             // CRUD ASN dalam OPD
             Route::post('/{opd}/asn', [OpdController::class, 'storeAsn'])->name('opds.asn.store');
             Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
@@ -95,7 +90,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('api')->group(function () {
             Route::get('/opds/{id}/tree', [OpdController::class, 'getOpdTree'])->name('api.opds.tree');
             Route::get('/jabatan/{id}/asns', [OpdController::class, 'getJabatanAsns'])->name('api.jabatan.asns');
-            Route::get('/bagian/{id}/detail', [App\Http\Controllers\BagianController::class, 'getDetail'])->name('api.bagian.detail');
             Route::get('/opds/{id}/jabatans', [PegawaiController::class, 'getJabatanByOpd'])->name('api.opds.jabatans');
         });
     });

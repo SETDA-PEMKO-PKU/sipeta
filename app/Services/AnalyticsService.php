@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Opd;
-use App\Models\Bagian;
 use App\Models\Jabatan;
 use App\Models\Asn;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +16,6 @@ class AnalyticsService
     {
         return [
             'total_opd' => Opd::count(),
-            'total_bagian' => Bagian::count(),
             'total_jabatan' => Jabatan::count(),
             'total_asn' => Asn::count(),
             'total_kebutuhan' => Jabatan::sum('kebutuhan'),
@@ -85,14 +83,9 @@ class AnalyticsService
      */
     public function getKebutuhanByOpd($opdId)
     {
-        // Jabatan bisa punya opd_id langsung (kepala) atau via bagian (parent_id)
-        $kebutuhanLangsung = Jabatan::where('opd_id', $opdId)->sum('kebutuhan');
-
-        $kebutuhanViaBagian = Jabatan::whereHas('bagian', function($query) use ($opdId) {
-            $query->where('opd_id', $opdId);
-        })->sum('kebutuhan');
-
-        return $kebutuhanLangsung + $kebutuhanViaBagian;
+        $opd = Opd::findOrFail($opdId);
+        $allJabatans = $opd->getAllJabatans();
+        return $allJabatans->sum('kebutuhan');
     }
 
     /**
@@ -101,20 +94,23 @@ class AnalyticsService
     public function getUnderstaffedPositions($limit = 10)
     {
         return Jabatan::select('jabatans.*', DB::raw('kebutuhan - (SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) as gap'))
-            ->with(['opd', 'bagian'])
+            ->with(['parent'])
             ->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
             ->get()
             ->map(function ($jabatan) {
                 $bezetting = $jabatan->asns()->count();
+                $opdId = $jabatan->getOpdId();
+                $opd = $opdId ? Opd::find($opdId) : null;
+
                 return [
                     'id' => $jabatan->id,
                     'nama_jabatan' => $jabatan->nama,
                     'jenis_jabatan' => $jabatan->jenis_jabatan,
                     'kelas' => $jabatan->kelas,
-                    'opd' => $jabatan->opd->nama ?? '-',
-                    'bagian' => $jabatan->bagian->nama ?? '-',
+                    'opd' => $opd ? $opd->nama : '-',
+                    'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
                     'kebutuhan' => $jabatan->kebutuhan,
                     'bezetting' => $bezetting,
                     'gap' => $jabatan->kebutuhan - $bezetting,
@@ -128,20 +124,23 @@ class AnalyticsService
     public function getOverstaffedPositions($limit = 10)
     {
         return Jabatan::select('jabatans.*', DB::raw('(SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) - kebutuhan as gap'))
-            ->with(['opd', 'bagian'])
+            ->with(['parent'])
             ->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
             ->get()
             ->map(function ($jabatan) {
                 $bezetting = $jabatan->asns()->count();
+                $opdId = $jabatan->getOpdId();
+                $opd = $opdId ? Opd::find($opdId) : null;
+
                 return [
                     'id' => $jabatan->id,
                     'nama_jabatan' => $jabatan->nama,
                     'jenis_jabatan' => $jabatan->jenis_jabatan,
                     'kelas' => $jabatan->kelas,
-                    'opd' => $jabatan->opd->nama ?? '-',
-                    'bagian' => $jabatan->bagian->nama ?? '-',
+                    'opd' => $opd ? $opd->nama : '-',
+                    'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
                     'kebutuhan' => $jabatan->kebutuhan,
                     'bezetting' => $bezetting,
                     'gap' => $bezetting - $jabatan->kebutuhan,
@@ -154,48 +153,52 @@ class AnalyticsService
      */
     public function getOpdAnalytics($opdId)
     {
-        $opd = Opd::with(['bagians', 'asns'])->findOrFail($opdId);
+        $opd = Opd::with(['asns'])->findOrFail($opdId);
+        $allJabatans = $opd->getAllJabatans();
 
-        // Get total jabatan (langsung + via bagian)
-        $totalJabatanLangsung = Jabatan::where('opd_id', $opdId)->count();
-        $totalJabatanViaBagian = Jabatan::whereHas('bagian', function($query) use ($opdId) {
-            $query->where('opd_id', $opdId);
-        })->count();
-        $totalJabatan = $totalJabatanLangsung + $totalJabatanViaBagian;
-
-        $totalKebutuhan = $this->getKebutuhanByOpd($opdId);
+        $totalJabatan = $allJabatans->count();
+        $totalKebutuhan = $allJabatans->sum('kebutuhan');
         $totalBezetting = $opd->asns->count();
 
         return [
             'opd' => $opd,
-            'total_bagian' => $opd->bagians->count(),
             'total_jabatan' => $totalJabatan,
             'total_kebutuhan' => $totalKebutuhan,
             'total_bezetting' => $totalBezetting,
             'total_selisih' => $totalBezetting - $totalKebutuhan,
             'persentase_pemenuhan' => $totalKebutuhan > 0 ? round(($totalBezetting / $totalKebutuhan) * 100, 2) : 0,
-            'bagians_data' => $this->getBagianDataByOpd($opdId),
+            'bagians_data' => $this->getJabatanRootDataByOpd($opdId),
             'jabatan_kosong' => $this->getJabatanKosongByOpd($opdId),
         ];
     }
 
     /**
-     * Get bagian data grouped by bagian for OPD
+     * Get root jabatan data grouped for OPD (replacement for bagian data)
      */
-    public function getBagianDataByOpd($opdId)
+    public function getJabatanRootDataByOpd($opdId)
     {
-        return Bagian::where('opd_id', $opdId)
-            ->withCount('asns')
-            ->get()
-            ->map(function ($bagian) {
-                $kebutuhan = Jabatan::where('parent_id', $bagian->id)->sum('kebutuhan');
-                return [
-                    'nama' => $bagian->nama,
-                    'bezetting' => $bagian->asns_count,
-                    'kebutuhan' => $kebutuhan,
-                    'selisih' => $bagian->asns_count - $kebutuhan,
-                ];
-            });
+        $opd = Opd::findOrFail($opdId);
+        $rootJabatans = $opd->jabatanKepala;
+
+        return $rootJabatans->map(function ($jabatan) {
+            $allDescendants = $jabatan->getAllDescendants();
+            $allJabatans = collect([$jabatan])->merge($allDescendants);
+
+            $bezetting = 0;
+            $kebutuhan = 0;
+
+            foreach ($allJabatans as $j) {
+                $bezetting += $j->asns()->count();
+                $kebutuhan += $j->kebutuhan;
+            }
+
+            return [
+                'nama' => $jabatan->nama,
+                'bezetting' => $bezetting,
+                'kebutuhan' => $kebutuhan,
+                'selisih' => $bezetting - $kebutuhan,
+            ];
+        });
     }
 
     /**
@@ -203,24 +206,12 @@ class AnalyticsService
      */
     public function getJabatanKosongByOpd($opdId)
     {
-        // Get jabatan langsung dan via bagian
-        $jabatanLangsung = Jabatan::where('opd_id', $opdId)
-            ->where('kebutuhan', '>', 0)
-            ->with('bagian')
-            ->get();
-
-        $jabatanViaBagian = Jabatan::whereHas('bagian', function($query) use ($opdId) {
-                $query->where('opd_id', $opdId);
-            })
-            ->where('kebutuhan', '>', 0)
-            ->with('bagian')
-            ->get();
-
-        $allJabatan = $jabatanLangsung->merge($jabatanViaBagian);
+        $opd = Opd::findOrFail($opdId);
+        $allJabatan = $opd->getAllJabatans();
 
         return $allJabatan
             ->filter(function ($jabatan) {
-                return $jabatan->asns()->count() == 0;
+                return $jabatan->kebutuhan > 0 && $jabatan->asns()->count() == 0;
             })
             ->values()
             ->map(function ($jabatan) {
@@ -228,7 +219,7 @@ class AnalyticsService
                     'nama_jabatan' => $jabatan->nama,
                     'jenis_jabatan' => $jabatan->jenis_jabatan,
                     'kelas' => $jabatan->kelas,
-                    'bagian' => $jabatan->bagian->nama ?? '-',
+                    'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
                     'kebutuhan' => $jabatan->kebutuhan,
                 ];
             });

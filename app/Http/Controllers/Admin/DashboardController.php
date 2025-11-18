@@ -7,7 +7,6 @@ use App\Models\Admin;
 use App\Models\Opd;
 use App\Models\Jabatan;
 use App\Models\Asn;
-use App\Models\Bagian;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -16,7 +15,6 @@ class DashboardController extends Controller
     {
         $stats = [
             'total_opd' => Opd::count(),
-            'total_bagian' => Bagian::count(),
             'total_jabatan' => Jabatan::count(),
             'total_asn' => Asn::count(),
             'total_admin' => Admin::count(),

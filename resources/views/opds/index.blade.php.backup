@@ -41,8 +41,8 @@
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-gray-600 mb-1">Total Jabatan</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->getAllJabatans()->count(); }) }}</p>
+                        <p class="text-xs text-gray-600 mb-1">Total Bagian</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->bagians->count(); }) }}</p>
                     </div>
                     <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-green-600" data-icon="mdi:folder-multiple" data-width="20" data-height="20"></span>
@@ -56,8 +56,8 @@
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-gray-600 mb-1">Total ASN</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->asns->count(); }) }}</p>
+                        <p class="text-xs text-gray-600 mb-1">Total Jabatan</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum(function($opd) { return $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }); }) }}</p>
                     </div>
                     <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-purple-600" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
@@ -66,13 +66,21 @@
             </div>
         </div>
 
-        <!-- Selisih -->
+        <!-- Total ASN -->
         @php
             $totalAsn = $opds->sum(function($opd) {
-                return $opd->asns->count();
+                return $opd->bagians->sum(function($bagian) {
+                    return $bagian->jabatans->sum(function($jabatan) {
+                        return $jabatan->asns->count();
+                    });
+                }) + $opd->jabatanKepala->sum(function($jabatan) {
+                    return $jabatan->asns->count();
+                });
             });
             $totalKebutuhan = $opds->sum(function($opd) {
-                return $opd->getAllJabatans()->sum('kebutuhan');
+                return $opd->jabatanKepala->sum('kebutuhan') + $opd->bagians->sum(function($bagian) {
+                    return $bagian->jabatans->sum('kebutuhan');
+                });
             });
             $selisih = $totalAsn - $totalKebutuhan;
         @endphp
@@ -80,8 +88,25 @@
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
+                        <p class="text-xs text-gray-600 mb-1">Total ASN</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $totalAsn }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-yellow-600" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selisih -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
                         <p class="text-xs text-gray-600 mb-1">Selisih</p>
-                        <p class="text-2xl font-bold {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ $selisih >= 0 ? '+' : '' }}{{ $selisih }}</p>
+                        <p class="text-2xl font-bold {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                            {{ $selisih >= 0 ? '+' : '' }}{{ $selisih }}
+                        </p>
                     </div>
                     <div class="w-10 h-10 {{ $selisih >= 0 ? 'bg-green-100' : 'bg-red-100' }} rounded-lg flex items-center justify-center">
                         <span class="iconify {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}" data-icon="{{ $selisih >= 0 ? 'mdi:trending-up' : 'mdi:trending-down' }}" data-width="20" data-height="20"></span>
@@ -89,8 +114,6 @@
                 </div>
             </div>
         </div>
-
-
     </div>
 
     <div>
@@ -155,6 +178,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nama OPD</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Bagian</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Jabatan</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ASN</th>
                                 <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Aksi</th>
@@ -176,10 +200,13 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="badge badge-primary">{{ $opd->getAllJabatans()->count() }}</span>
+                                        <span class="badge badge-success">{{ $opd->bagians->count() }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="badge badge-gray">{{ $opd->asns->count() }}</span>
+                                        <span class="badge badge-primary">{{ $opd->jabatanKepala->count() + $opd->bagians->sum(function($bagian) { return $bagian->jabatans->count(); }) }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="badge badge-gray">{{ $opd->bagians->sum(function($bagian) { return $bagian->jabatans->sum(function($jabatan) { return $jabatan->asns->count(); }); }) + $opd->jabatanKepala->sum(function($jabatan) { return $jabatan->asns->count(); }) }}</span>
                                     </td>
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex items-center justify-center gap-2">
@@ -335,7 +362,7 @@
             <h3 class="text-lg font-semibold text-gray-900 mt-3 mb-2">Hapus OPD?</h3>
             <p class="text-sm text-gray-600 mb-4">
                 Apakah Anda yakin ingin menghapus <strong id="delete_opd_nama"></strong>?<br>
-                Semua data jabatan dan ASN di dalamnya akan ikut terhapus.<br>
+                Semua data bagian, jabatan, dan ASN di dalamnya akan ikut terhapus.<br>
                 <span class="text-red-600 font-semibold">Tindakan ini tidak dapat dibatalkan!</span>
             </p>
             <form id="deleteOpdForm" method="POST" class="flex gap-2 justify-center">

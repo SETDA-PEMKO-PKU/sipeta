@@ -17,25 +17,15 @@ class Opd extends Model
     ];
 
     /**
-     * Relasi ke bagian-bagian yang dimiliki OPD ini
-     */
-    public function bagians()
-    {
-        return $this->hasMany(Bagian::class, 'opd_id');
-    }
-
-    /**
-     * Mendapatkan semua jabatan yang ada di OPD ini
-     * Termasuk jabatan yang terkait dengan bagian dan jabatan pimpinan OPD (tanpa bagian)
+     * Mendapatkan semua jabatan yang ada di OPD ini (direct relationship)
      */
     public function jabatans()
     {
-        // Menggunakan hasManyThrough dengan parent_id yang sekarang mereferensikan bagians
-        return $this->hasManyThrough(Jabatan::class, Bagian::class, 'opd_id', 'parent_id');
+        return $this->hasMany(Jabatan::class, 'opd_id');
     }
 
     /**
-     * Mendapatkan jabatan kepala OPD (jabatan tanpa bagian)
+     * Mendapatkan jabatan kepala OPD (jabatan root level)
      */
     public function jabatanKepala()
     {
@@ -43,15 +33,30 @@ class Opd extends Model
     }
 
     /**
-     * Mendapatkan semua jabatan termasuk kepala OPD
+     * Mendapatkan semua jabatan termasuk sub-jabatan
      */
     public function getAllJabatans()
     {
-        // Gabungkan jabatan kepala OPD dan jabatan dari bagian
-        $jabatanKepala = $this->jabatanKepala()->get();
-        $jabatanBagian = $this->jabatans()->get();
+        $allJabatans = collect();
 
-        return $jabatanKepala->merge($jabatanBagian);
+        // Dapatkan jabatan kepala (root)
+        $jabatanKepala = $this->jabatanKepala()->get();
+
+        foreach ($jabatanKepala as $kepala) {
+            $allJabatans->push($kepala);
+            // Dapatkan semua descendants
+            $allJabatans = $allJabatans->merge($kepala->getAllDescendants());
+        }
+
+        return $allJabatans;
+    }
+
+    /**
+     * Mendapatkan hierarki jabatan dalam bentuk tree
+     */
+    public function getJabatanTree()
+    {
+        return $this->jabatanKepala()->with('children.children.children')->get();
     }
 
     /**
@@ -60,5 +65,21 @@ class Opd extends Model
     public function asns()
     {
         return $this->hasMany(Asn::class, 'opd_id');
+    }
+
+    /**
+     * Hitung total jabatan di OPD ini
+     */
+    public function getTotalJabatanAttribute()
+    {
+        return $this->getAllJabatans()->count();
+    }
+
+    /**
+     * Hitung total ASN di OPD ini
+     */
+    public function getTotalAsnAttribute()
+    {
+        return $this->asns()->count();
     }
 }

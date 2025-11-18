@@ -1,167 +1,166 @@
 @php
+    $indent = $level * 24;
     $bezetting = $jabatan->asns->count();
-    $kebutuhan = $jabatan->kebutuhan;
-    $badgeClass = 'badge-gray';
-    if ($bezetting > 0) {
-        if ($bezetting == $kebutuhan) $badgeClass = 'badge-success';
-        elseif ($bezetting < $kebutuhan) $badgeClass = 'badge-warning';
-        else $badgeClass = 'badge-danger';
-    }
-    $treeId = 'jabatan-' . $jabatan->id;
+    $gap = $bezetting - $jabatan->kebutuhan;
+    $statusClass = $gap < 0 ? 'text-red-600' : ($gap > 0 ? 'text-green-600' : 'text-gray-600');
 @endphp
 
-<div class="tree-item" data-tree-node="{{ $treeId }}" x-data="{ showPegawaiModal: false }" role="treeitem">
-    <div class="tree-node tree-node-{{ $type }} group"
-         :style="{ marginLeft: '{{ $level * 1.5 }}rem' }"
-         tabindex="0"
-         :aria-label="'Jabatan: {{ $jabatan->nama }}, Bezetting: {{ $bezetting }}, Kebutuhan: {{ $kebutuhan }}'">
-
-        <!-- Placeholder for alignment -->
-        <span class="w-5"></span>
-
+<div class="tree-item" style="margin-left: {{ $indent }}px;">
+    <div class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow mb-2">
         <!-- Icon -->
-        <span class="iconify flex-shrink-0 {{ $type === 'kepala' ? 'text-amber-600' : 'text-green-600' }}"
-              :data-icon="'{{ $type === 'kepala' ? 'mdi:crown' : 'mdi:account-tie' }}'"
-              data-width="18"
-              data-height="18"
-              aria-hidden="true"></span>
-
-        <!-- Label -->
-        <div class="flex-1 min-w-0">
-            <div class="font-medium text-gray-900 truncate leading-tight">{{ $jabatan->nama }}</div>
-            <div class="flex items-center gap-3 text-xs text-gray-600 mt-0.5">
-                @if($jabatan->jenis_jabatan)
-                    <span class="inline-flex items-center gap-1">
-                        <span class="iconify text-gray-400" data-icon="mdi:tag" data-width="12" data-height="12"></span>
-                        {{ $jabatan->jenis_jabatan }}
-                    </span>
-                @endif
-                @if($jabatan->kelas)
-                    <span class="inline-flex items-center gap-1">
-                        <span class="iconify text-gray-400" data-icon="mdi:certificate" data-width="12" data-height="12"></span>
-                        Kelas {{ $jabatan->kelas }}
-                    </span>
-                @endif
-            </div>
+        <div class="flex-shrink-0">
+            @if($jabatan->isRoot())
+                <span class="iconify text-blue-500" data-icon="mdi:account-tie" data-width="24" data-height="24"></span>
+            @else
+                <span class="iconify text-gray-500" data-icon="mdi:briefcase-outline" data-width="24" data-height="24"></span>
+            @endif
         </div>
 
-        <!-- Bezetting Badge -->
-        <span class="badge {{ $badgeClass }} text-xs whitespace-nowrap font-semibold" aria-label="Bezetting {{ $bezetting }} dari {{ $kebutuhan }}">
-            {{ $bezetting }}/{{ $kebutuhan }}
-        </span>
+        <!-- Jabatan Info -->
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-gray-900 truncate">{{ $jabatan->nama }}</h4>
+                <span class="badge badge-sm {{
+                    $jabatan->jenis_jabatan == 'Struktural' ? 'badge-primary' :
+                    ($jabatan->jenis_jabatan == 'Fungsional' ? 'badge-success' :
+                    ($jabatan->jenis_jabatan == 'Staf Ahli' ? 'badge-warning' : 'badge-info'))
+                }}">
+                    {{ $jabatan->jenis_jabatan }}
+                </span>
+                @if($jabatan->kelas)
+                    <span class="text-xs text-gray-500">Kelas {{ $jabatan->kelas }}</span>
+                @endif
+            </div>
+            <div class="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                <span class="flex items-center gap-1">
+                    <span class="iconify" data-icon="mdi:account-multiple" data-width="14" data-height="14"></span>
+                    Kebutuhan: <span class="font-medium">{{ $jabatan->kebutuhan }}</span>
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="iconify" data-icon="mdi:account-check" data-width="14" data-height="14"></span>
+                    Bezetting: <span class="font-medium">{{ $bezetting }}</span>
+                </span>
+                <span class="flex items-center gap-1 {{ $statusClass }}">
+                    <span class="iconify" data-icon="mdi:{{ $gap < 0 ? 'alert-circle' : ($gap > 0 ? 'arrow-up-circle' : 'check-circle') }}" data-width="14" data-height="14"></span>
+                    Selisih: <span class="font-medium">{{ $gap >= 0 ? '+' : '' }}{{ $gap }}</span>
+                </span>
+            </div>
+
+            <!-- Single ASN Display (jika hanya 1 ASN) -->
+            @if($jabatan->asns->count() == 1)
+                @php $asn = $jabatan->asns->first(); @endphp
+                <div class="flex items-center gap-2 mt-2 text-sm">
+                    <span class="iconify text-blue-500" data-icon="mdi:account" data-width="16" data-height="16"></span>
+                    <span class="font-medium text-gray-900">{{ $asn->nama }}</span>
+                    <span class="text-gray-500 text-xs">NIP: {{ $asn->nip }}</span>
+                </div>
+            @endif
+        </div>
 
         <!-- Actions -->
-        <div class="tree-actions flex gap-1" role="group" aria-label="Actions for {{ $jabatan->nama }}">
-            @if($jabatan->asns->count() > 0)
-                <button @click.stop="showPegawaiModal = true"
-                        class="flex items-center gap-1 px-2 py-1.5 hover:bg-purple-100 rounded-md text-purple-600 transition-colors text-xs font-medium"
-                        title="Lihat Pegawai"
-                        aria-label="Lihat Pegawai di {{ $jabatan->nama }}"
-                        type="button">
-                    <span class="iconify" data-icon="mdi:account-group" data-width="14" data-height="14"></span>
-                    <span>Lihat Pegawai</span>
+        <div class="flex-shrink-0 flex items-center gap-2">
+            <!-- Button Lihat Pegawai (jika lebih dari 1 ASN) -->
+            @if($jabatan->asns->count() > 1)
+                <button
+                    @click="$dispatch('open-modal', 'view-asn-{{ $jabatan->id }}')"
+                    class="btn btn-sm btn-info flex items-center gap-1">
+                    <span class="iconify" data-icon="mdi:account-group" data-width="16" data-height="16"></span>
+                    <span>Lihat Pegawai ({{ $jabatan->asns->count() }})</span>
                 </button>
             @endif
-            @if($bezetting < $kebutuhan)
-                <button @click.stop="$dispatch('add-asn', { jabatanId: {{ $jabatan->id }}, nama: '{{ $jabatan->nama }}' })"
-                        class="flex items-center gap-1 px-2 py-1.5 hover:bg-green-100 rounded-md text-green-600 transition-colors text-xs font-medium"
-                        title="Tambah ASN"
-                        aria-label="Tambah ASN ke {{ $jabatan->nama }}"
-                        type="button">
-                    <span class="iconify" data-icon="mdi:account-plus" data-width="14" data-height="14"></span>
-                    <span>Tambah</span>
-                </button>
-            @endif
-            <button @click.stop="$dispatch('edit-jabatan', { id: {{ $jabatan->id }} })"
-                    class="flex items-center gap-1 px-2 py-1.5 hover:bg-yellow-100 rounded-md text-yellow-600 transition-colors text-xs font-medium"
-                    title="Edit Jabatan"
-                    aria-label="Edit {{ $jabatan->nama }}"
-                    type="button">
-                <span class="iconify" data-icon="mdi:pencil" data-width="14" data-height="14"></span>
+
+            <button
+                @click="$dispatch('open-modal', 'add-asn')"
+                class="btn btn-sm btn-success flex items-center gap-1">
+                <span class="iconify" data-icon="mdi:account-plus" data-width="16" data-height="16"></span>
+                <span>Tambah ASN</span>
+            </button>
+
+            <button
+                @click="$store.editJabatan = {{ json_encode([
+                    'id' => $jabatan->id,
+                    'nama' => $jabatan->nama,
+                    'jenis_jabatan' => $jabatan->jenis_jabatan,
+                    'kelas' => $jabatan->kelas,
+                    'kebutuhan' => $jabatan->kebutuhan,
+                    'parent_id' => $jabatan->parent_id
+                ]) }}"
+                class="btn btn-sm btn-outline flex items-center gap-1">
+                <span class="iconify" data-icon="mdi:pencil" data-width="16" data-height="16"></span>
                 <span>Edit</span>
             </button>
-            <button @click.stop="$dispatch('delete-jabatan', { id: {{ $jabatan->id }}, nama: '{{ $jabatan->nama }}' })"
-                    class="flex items-center gap-1 px-2 py-1.5 hover:bg-red-100 rounded-md text-red-600 transition-colors text-xs font-medium"
-                    title="Hapus Jabatan"
-                    aria-label="Hapus {{ $jabatan->nama }}"
-                    type="button">
-                <span class="iconify" data-icon="mdi:delete" data-width="14" data-height="14"></span>
-                <span>Hapus</span>
-            </button>
+
+            <form action="{{ route('admin.opds.jabatan.destroy', [$opd->id, $jabatan->id]) }}"
+                  method="POST"
+                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus jabatan ini?')"
+                  class="inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-sm btn-error flex items-center gap-1">
+                    <span class="iconify" data-icon="mdi:delete" data-width="16" data-height="16"></span>
+                    <span>Hapus</span>
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Modal Pegawai -->
-    @if($jabatan->asns->count() > 0)
-        <div x-show="showPegawaiModal"
-             @click.self="showPegawaiModal = false"
-             @keydown.escape.window="showPegawaiModal = false"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50 flex items-center justify-center p-4"
-             style="display: none; background-color: rgba(0, 0, 0, 0.5);">
-            <div @click.stop
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
-                 class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-                <!-- Header -->
-                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900">Daftar Pegawai</h3>
-                        <p class="text-sm text-gray-600 mt-1">{{ $jabatan->nama }}</p>
-                    </div>
-                    <button @click="showPegawaiModal = false"
-                            class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <span class="iconify" data-icon="mdi:close" data-width="24" data-height="24"></span>
-                    </button>
-                </div>
-
-                <!-- Content -->
-                <div class="px-6 py-4 overflow-y-auto max-h-[calc(80vh-140px)]">
-                    <div class="space-y-2">
-                        @foreach($jabatan->asns as $asn)
-                            <div class="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group">
-                                <span class="iconify text-purple-600 flex-shrink-0" data-icon="mdi:account-circle" data-width="32" data-height="32"></span>
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-medium text-gray-900">{{ $asn->nama }}</div>
-                                    <div class="text-sm text-gray-500 font-mono">{{ $asn->nip }}</div>
-                                </div>
-                                <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button @click.stop="showPegawaiModal = false; $dispatch('edit-asn', { id: {{ $asn->id }}, nama: '{{ $asn->nama }}', nip: '{{ $asn->nip }}', jabatanId: {{ $jabatan->id }} })"
-                                            class="p-1.5 hover:bg-yellow-100 rounded text-yellow-600 transition-colors"
-                                            title="Edit ASN">
-                                        <span class="iconify" data-icon="mdi:pencil" data-width="16" data-height="16"></span>
-                                    </button>
-                                    <button @click.stop="showPegawaiModal = false; $dispatch('delete-asn', { id: {{ $asn->id }}, nama: '{{ $asn->nama }}' })"
-                                            class="p-1.5 hover:bg-red-100 rounded text-red-600 transition-colors"
-                                            title="Hapus ASN">
-                                        <span class="iconify" data-icon="mdi:delete" data-width="16" data-height="16"></span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+    <!-- Modal: View ASN (jika lebih dari 1 ASN) -->
+    @if($jabatan->asns->count() > 1)
+        <x-modal name="view-asn-{{ $jabatan->id }}" title="Daftar ASN - {{ $jabatan->nama }}" maxWidth="lg">
+            <div class="space-y-3">
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
                     <div class="text-sm text-gray-600">
-                        Total: <span class="font-semibold">{{ $jabatan->asns->count() }}</span> pegawai
+                        <span class="font-semibold">Jabatan:</span> {{ $jabatan->nama }}<br>
+                        <span class="font-semibold">Total ASN:</span> {{ $jabatan->asns->count() }} dari {{ $jabatan->kebutuhan }} kebutuhan
                     </div>
-                    <button @click="showPegawaiModal = false"
-                            class="btn btn-outline btn-sm">
-                        Tutup
-                    </button>
                 </div>
+
+                @foreach($jabatan->asns as $asn)
+                    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="iconify text-blue-600" data-icon="mdi:account" data-width="20" data-height="20"></span>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">{{ $asn->nama }}</div>
+                                <div class="text-xs text-gray-500">NIP: {{ $asn->nip }}</div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <form action="{{ route('admin.opds.asn.destroy', [$opd->id, $asn->id]) }}"
+                                  method="POST"
+                                  onsubmit="return confirm('Hapus ASN {{ $asn->nama }}?')"
+                                  class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-xs btn-error flex items-center gap-1">
+                                    <span class="iconify" data-icon="mdi:delete" data-width="12" data-height="12"></span>
+                                    <span class="text-xs">Hapus</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
             </div>
+
+            <div class="mt-6 flex justify-end">
+                <button type="button" @click="$dispatch('close-modal', 'view-asn-{{ $jabatan->id }}')" class="btn btn-outline">
+                    Tutup
+                </button>
+            </div>
+        </x-modal>
+    @endif
+
+    <!-- Child Jabatan (Recursive) -->
+    @if($jabatan->children->count() > 0)
+        <div class="ml-6">
+            @foreach($jabatan->children as $childJabatan)
+                @include('opds.partials.tree-jabatan', [
+                    'jabatan' => $childJabatan,
+                    'opd' => $opd,
+                    'level' => $level + 1
+                ])
+            @endforeach
         </div>
     @endif
 </div>
