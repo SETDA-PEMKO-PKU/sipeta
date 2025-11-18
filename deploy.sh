@@ -11,7 +11,7 @@ git pull
 
 # Jika masih error, force reset
 git fetch origin
-git reset --hard origin/main  # atau origin/master jika branch master
+git reset --hard origin/dev  # atau origin/master jika branch master
 
 # Kembalikan ownership
 sudo chown -R www-data:www-data /home/kirimi/sipeta
