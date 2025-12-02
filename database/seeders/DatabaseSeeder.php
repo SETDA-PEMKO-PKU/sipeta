@@ -16,12 +16,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create admin user
-        Admin::create([
-            'name' => 'Administrator',
-            'email' => 'admin@sipeta.com',
-            'password' => Hash::make('password'),
-        ]);
+        // Call AdminSeeder to create base admin accounts
+        $this->call(AdminSeeder::class);
 
         // Create sample OPD
         $opd1 = Opd::create(['nama' => 'Dinas Pendidikan']);
@@ -138,6 +134,9 @@ class DatabaseSeeder extends Seeder
             'jabatan_id' => $kepalaDishub->id,
             'opd_id' => $opd3->id,
         ]);
+
+        // Call AdminOpdSeeder to create admin OPD accounts
+        $this->call(AdminOpdSeeder::class);
 
         $this->command->info('Database seeded successfully!');
     }

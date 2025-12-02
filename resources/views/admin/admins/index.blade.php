@@ -26,6 +26,7 @@
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Admin</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">OPD</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Terdaftar</th>
                         <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Aksi</th>
@@ -57,8 +58,17 @@
                                     <span class="badge badge-success">Admin Organisasi</span>
                                 @elseif($admin->isAdminBkpsdm())
                                     <span class="badge badge-info">Admin BKPSDM</span>
+                                @elseif($admin->isAdminOpd())
+                                    <span class="badge badge-warning">Admin OPD</span>
                                 @else
                                     <span class="badge badge-gray">{{ $admin->role }}</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4">
+                                @if($admin->opd)
+                                    <div class="text-sm text-gray-900">{{ $admin->opd->nama }}</div>
+                                @else
+                                    <span class="text-sm text-gray-400">-</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -98,7 +108,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
+                            <td colspan="7" class="px-6 py-12 text-center">
                                 <span class="iconify text-gray-300" data-icon="mdi:account-group" data-width="48" data-height="48"></span>
                                 <p class="text-gray-500 mt-2">Belum ada data admin</p>
                             </td>

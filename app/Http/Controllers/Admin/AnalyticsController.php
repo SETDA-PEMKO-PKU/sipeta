@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\HasOpdScope;
 use App\Services\AnalyticsService;
 use App\Services\ChartDataService;
 use App\Models\Opd;
@@ -13,6 +14,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class AnalyticsController extends Controller
 {
+    use HasOpdScope;
+
     protected $analyticsService;
     protected $chartDataService;
 
@@ -27,18 +30,20 @@ class AnalyticsController extends Controller
      */
     public function overview()
     {
-        $stats = $this->analyticsService->getOverviewStats();
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+
+        $stats = $this->analyticsService->getOverviewStats($accessibleOpdIds);
 
         // Chart data
-        $jenisJabatanData = $this->analyticsService->getDistribusiJenisJabatan();
+        $jenisJabatanData = $this->analyticsService->getDistribusiJenisJabatan($accessibleOpdIds);
         $pieChartData = $this->chartDataService->formatPieChart($jenisJabatanData);
 
-        $topOpdData = $this->analyticsService->getTopOpdByStaffing(10);
+        $topOpdData = $this->analyticsService->getTopOpdByStaffing(10, $accessibleOpdIds);
         $barChartData = $this->chartDataService->formatStackedBarChart($topOpdData);
 
         $gaugeData = $this->chartDataService->formatGaugeChart($stats['persentase_pemenuhan']);
 
-        $understaffedPositions = $this->analyticsService->getUnderstaffedPositions(10);
+        $understaffedPositions = $this->analyticsService->getUnderstaffedPositions(10, $accessibleOpdIds);
 
         return view('admin.analytics.overview', compact(
             'stats',
@@ -54,7 +59,11 @@ class AnalyticsController extends Controller
      */
     public function opdAnalytics(Request $request)
     {
-        $opds = Opd::orderBy('nama')->get();
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+        
+        // Filter OPD list to only show accessible OPDs
+        $opds = $this->applyOpdScope(Opd::query())->orderBy('nama')->get();
+        
         $selectedOpdId = $request->get('opd_id');
 
         $data = null;
@@ -62,6 +71,9 @@ class AnalyticsController extends Controller
         $distribusiPegawaiData = null;
 
         if ($selectedOpdId) {
+            // Validate OPD access
+            $this->validateOpdAccess($selectedOpdId);
+            
             $data = $this->analyticsService->getOpdAnalytics($selectedOpdId);
 
             // Chart bezetting vs kebutuhan per bagian
@@ -87,11 +99,19 @@ class AnalyticsController extends Controller
      */
     public function kepegawaianAnalytics(Request $request)
     {
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+        
         $filters = [
             'opd_id' => $request->get('opd_id'),
             'jenis_jabatan' => $request->get('jenis_jabatan'),
             'kelas' => $request->get('kelas'),
+            'accessible_opd_ids' => $accessibleOpdIds,
         ];
+
+        // Validate OPD access if specific OPD is selected
+        if (!empty($filters['opd_id'])) {
+            $this->validateOpdAccess($filters['opd_id']);
+        }
 
         $data = $this->analyticsService->getKepegawaianAnalytics($filters);
 
@@ -104,7 +124,8 @@ class AnalyticsController extends Controller
             'rgba(168, 85, 247, 0.8)'
         );
 
-        $opds = Opd::orderBy('nama')->get();
+        // Filter OPD list to only show accessible OPDs
+        $opds = $this->applyOpdScope(Opd::query())->orderBy('nama')->get();
         $jenisJabatanList = ['Struktural', 'Fungsional', 'Pelaksana'];
         $kelasList = range(1, 17);
 
@@ -125,7 +146,9 @@ class AnalyticsController extends Controller
      */
     public function jabatanAnalytics()
     {
-        $data = $this->analyticsService->getJabatanAnalytics();
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+        
+        $data = $this->analyticsService->getJabatanAnalytics($accessibleOpdIds);
 
         // Charts
         $jenisChartData = $this->chartDataService->formatPieChart($data['total_per_jenis']);
@@ -151,7 +174,9 @@ class AnalyticsController extends Controller
      */
     public function gapAnalysis()
     {
-        $data = $this->analyticsService->getGapAnalysis();
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+        
+        $data = $this->analyticsService->getGapAnalysis($accessibleOpdIds);
 
         // Format heat map data
         $heatMapData = $this->chartDataService->formatHeatMapData($data['heat_map_data']);
@@ -167,7 +192,8 @@ class AnalyticsController extends Controller
      */
     public function laporan()
     {
-        $opds = Opd::orderBy('nama')->get();
+        // Filter OPD list to only show accessible OPDs
+        $opds = $this->applyOpdScope(Opd::query())->orderBy('nama')->get();
 
         return view('admin.analytics.laporan', compact('opds'));
     }
@@ -180,7 +206,14 @@ class AnalyticsController extends Controller
         $type = $request->get('type', 'overview');
         $opdId = $request->get('opd_id');
 
-        return Excel::download(new AnalyticsExport($type, $opdId), 'analytics-' . $type . '-' . date('Y-m-d') . '.xlsx');
+        // Validate OPD access if specific OPD is selected
+        if ($opdId) {
+            $this->validateOpdAccess($opdId);
+        }
+
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+
+        return Excel::download(new AnalyticsExport($type, $opdId, $accessibleOpdIds), 'analytics-' . $type . '-' . date('Y-m-d') . '.xlsx');
     }
 
     /**
@@ -191,14 +224,20 @@ class AnalyticsController extends Controller
         $type = $request->get('type', 'overview');
         $opdId = $request->get('opd_id');
 
+        // Validate OPD access if specific OPD is selected
+        if ($opdId) {
+            $this->validateOpdAccess($opdId);
+        }
+
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
         $data = [];
 
         switch ($type) {
             case 'overview':
                 $data = [
-                    'stats' => $this->analyticsService->getOverviewStats(),
-                    'topOpd' => $this->analyticsService->getTopOpdByStaffing(10),
-                    'understaffed' => $this->analyticsService->getUnderstaffedPositions(10),
+                    'stats' => $this->analyticsService->getOverviewStats($accessibleOpdIds),
+                    'topOpd' => $this->analyticsService->getTopOpdByStaffing(10, $accessibleOpdIds),
+                    'understaffed' => $this->analyticsService->getUnderstaffedPositions(10, $accessibleOpdIds),
                 ];
                 break;
 
@@ -209,7 +248,7 @@ class AnalyticsController extends Controller
                 break;
 
             case 'gap':
-                $data = $this->analyticsService->getGapAnalysis();
+                $data = $this->analyticsService->getGapAnalysis($accessibleOpdIds);
                 break;
         }
 
@@ -224,18 +263,22 @@ class AnalyticsController extends Controller
     {
         $type = $request->get('type');
         $opdId = $request->get('opd_id');
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
 
         switch ($type) {
             case 'jenis_jabatan':
-                $data = $this->analyticsService->getDistribusiJenisJabatan();
+                $data = $this->analyticsService->getDistribusiJenisJabatan($accessibleOpdIds);
                 return response()->json($this->chartDataService->formatPieChart($data));
 
             case 'top_opd':
-                $data = $this->analyticsService->getTopOpdByStaffing(10);
+                $data = $this->analyticsService->getTopOpdByStaffing(10, $accessibleOpdIds);
                 return response()->json($this->chartDataService->formatStackedBarChart($data));
 
             case 'opd_bagian':
                 if ($opdId) {
+                    // Validate OPD access
+                    $this->validateOpdAccess($opdId);
+                    
                     $opdData = $this->analyticsService->getOpdAnalytics($opdId);
                     return response()->json($this->chartDataService->formatStackedBarChart($opdData['bagians_data']));
                 }

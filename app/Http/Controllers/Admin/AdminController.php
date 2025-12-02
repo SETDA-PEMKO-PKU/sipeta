@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\Opd;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,8 @@ class AdminController extends Controller
             $perPage = 10;
         }
 
-        $admins = Admin::orderBy('created_at', 'desc')
+        $admins = Admin::with('opd')
+                       ->orderBy('created_at', 'desc')
                        ->paginate($perPage)
                        ->withQueryString();
         return view('admin.admins.index', compact('admins'));
@@ -32,7 +34,8 @@ class AdminController extends Controller
      */
     public function create()
     {
-        return view('admin.admins.create');
+        $opds = Opd::orderBy('nama')->get();
+        return view('admin.admins.create', compact('opds'));
     }
 
     /**
@@ -44,12 +47,22 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:admins,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm',
+            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm,admin_opd',
             'is_active' => 'boolean',
+            'opd_id' => [
+                'nullable',
+                'exists:opds,id',
+                Rule::requiredIf($request->role === 'admin_opd'),
+            ],
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $request->boolean('is_active', true);
+
+        // Ensure opd_id is null for non-admin_opd roles
+        if ($validated['role'] !== 'admin_opd') {
+            $validated['opd_id'] = null;
+        }
 
         Admin::create($validated);
 
@@ -70,7 +83,8 @@ class AdminController extends Controller
      */
     public function edit(Admin $admin)
     {
-        return view('admin.admins.edit', compact('admin'));
+        $opds = Opd::orderBy('nama')->get();
+        return view('admin.admins.edit', compact('admin', 'opds'));
     }
 
     /**
@@ -82,8 +96,13 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('admins')->ignore($admin->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm',
+            'role' => 'required|in:super_admin,admin_organisasi,admin_bkpsdm,admin_opd',
             'is_active' => 'boolean',
+            'opd_id' => [
+                'nullable',
+                'exists:opds,id',
+                Rule::requiredIf($request->role === 'admin_opd'),
+            ],
         ]);
 
         if ($request->filled('password')) {
@@ -93,6 +112,11 @@ class AdminController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active');
+
+        // Ensure opd_id is null for non-admin_opd roles
+        if ($validated['role'] !== 'admin_opd') {
+            $validated['opd_id'] = null;
+        }
 
         $admin->update($validated);
 

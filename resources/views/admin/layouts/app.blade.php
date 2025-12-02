@@ -106,6 +106,19 @@
 
             <!-- User Info & Logout -->
             <div class="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+                <!-- OPD Badge for Admin OPD -->
+                <div class="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-blue-600 font-medium">OPD Anda</p>
+                            <p class="text-sm font-semibold text-blue-900 truncate">{{ auth('admin')->user()->opd->nama }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -139,8 +152,21 @@
                 </div>
 
                 <div class="flex items-center gap-2">
+                    @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                            <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="14" data-height="14"></span>
+                            <span class="text-xs font-medium text-blue-900">{{ auth('admin')->user()->opd->nama }}</span>
+                        </div>
+                    @endif
+                    
                     @if(auth('admin')->user()->isSuperAdmin())
                         <span class="badge badge-primary text-xs">Super Admin</span>
+                    @elseif(auth('admin')->user()->isAdminOpd())
+                        <span class="badge badge-warning text-xs">Admin OPD</span>
+                    @elseif(auth('admin')->user()->isAdminOrganisasi())
+                        <span class="badge badge-success text-xs">Admin Organisasi</span>
+                    @elseif(auth('admin')->user()->isAdminBkpsdm())
+                        <span class="badge badge-info text-xs">Admin BKPSDM</span>
                     @else
                         <span class="badge badge-gray text-xs">Admin</span>
                     @endif

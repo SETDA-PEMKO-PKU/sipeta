@@ -12,46 +12,73 @@ class AnalyticsService
     /**
      * Get overview statistics
      */
-    public function getOverviewStats()
+    public function getOverviewStats($accessibleOpdIds = null)
     {
+        $opdQuery = Opd::query();
+        $jabatanQuery = Jabatan::query();
+        $asnQuery = Asn::query();
+
+        if ($accessibleOpdIds !== null) {
+            $opdQuery->whereIn('id', $accessibleOpdIds);
+            $jabatanQuery->whereIn('opd_id', $accessibleOpdIds);
+            $asnQuery->whereIn('opd_id', $accessibleOpdIds);
+        }
+
         return [
-            'total_opd' => Opd::count(),
-            'total_jabatan' => Jabatan::count(),
-            'total_asn' => Asn::count(),
-            'total_kebutuhan' => Jabatan::sum('kebutuhan'),
-            'total_bezetting' => $this->getTotalBezetting(),
-            'total_selisih' => $this->getTotalBezetting() - Jabatan::sum('kebutuhan'),
-            'persentase_pemenuhan' => $this->getPersentasePemenuhan(),
+            'total_opd' => $opdQuery->count(),
+            'total_jabatan' => $jabatanQuery->count(),
+            'total_asn' => $asnQuery->count(),
+            'total_kebutuhan' => $jabatanQuery->sum('kebutuhan'),
+            'total_bezetting' => $this->getTotalBezetting($accessibleOpdIds),
+            'total_selisih' => $this->getTotalBezetting($accessibleOpdIds) - $jabatanQuery->sum('kebutuhan'),
+            'persentase_pemenuhan' => $this->getPersentasePemenuhan($accessibleOpdIds),
         ];
     }
 
     /**
      * Get total bezetting (current staffing)
      */
-    public function getTotalBezetting()
+    public function getTotalBezetting($accessibleOpdIds = null)
     {
-        return Asn::count();
+        $query = Asn::query();
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->count();
     }
 
     /**
      * Get persentase pemenuhan kebutuhan
      */
-    public function getPersentasePemenuhan()
+    public function getPersentasePemenuhan($accessibleOpdIds = null)
     {
-        $totalKebutuhan = Jabatan::sum('kebutuhan');
+        $query = Jabatan::query();
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        $totalKebutuhan = $query->sum('kebutuhan');
         if ($totalKebutuhan == 0) return 0;
 
-        $totalBezetting = $this->getTotalBezetting();
+        $totalBezetting = $this->getTotalBezetting($accessibleOpdIds);
         return round(($totalBezetting / $totalKebutuhan) * 100, 2);
     }
 
     /**
      * Get distribusi jabatan berdasarkan jenis
      */
-    public function getDistribusiJenisJabatan()
+    public function getDistribusiJenisJabatan($accessibleOpdIds = null)
     {
-        return Jabatan::select('jenis_jabatan', DB::raw('count(*) as total'))
-            ->groupBy('jenis_jabatan')
+        $query = Jabatan::select('jenis_jabatan', DB::raw('count(*) as total'));
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->groupBy('jenis_jabatan')
             ->get()
             ->mapWithKeys(function ($item) {
                 return [$item->jenis_jabatan => $item->total];
@@ -62,10 +89,15 @@ class AnalyticsService
     /**
      * Get top OPD by staffing (bezetting)
      */
-    public function getTopOpdByStaffing($limit = 10)
+    public function getTopOpdByStaffing($limit = 10, $accessibleOpdIds = null)
     {
-        return Opd::withCount('asns')
-            ->orderBy('asns_count', 'desc')
+        $query = Opd::withCount('asns');
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('id', $accessibleOpdIds);
+        }
+        
+        return $query->orderBy('asns_count', 'desc')
             ->limit($limit)
             ->get()
             ->map(function ($opd) {
@@ -91,11 +123,16 @@ class AnalyticsService
     /**
      * Get understaffed positions (top positions with biggest gap)
      */
-    public function getUnderstaffedPositions($limit = 10)
+    public function getUnderstaffedPositions($limit = 10, $accessibleOpdIds = null)
     {
-        return Jabatan::select('jabatans.*', DB::raw('kebutuhan - (SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) as gap'))
-            ->with(['parent'])
-            ->havingRaw('gap > 0')
+        $query = Jabatan::select('jabatans.*', DB::raw('kebutuhan - (SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) as gap'))
+            ->with(['parent']);
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
             ->get()
@@ -121,11 +158,16 @@ class AnalyticsService
     /**
      * Get overstaffed positions
      */
-    public function getOverstaffedPositions($limit = 10)
+    public function getOverstaffedPositions($limit = 10, $accessibleOpdIds = null)
     {
-        return Jabatan::select('jabatans.*', DB::raw('(SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) - kebutuhan as gap'))
-            ->with(['parent'])
-            ->havingRaw('gap > 0')
+        $query = Jabatan::select('jabatans.*', DB::raw('(SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) - kebutuhan as gap'))
+            ->with(['parent']);
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
             ->get()
@@ -232,6 +274,12 @@ class AnalyticsService
     {
         $query = Asn::query();
 
+        // Apply accessible OPD filter first
+        if (!empty($filters['accessible_opd_ids'])) {
+            $query->whereIn('opd_id', $filters['accessible_opd_ids']);
+        }
+
+        // Then apply specific OPD filter if provided
         if (!empty($filters['opd_id'])) {
             $query->where('opd_id', $filters['opd_id']);
         }
@@ -249,8 +297,14 @@ class AnalyticsService
      */
     public function getDistribusiAsnPerOpd($filters = [])
     {
-        return Opd::withCount('asns')
-            ->orderBy('asns_count', 'desc')
+        $query = Opd::withCount('asns');
+        
+        // Apply accessible OPD filter
+        if (!empty($filters['accessible_opd_ids'])) {
+            $query->whereIn('id', $filters['accessible_opd_ids']);
+        }
+        
+        return $query->orderBy('asns_count', 'desc')
             ->get()
             ->map(function ($opd) {
                 return [
@@ -269,6 +323,12 @@ class AnalyticsService
             ->select('jabatans.jenis_jabatan', DB::raw('count(*) as total'))
             ->groupBy('jabatans.jenis_jabatan');
 
+        // Apply accessible OPD filter first
+        if (!empty($filters['accessible_opd_ids'])) {
+            $query->whereIn('asns.opd_id', $filters['accessible_opd_ids']);
+        }
+
+        // Then apply specific OPD filter if provided
         if (!empty($filters['opd_id'])) {
             $query->where('asns.opd_id', $filters['opd_id']);
         }
@@ -288,6 +348,12 @@ class AnalyticsService
             ->groupBy('jabatans.kelas')
             ->orderBy('jabatans.kelas');
 
+        // Apply accessible OPD filter first
+        if (!empty($filters['accessible_opd_ids'])) {
+            $query->whereIn('asns.opd_id', $filters['accessible_opd_ids']);
+        }
+
+        // Then apply specific OPD filter if provided
         if (!empty($filters['opd_id'])) {
             $query->where('asns.opd_id', $filters['opd_id']);
         }
@@ -300,23 +366,28 @@ class AnalyticsService
     /**
      * Get jabatan analytics
      */
-    public function getJabatanAnalytics()
+    public function getJabatanAnalytics($accessibleOpdIds = null)
     {
         return [
-            'total_per_jenis' => $this->getDistribusiJenisJabatan(),
-            'distribusi_per_kelas' => $this->getDistribusiJabatanPerKelas(),
-            'jabatan_kosong_vs_terisi' => $this->getJabatanKosongVsTerisi(),
-            'average_bezetting_per_jenis' => $this->getAverageBezettingPerJenis(),
+            'total_per_jenis' => $this->getDistribusiJenisJabatan($accessibleOpdIds),
+            'distribusi_per_kelas' => $this->getDistribusiJabatanPerKelas($accessibleOpdIds),
+            'jabatan_kosong_vs_terisi' => $this->getJabatanKosongVsTerisi($accessibleOpdIds),
+            'average_bezetting_per_jenis' => $this->getAverageBezettingPerJenis($accessibleOpdIds),
         ];
     }
 
     /**
      * Get distribusi jabatan per kelas
      */
-    public function getDistribusiJabatanPerKelas()
+    public function getDistribusiJabatanPerKelas($accessibleOpdIds = null)
     {
-        return Jabatan::select('kelas', DB::raw('count(*) as total'))
-            ->groupBy('kelas')
+        $query = Jabatan::select('kelas', DB::raw('count(*) as total'));
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->groupBy('kelas')
             ->orderBy('kelas')
             ->get()
             ->mapWithKeys(function ($item) {
@@ -328,9 +399,15 @@ class AnalyticsService
     /**
      * Get jabatan kosong vs terisi
      */
-    public function getJabatanKosongVsTerisi()
+    public function getJabatanKosongVsTerisi($accessibleOpdIds = null)
     {
-        $allJabatan = Jabatan::where('kebutuhan', '>', 0)->get();
+        $query = Jabatan::where('kebutuhan', '>', 0);
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        $allJabatan = $query->get();
 
         $kosong = 0;
         $terisi = 0;
@@ -352,10 +429,15 @@ class AnalyticsService
     /**
      * Get average bezetting per jenis jabatan
      */
-    public function getAverageBezettingPerJenis()
+    public function getAverageBezettingPerJenis($accessibleOpdIds = null)
     {
-        return Jabatan::select('jenis_jabatan')
-            ->get()
+        $query = Jabatan::select('jenis_jabatan');
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('opd_id', $accessibleOpdIds);
+        }
+        
+        return $query->get()
             ->groupBy('jenis_jabatan')
             ->map(function ($jabatans, $jenis) {
                 $totalBezetting = 0;
@@ -370,22 +452,28 @@ class AnalyticsService
     /**
      * Get gap analysis data
      */
-    public function getGapAnalysis()
+    public function getGapAnalysis($accessibleOpdIds = null)
     {
         return [
-            'heat_map_data' => $this->getGapHeatMapData(),
-            'understaffed_positions' => $this->getUnderstaffedPositions(20),
-            'overstaffed_positions' => $this->getOverstaffedPositions(20),
-            'priority_recruitment' => $this->getPriorityRecruitment(),
+            'heat_map_data' => $this->getGapHeatMapData($accessibleOpdIds),
+            'understaffed_positions' => $this->getUnderstaffedPositions(20, $accessibleOpdIds),
+            'overstaffed_positions' => $this->getOverstaffedPositions(20, $accessibleOpdIds),
+            'priority_recruitment' => $this->getPriorityRecruitment($accessibleOpdIds),
         ];
     }
 
     /**
      * Get gap heat map data (selisih per OPD)
      */
-    public function getGapHeatMapData()
+    public function getGapHeatMapData($accessibleOpdIds = null)
     {
-        return Opd::all()->map(function ($opd) {
+        $query = Opd::query();
+        
+        if ($accessibleOpdIds !== null) {
+            $query->whereIn('id', $accessibleOpdIds);
+        }
+        
+        return $query->get()->map(function ($opd) {
             $kebutuhan = $this->getKebutuhanByOpd($opd->id);
             $bezetting = $opd->asns()->count();
             $selisih = $bezetting - $kebutuhan;
@@ -403,9 +491,9 @@ class AnalyticsService
     /**
      * Get priority recruitment list
      */
-    public function getPriorityRecruitment()
+    public function getPriorityRecruitment($accessibleOpdIds = null)
     {
-        return $this->getUnderstaffedPositions(10)->map(function ($item) {
+        return $this->getUnderstaffedPositions(10, $accessibleOpdIds)->map(function ($item) {
             return [
                 'jabatan' => $item['nama_jabatan'],
                 'jenis' => $item['jenis_jabatan'],

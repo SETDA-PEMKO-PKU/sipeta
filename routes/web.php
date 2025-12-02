@@ -45,11 +45,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin Management
         Route::resource('admins', AdminController::class);
 
-        // Pegawai Management
-        Route::resource('pegawai', PegawaiController::class);
+        // Pegawai Management (with OPD access check)
+        Route::resource('pegawai', PegawaiController::class)->middleware('check.opd.access');
 
-        // Analytics Routes
-        Route::prefix('analytics')->name('analytics.')->group(function () {
+        // Jabatan Management (with OPD access check)
+        Route::resource('jabatan', \App\Http\Controllers\Admin\OpdJabatanController::class)->middleware('check.opd.access');
+
+        // Analytics Routes (with OPD access check)
+        Route::prefix('analytics')->name('analytics.')->middleware('check.opd.access')->group(function () {
             Route::get('overview', [AnalyticsController::class, 'overview'])->name('overview');
             Route::get('opd', [AnalyticsController::class, 'opdAnalytics'])->name('opd');
             Route::get('kepegawaian', [AnalyticsController::class, 'kepegawaianAnalytics'])->name('kepegawaian');

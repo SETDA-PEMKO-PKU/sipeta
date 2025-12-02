@@ -98,6 +98,7 @@
                         <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
                         <option value="admin_organisasi" {{ old('role') === 'admin_organisasi' ? 'selected' : '' }}>Admin Organisasi</option>
                         <option value="admin_bkpsdm" {{ old('role') === 'admin_bkpsdm' ? 'selected' : '' }}>Admin BKPSDM</option>
+                        <option value="admin_opd" {{ old('role') === 'admin_opd' ? 'selected' : '' }}>Admin OPD</option>
                     </select>
                     @error('role')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -106,7 +107,29 @@
                         <p><strong>Super Admin:</strong> Akses penuh ke semua fitur</p>
                         <p><strong>Admin Organisasi:</strong> Tidak bisa tambah ASN</p>
                         <p><strong>Admin BKPSDM:</strong> Tidak bisa kelola OPD dan Jabatan</p>
+                        <p><strong>Admin OPD:</strong> Hanya bisa kelola OPD yang ditugaskan</p>
                     </div>
+                </div>
+
+                <!-- OPD Assignment (only for admin_opd) -->
+                <div id="opd-field" style="display: {{ old('role') === 'admin_opd' ? 'block' : 'none' }};">
+                    <label for="opd_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        OPD <span class="text-red-500">*</span>
+                    </label>
+                    <select name="opd_id"
+                            id="opd_id"
+                            class="input w-full @error('opd_id') border-red-300 @enderror">
+                        <option value="">Pilih OPD</option>
+                        @foreach($opds as $opd)
+                            <option value="{{ $opd->id }}" {{ old('opd_id') == $opd->id ? 'selected' : '' }}>
+                                {{ $opd->nama }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('opd_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-xs text-gray-500">Pilih OPD yang akan dikelola oleh admin ini</p>
                 </div>
 
                 <!-- Status -->
@@ -136,4 +159,25 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelect = document.getElementById('role');
+        const opdField = document.getElementById('opd-field');
+        const opdSelect = document.getElementById('opd_id');
+
+        roleSelect.addEventListener('change', function() {
+            if (this.value === 'admin_opd') {
+                opdField.style.display = 'block';
+                opdSelect.required = true;
+            } else {
+                opdField.style.display = 'none';
+                opdSelect.required = false;
+                opdSelect.value = '';
+            }
+        });
+    });
+</script>
+@endpush
 @endsection

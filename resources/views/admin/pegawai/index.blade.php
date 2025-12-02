@@ -5,6 +5,16 @@
 
 @section('content')
 <div class="p-4 lg:p-8" x-data="pegawaiIndex()">
+    <!-- Breadcrumbs -->
+    @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+    <nav class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+        <span class="iconify" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
+        <span class="font-medium text-gray-900">{{ auth('admin')->user()->opd->nama }}</span>
+        <span class="iconify" data-icon="mdi:chevron-right" data-width="16" data-height="16"></span>
+        <span>Daftar Pegawai</span>
+    </nav>
+    @endif
+
     <!-- Header Actions -->
     <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

@@ -68,6 +68,14 @@ class Opd extends Model
     }
 
     /**
+     * Mendapatkan semua admin OPD yang ditugaskan ke OPD ini
+     */
+    public function adminOpds()
+    {
+        return $this->hasMany(Admin::class)->where('role', Admin::ROLE_ADMIN_OPD);
+    }
+
+    /**
      * Hitung total jabatan di OPD ini
      */
     public function getTotalJabatanAttribute()
