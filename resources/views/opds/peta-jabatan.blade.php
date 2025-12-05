@@ -159,9 +159,9 @@ const orgData = @json($opd->jabatanKepala);
 const CONFIG = {
     boxWidth: 200,
     boxHeight: 80, // header(25) + nama(30) + kelas(25)
-    tableRowHeight: 25,
-    horizontalGap: 100, // Increased from 50 to prevent table overlap
-    verticalGap: 40, // Reduced from 80 to make connectors shorter
+    tableRowHeight: 20,
+    horizontalGap: 80,
+    verticalGap: 30,
     fontSize: 12,
     headerFontSize: 11,
     tableFontSize: 10,
@@ -309,59 +309,93 @@ function processOrgData(nodes, parentNode = null) {
     return processed;
 }
 
-// Group pelaksana/fungsional nodes
+// Group pelaksana/fungsional nodes per parent
 function groupNodes(nodes) {
-    const struktural = [];
-    const pelaksanaFungsional = {
-        pelaksana: [],
-        fungsional: []
-    };
+    const result = [];
 
     nodes.forEach(node => {
-        if (node.jenis_jabatan === 'Pelaksana') {
-            pelaksanaFungsional.pelaksana.push(node);
-        } else if (node.jenis_jabatan === 'Fungsional') {
-            pelaksanaFungsional.fungsional.push(node);
+        if (node.jenis_jabatan === 'Pelaksana' || node.jenis_jabatan === 'Fungsional') {
+            // Keep as individual node but mark as table type
+            result.push({
+                ...node,
+                isTableNode: true
+            });
         } else {
-            struktural.push(node);
+            // Struktural node - process children recursively
+            const processedNode = { ...node };
+            
+            if (node.children && node.children.length > 0) {
+                // Separate children into struktural and table nodes
+                const strukturalChildren = [];
+                const tableChildren = {
+                    pelaksana: [],
+                    fungsional: []
+                };
+
+                node.children.forEach(child => {
+                    if (child.jenis_jabatan === 'Pelaksana') {
+                        tableChildren.pelaksana.push(child);
+                    } else if (child.jenis_jabatan === 'Fungsional') {
+                        tableChildren.fungsional.push(child);
+                    } else {
+                        strukturalChildren.push(child);
+                    }
+                });
+
+                // Recursively process struktural children
+                processedNode.children = groupNodes(strukturalChildren);
+
+                // Add table nodes as special children
+                processedNode.tableChildren = {
+                    pelaksana: tableChildren.pelaksana.length > 0 ? {
+                        type: 'table',
+                        jenis_jabatan: 'Pelaksana',
+                        items: tableChildren.pelaksana
+                    } : null,
+                    fungsional: tableChildren.fungsional.length > 0 ? {
+                        type: 'table',
+                        jenis_jabatan: 'Fungsional',
+                        items: tableChildren.fungsional
+                    } : null
+                };
+            }
+
+            result.push(processedNode);
         }
     });
 
-    // Return object with struktural and tables separated
-    return {
-        struktural: struktural,
-        tables: {
-            pelaksana: pelaksanaFungsional.pelaksana.length > 0 ? {
-                type: 'table',
-                jenis_jabatan: 'Pelaksana',
-                items: pelaksanaFungsional.pelaksana
-            } : null,
-            fungsional: pelaksanaFungsional.fungsional.length > 0 ? {
-                type: 'table',
-                jenis_jabatan: 'Fungsional',
-                items: pelaksanaFungsional.fungsional
-            } : null
-        }
-    };
+    return result;
 }
 
 // Calculate tree layout
 function calculateLayout(nodes, x = 0, y = 0, level = 0) {
-    const grouped = groupNodes(nodes);
-    const strukturalNodes = grouped.struktural;
-    const tableNodes = grouped.tables;
-
     const positions = [];
     let totalWidth = 0;
 
-    // Calculate width for struktural nodes including tables
-    strukturalNodes.forEach((node, index) => {
+    // Calculate width for each node
+    nodes.forEach((node, index) => {
         let nodeWidth = CONFIG.boxWidth;
 
+        // Calculate child layout if has children
         if (node.children && node.children.length > 0) {
             const childLayout = calculateLayout(node.children, 0, 0, level + 1);
             node.childLayout = childLayout;
             nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
+        }
+
+        // Calculate table children width
+        if (node.tableChildren) {
+            const TABLE_WIDTH = 280;
+            const tableGap = 40;
+            let tableWidth = 0;
+
+            if (node.tableChildren.pelaksana && node.tableChildren.fungsional) {
+                tableWidth = TABLE_WIDTH * 2 + tableGap;
+            } else if (node.tableChildren.pelaksana || node.tableChildren.fungsional) {
+                tableWidth = TABLE_WIDTH;
+            }
+
+            nodeWidth = Math.max(nodeWidth, tableWidth);
         }
 
         node.layoutWidth = nodeWidth;
@@ -372,17 +406,10 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         }
     });
 
-    // Add table widths to total if they exist (tables are 280px wide each)
-    if (tableNodes.pelaksana || tableNodes.fungsional) {
-        const TABLE_WIDTH = 280;
-        // Ensure total width can accommodate the table width plus some padding
-        totalWidth = Math.max(totalWidth, TABLE_WIDTH + 40);
-    }
-
-    // Position struktural nodes horizontally
+    // Position nodes horizontally
     let currentX = x - totalWidth / 2;
 
-    strukturalNodes.forEach((node, index) => {
+    nodes.forEach((node, index) => {
         if (index > 0) {
             currentX += CONFIG.horizontalGap;
         }
@@ -396,42 +423,75 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
             y: nodeY
         });
 
-        // Position children
+        // Calculate next level Y position
+        let nextY = y + CONFIG.verticalGap + CONFIG.boxHeight;
+
+        // Position table children first (they appear before struktural children)
+        if (node.tableChildren) {
+            const TABLE_WIDTH = 280;
+            const tableGap = 40;
+            const hasBoth = node.tableChildren.pelaksana && node.tableChildren.fungsional;
+
+            if (hasBoth) {
+                // Position side by side
+                const totalTableWidth = TABLE_WIDTH * 2 + tableGap;
+                const startX = nodeX - totalTableWidth / 2;
+
+                if (node.tableChildren.pelaksana) {
+                    positions.push({
+                        node: node.tableChildren.pelaksana,
+                        x: startX + TABLE_WIDTH / 2,
+                        y: nextY,
+                        isTable: true,
+                        parentX: nodeX,
+                        parentY: y + CONFIG.boxHeight
+                    });
+                }
+
+                if (node.tableChildren.fungsional) {
+                    positions.push({
+                        node: node.tableChildren.fungsional,
+                        x: startX + TABLE_WIDTH + tableGap + TABLE_WIDTH / 2,
+                        y: nextY,
+                        isTable: true,
+                        parentX: nodeX,
+                        parentY: y + CONFIG.boxHeight
+                    });
+                }
+
+                // Calculate max table height for next level
+                const pelaksanaHeight = node.tableChildren.pelaksana ? 
+                    (45 + node.tableChildren.pelaksana.items.length * CONFIG.tableRowHeight) : 0;
+                const fungsionalHeight = node.tableChildren.fungsional ? 
+                    (45 + node.tableChildren.fungsional.items.length * CONFIG.tableRowHeight) : 0;
+                const maxTableHeight = Math.max(pelaksanaHeight, fungsionalHeight);
+
+                nextY += maxTableHeight + CONFIG.verticalGap;
+            } else {
+                // Single table - center it
+                const table = node.tableChildren.pelaksana || node.tableChildren.fungsional;
+                
+                positions.push({
+                    node: table,
+                    x: nodeX,
+                    y: nextY,
+                    isTable: true,
+                    parentX: nodeX,
+                    parentY: y + CONFIG.boxHeight
+                });
+
+                const tableHeight = 45 + table.items.length * CONFIG.tableRowHeight;
+                nextY += tableHeight + CONFIG.verticalGap;
+            }
+        }
+
+        // Position struktural children
         if (node.childLayout) {
-            const childY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-            node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
+            node.childPositions = calculateLayout(node.children, nodeX, nextY, level + 1).positions;
         }
 
         currentX += node.layoutWidth;
     });
-
-    // Add table nodes - stack vertically (pelaksana first, then fungsional)
-    if (tableNodes.pelaksana || tableNodes.fungsional) {
-        let tableY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-        const tableGap = 30; // Gap between pelaksana and fungsional tables
-
-        if (tableNodes.pelaksana) {
-            positions.push({
-                node: tableNodes.pelaksana,
-                x: x,
-                y: tableY,
-                isTable: true
-            });
-
-            // Calculate pelaksana table height
-            const pelaksanaHeight = 25 + 25 + (tableNodes.pelaksana.items.length * CONFIG.tableRowHeight);
-            tableY += pelaksanaHeight + tableGap;
-        }
-
-        if (tableNodes.fungsional) {
-            positions.push({
-                node: tableNodes.fungsional,
-                x: x,
-                y: tableY,
-                isTable: true
-            });
-        }
-    }
 
     return {
         positions: positions,
@@ -532,10 +592,10 @@ function drawBoxNode(node, x, y) {
 
 // Draw table node (single column, vertical layout)
 function drawTableNode(jenis, items, x, y) {
-    const tableWidth = 280; // Reduced from 500 to make it more compact
-    const headerHeight = 20;
-    const columnHeaderHeight = 20;
-    const rowHeight = 20; // Reduced row height
+    const tableWidth = 280;
+    const headerHeight = 25;
+    const columnHeaderHeight = 25;
+    const rowHeight = CONFIG.tableRowHeight;
     const totalHeight = headerHeight + columnHeaderHeight + (items.length * rowHeight);
 
     const group = new Konva.Group({ x: x - tableWidth / 2, y: y });
@@ -562,7 +622,7 @@ function drawTableNode(jenis, items, x, y) {
         width: tableWidth,
         height: headerHeight,
         text: 'Jabatan ' + jenis,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: 'Arial',
         fill: '#FFFFFF',
         align: 'center',
@@ -583,13 +643,13 @@ function drawTableNode(jenis, items, x, y) {
     });
     group.add(colHeaderBg);
 
-    // Column widths - more compact
+    // Column widths
     const colWidths = {
-        nama: 150,
+        nama: 155,
         kelas: 45,
-        k: 30,
-        b: 30,
-        s: 25
+        b: 27,
+        k: 27,
+        s: 26
     };
 
     let colX = 0;
@@ -612,9 +672,9 @@ function drawTableNode(jenis, items, x, y) {
         }
 
         const colText = new Konva.Text({
-            x: colX + 3,
+            x: colX + 2,
             y: colHeaderY,
-            width: col.width - 6,
+            width: col.width - 4,
             height: columnHeaderHeight,
             text: col.label,
             fontSize: 9,
@@ -634,20 +694,18 @@ function drawTableNode(jenis, items, x, y) {
         const rowY = headerHeight + columnHeaderHeight + (idx * rowHeight);
 
         // Horizontal line
-        if (idx > 0) {
-            const hLine = new Konva.Line({
-                points: [0, rowY, tableWidth, rowY],
-                stroke: '#000000',
-                strokeWidth: 0.5
-            });
-            group.add(hLine);
-        }
+        const hLine = new Konva.Line({
+            points: [0, rowY, tableWidth, rowY],
+            stroke: '#000000',
+            strokeWidth: 0.5
+        });
+        group.add(hLine);
 
         // Row data
         let cellX = 0;
 
         // Truncate nama if too long
-        const namaText = item.nama.length > 25 ? item.nama.substring(0, 22) + '...' : item.nama;
+        const namaText = item.nama.length > 28 ? item.nama.substring(0, 25) + '...' : item.nama;
 
         const rowData = [
             { text: namaText, width: colWidths.nama, align: 'left' },
@@ -660,9 +718,9 @@ function drawTableNode(jenis, items, x, y) {
         rowData.forEach((cell) => {
             const cellText = new Konva.Text({
                 x: cellX + 2,
-                y: rowY,
+                y: rowY + 1,
                 width: cell.width - 4,
-                height: rowHeight,
+                height: rowHeight - 2,
                 text: cell.text,
                 fontSize: 8,
                 fontFamily: 'Arial',
@@ -687,13 +745,13 @@ function drawConnector(fromX, fromY, toX, toY) {
         const line = new Konva.Line({
             points: [fromX, fromY, toX, toY],
             stroke: '#000000',
-            strokeWidth: 2
+            strokeWidth: 1.5
         });
         layer.add(line);
         line.moveToBottom();
     } else {
         // Draw L-shaped connector if not aligned
-        const midY = fromY + 20; // Small offset from parent
+        const midY = fromY + (toY - fromY) / 2;
 
         const line = new Konva.Line({
             points: [
@@ -703,7 +761,7 @@ function drawConnector(fromX, fromY, toX, toY) {
                 toX, toY
             ],
             stroke: '#000000',
-            strokeWidth: 2,
+            strokeWidth: 1.5,
             lineCap: 'square',
             lineJoin: 'miter'
         });
@@ -715,42 +773,30 @@ function drawConnector(fromX, fromY, toX, toY) {
 
 // Render the tree
 function renderTree(positions, parentInfo = null) {
-    const strukturalPositions = [];
-    const tablePositions = [];
-
-    // Separate struktural and table positions
     positions.forEach(pos => {
         if (pos.isTable) {
-            tablePositions.push(pos);
+            // Render table node
+            const { node, x, y, parentX, parentY } = pos;
+            drawTableNode(node.jenis_jabatan, node.items, x, y);
+
+            // Draw connector from parent
+            if (parentX !== undefined && parentY !== undefined) {
+                drawConnector(parentX, parentY, x, y);
+            }
         } else {
-            strukturalPositions.push(pos);
-        }
-    });
+            // Render struktural node
+            const { node, x, y } = pos;
+            const nodeInfo = drawBoxNode(node, x, y);
 
-    // Render struktural nodes first
-    strukturalPositions.forEach(pos => {
-        const { node, x, y } = pos;
-        const nodeInfo = drawBoxNode(node, x, y);
+            // Draw connector from parent if exists
+            if (parentInfo) {
+                drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y);
+            }
 
-        // Draw connector from parent if exists
-        if (parentInfo) {
-            drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y);
-        }
-
-        // Recursively render children
-        if (node.childPositions) {
-            renderTree(node.childPositions, nodeInfo);
-        }
-    });
-
-    // Render table nodes (they will be drawn below struktural)
-    tablePositions.forEach(pos => {
-        const { node, x, y } = pos;
-        drawTableNode(node.jenis_jabatan, node.items, x, y);
-
-        // Draw connector from parent to table (if there's a parent struktural node)
-        if (parentInfo) {
-            drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y);
+            // Recursively render children
+            if (node.childPositions) {
+                renderTree(node.childPositions, nodeInfo);
+            }
         }
     });
 }
@@ -772,7 +818,8 @@ document.addEventListener('DOMContentLoaded', function() {
         initStage();
 
         const processedData = processOrgData(orgData);
-        const layout = calculateLayout(processedData, stage.width() / 2, 50, 0);
+        const groupedData = groupNodes(processedData);
+        const layout = calculateLayout(groupedData, stage.width() / 2, 50, 0);
 
         renderTree(layout.positions);
 
