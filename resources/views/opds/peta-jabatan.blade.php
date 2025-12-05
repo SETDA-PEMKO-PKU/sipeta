@@ -309,72 +309,78 @@ function processOrgData(nodes, parentNode = null) {
     return processed;
 }
 
-// Group pelaksana/fungsional nodes
-function groupNodes(nodes) {
-    const struktural = [];
-    const pelaksanaFungsional = {
-        pelaksana: [],
-        fungsional: []
-    };
+// Calculate tree layout - treat tables as siblings of struktural nodes
+function calculateLayout(nodes, x = 0, y = 0, level = 0) {
+    // Separate nodes into struktural and table types
+    const strukturalNodes = [];
+    const pelaksanaNodes = [];
+    const fungsionalNodes = [];
 
     nodes.forEach(node => {
         if (node.jenis_jabatan === 'Pelaksana') {
-            pelaksanaFungsional.pelaksana.push(node);
+            pelaksanaNodes.push(node);
         } else if (node.jenis_jabatan === 'Fungsional') {
-            pelaksanaFungsional.fungsional.push(node);
+            fungsionalNodes.push(node);
         } else {
-            struktural.push(node);
+            strukturalNodes.push(node);
         }
     });
 
-    return {
-        struktural: struktural,
-        tables: {
-            pelaksana: pelaksanaFungsional.pelaksana.length > 0 ? {
-                type: 'table',
-                jenis_jabatan: 'Pelaksana',
-                items: pelaksanaFungsional.pelaksana
-            } : null,
-            fungsional: pelaksanaFungsional.fungsional.length > 0 ? {
-                type: 'table',
-                jenis_jabatan: 'Fungsional',
-                items: pelaksanaFungsional.fungsional
-            } : null
-        }
-    };
-}
+    // Create table objects if there are pelaksana/fungsional nodes
+    const allNodes = [...strukturalNodes];
+    
+    if (fungsionalNodes.length > 0) {
+        allNodes.push({
+            isTable: true,
+            type: 'table',
+            jenis_jabatan: 'Fungsional',
+            items: fungsionalNodes,
+            layoutWidth: 280
+        });
+    }
 
-// Calculate tree layout
-function calculateLayout(nodes, x = 0, y = 0, level = 0) {
-    const grouped = groupNodes(nodes);
-    const strukturalNodes = grouped.struktural;
-    const tableNodes = grouped.tables;
+    if (pelaksanaNodes.length > 0) {
+        allNodes.push({
+            isTable: true,
+            type: 'table',
+            jenis_jabatan: 'Pelaksana',
+            items: pelaksanaNodes,
+            layoutWidth: 280
+        });
+    }
 
     const positions = [];
     let totalWidth = 0;
 
-    // Calculate width for struktural nodes
-    strukturalNodes.forEach((node, index) => {
-        let nodeWidth = CONFIG.boxWidth;
+    // Calculate width for all nodes (struktural + tables as siblings)
+    allNodes.forEach((node, index) => {
+        if (node.isTable) {
+            // Table width is fixed
+            node.layoutWidth = 280;
+        } else {
+            // Struktural node
+            let nodeWidth = CONFIG.boxWidth;
 
-        if (node.children && node.children.length > 0) {
-            const childLayout = calculateLayout(node.children, 0, 0, level + 1);
-            node.childLayout = childLayout;
-            nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
+            if (node.children && node.children.length > 0) {
+                const childLayout = calculateLayout(node.children, 0, 0, level + 1);
+                node.childLayout = childLayout;
+                nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
+            }
+
+            node.layoutWidth = nodeWidth;
         }
 
-        node.layoutWidth = nodeWidth;
-        totalWidth += nodeWidth;
+        totalWidth += node.layoutWidth;
 
         if (index > 0) {
             totalWidth += CONFIG.horizontalGap;
         }
     });
 
-    // Position struktural nodes horizontally
+    // Position all nodes horizontally at same level
     let currentX = x - totalWidth / 2;
 
-    strukturalNodes.forEach((node, index) => {
+    allNodes.forEach((node, index) => {
         if (index > 0) {
             currentX += CONFIG.horizontalGap;
         }
@@ -382,48 +388,31 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         const nodeX = currentX + node.layoutWidth / 2;
         const nodeY = y;
 
-        positions.push({
-            node: node,
-            x: nodeX,
-            y: nodeY
-        });
+        if (node.isTable) {
+            // Position table
+            positions.push({
+                node: node,
+                x: nodeX,
+                y: nodeY,
+                isTable: true
+            });
+        } else {
+            // Position struktural node
+            positions.push({
+                node: node,
+                x: nodeX,
+                y: nodeY
+            });
 
-        // Position children
-        if (node.childLayout) {
-            const childY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-            node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
+            // Position children recursively
+            if (node.childLayout) {
+                const childY = y + CONFIG.verticalGap + CONFIG.boxHeight;
+                node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
+            }
         }
 
         currentX += node.layoutWidth;
     });
-
-    // Add table nodes below struktural nodes
-    if (tableNodes.pelaksana || tableNodes.fungsional) {
-        let tableY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-        const TABLE_WIDTH = 280;
-        const tableGap = 30;
-
-        if (tableNodes.pelaksana) {
-            positions.push({
-                node: tableNodes.pelaksana,
-                x: x,
-                y: tableY,
-                isTable: true
-            });
-
-            const pelaksanaHeight = 50 + (tableNodes.pelaksana.items.length * CONFIG.tableRowHeight);
-            tableY += pelaksanaHeight + tableGap;
-        }
-
-        if (tableNodes.fungsional) {
-            positions.push({
-                node: tableNodes.fungsional,
-                x: x,
-                y: tableY,
-                isTable: true
-            });
-        }
-    }
 
     return {
         positions: positions,
