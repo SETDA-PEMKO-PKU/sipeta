@@ -160,8 +160,8 @@ const CONFIG = {
     boxWidth: 200,
     boxHeight: 80, // header(25) + nama(30) + kelas(25)
     tableRowHeight: 20,
-    horizontalGap: 80,
-    verticalGap: 30,
+    horizontalGap: 60,
+    verticalGap: 40,
     fontSize: 12,
     headerFontSize: 11,
     tableFontSize: 10,
@@ -372,30 +372,31 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
     const positions = [];
     let totalWidth = 0;
 
-    // Calculate width for each node
+    // Calculate width for each node including its table children
     nodes.forEach((node, index) => {
         let nodeWidth = CONFIG.boxWidth;
+
+        // If node has table children, they should be positioned horizontally at same level
+        if (node.tableChildren) {
+            const TABLE_WIDTH = 280;
+            const tableGap = 40;
+            let tablesWidth = 0;
+
+            if (node.tableChildren.pelaksana && node.tableChildren.fungsional) {
+                tablesWidth = TABLE_WIDTH * 2 + tableGap;
+            } else if (node.tableChildren.pelaksana || node.tableChildren.fungsional) {
+                tablesWidth = TABLE_WIDTH;
+            }
+
+            // Node width includes the node itself + gap + tables
+            nodeWidth = CONFIG.boxWidth + CONFIG.horizontalGap + tablesWidth;
+        }
 
         // Calculate child layout if has children
         if (node.children && node.children.length > 0) {
             const childLayout = calculateLayout(node.children, 0, 0, level + 1);
             node.childLayout = childLayout;
             nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
-        }
-
-        // Calculate table children width
-        if (node.tableChildren) {
-            const TABLE_WIDTH = 280;
-            const tableGap = 40;
-            let tableWidth = 0;
-
-            if (node.tableChildren.pelaksana && node.tableChildren.fungsional) {
-                tableWidth = TABLE_WIDTH * 2 + tableGap;
-            } else if (node.tableChildren.pelaksana || node.tableChildren.fungsional) {
-                tableWidth = TABLE_WIDTH;
-            }
-
-            nodeWidth = Math.max(nodeWidth, tableWidth);
         }
 
         node.layoutWidth = nodeWidth;
@@ -417,77 +418,74 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         const nodeX = currentX + node.layoutWidth / 2;
         const nodeY = y;
 
-        positions.push({
-            node: node,
-            x: nodeX,
-            y: nodeY
-        });
-
-        // Calculate next level Y position
-        let nextY = y + CONFIG.verticalGap + CONFIG.boxHeight;
-
-        // Position table children first (they appear before struktural children)
+        // If node has table children, adjust node position to the left
+        let actualNodeX = nodeX;
         if (node.tableChildren) {
             const TABLE_WIDTH = 280;
             const tableGap = 40;
-            const hasBoth = node.tableChildren.pelaksana && node.tableChildren.fungsional;
+            let tablesWidth = 0;
 
-            if (hasBoth) {
-                // Position side by side
-                const totalTableWidth = TABLE_WIDTH * 2 + tableGap;
-                const startX = nodeX - totalTableWidth / 2;
+            if (node.tableChildren.pelaksana && node.tableChildren.fungsional) {
+                tablesWidth = TABLE_WIDTH * 2 + tableGap;
+            } else if (node.tableChildren.pelaksana || node.tableChildren.fungsional) {
+                tablesWidth = TABLE_WIDTH;
+            }
 
-                if (node.tableChildren.pelaksana) {
-                    positions.push({
-                        node: node.tableChildren.pelaksana,
-                        x: startX + TABLE_WIDTH / 2,
-                        y: nextY,
-                        isTable: true,
-                        parentX: nodeX,
-                        parentY: y + CONFIG.boxHeight
-                    });
-                }
+            // Position node to the left, tables to the right
+            const totalGroupWidth = CONFIG.boxWidth + CONFIG.horizontalGap + tablesWidth;
+            actualNodeX = nodeX - totalGroupWidth / 2 + CONFIG.boxWidth / 2;
+        }
 
-                if (node.tableChildren.fungsional) {
-                    positions.push({
-                        node: node.tableChildren.fungsional,
-                        x: startX + TABLE_WIDTH + tableGap + TABLE_WIDTH / 2,
-                        y: nextY,
-                        isTable: true,
-                        parentX: nodeX,
-                        parentY: y + CONFIG.boxHeight
-                    });
-                }
+        positions.push({
+            node: node,
+            x: actualNodeX,
+            y: nodeY
+        });
 
-                // Calculate max table height for next level
-                const pelaksanaHeight = node.tableChildren.pelaksana ? 
-                    (45 + node.tableChildren.pelaksana.items.length * CONFIG.tableRowHeight) : 0;
-                const fungsionalHeight = node.tableChildren.fungsional ? 
-                    (45 + node.tableChildren.fungsional.items.length * CONFIG.tableRowHeight) : 0;
-                const maxTableHeight = Math.max(pelaksanaHeight, fungsionalHeight);
+        // Position table children at same Y level, to the right of the node
+        if (node.tableChildren) {
+            const TABLE_WIDTH = 280;
+            const tableGap = 40;
+            const tableStartX = actualNodeX + CONFIG.boxWidth / 2 + CONFIG.horizontalGap;
 
-                nextY += maxTableHeight + CONFIG.verticalGap;
+            if (node.tableChildren.pelaksana && node.tableChildren.fungsional) {
+                // Both tables side by side
+                positions.push({
+                    node: node.tableChildren.pelaksana,
+                    x: tableStartX + TABLE_WIDTH / 2,
+                    y: nodeY,
+                    isTable: true,
+                    parentX: actualNodeX,
+                    parentY: nodeY + CONFIG.boxHeight / 2
+                });
+
+                positions.push({
+                    node: node.tableChildren.fungsional,
+                    x: tableStartX + TABLE_WIDTH + tableGap + TABLE_WIDTH / 2,
+                    y: nodeY,
+                    isTable: true,
+                    parentX: actualNodeX,
+                    parentY: nodeY + CONFIG.boxHeight / 2
+                });
             } else {
-                // Single table - center it
+                // Single table
                 const table = node.tableChildren.pelaksana || node.tableChildren.fungsional;
                 
                 positions.push({
                     node: table,
-                    x: nodeX,
-                    y: nextY,
+                    x: tableStartX + TABLE_WIDTH / 2,
+                    y: nodeY,
                     isTable: true,
-                    parentX: nodeX,
-                    parentY: y + CONFIG.boxHeight
+                    parentX: actualNodeX,
+                    parentY: nodeY + CONFIG.boxHeight / 2
                 });
-
-                const tableHeight = 45 + table.items.length * CONFIG.tableRowHeight;
-                nextY += tableHeight + CONFIG.verticalGap;
             }
         }
 
-        // Position struktural children
+        // Position struktural children below
         if (node.childLayout) {
-            node.childPositions = calculateLayout(node.children, nodeX, nextY, level + 1).positions;
+            const childY = y + CONFIG.verticalGap + CONFIG.boxHeight;
+            node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
         }
 
         currentX += node.layoutWidth;
@@ -738,10 +736,19 @@ function drawTableNode(jenis, items, x, y) {
     return { width: tableWidth, height: totalHeight, centerX: x, bottomY: y + totalHeight };
 }
 
-// Draw connector lines (straight line from parent to child)
-function drawConnector(fromX, fromY, toX, toY) {
-    // Draw a simple straight vertical line if they're aligned
-    if (Math.abs(fromX - toX) < 5) {
+// Draw connector lines
+function drawConnector(fromX, fromY, toX, toY, isHorizontal = false) {
+    if (isHorizontal) {
+        // Horizontal line for same-level connections (node to table)
+        const line = new Konva.Line({
+            points: [fromX, fromY, toX, fromY],
+            stroke: '#000000',
+            strokeWidth: 1.5
+        });
+        layer.add(line);
+        line.moveToBottom();
+    } else if (Math.abs(fromX - toX) < 5) {
+        // Straight vertical line if aligned
         const line = new Konva.Line({
             points: [fromX, fromY, toX, toY],
             stroke: '#000000',
@@ -750,7 +757,7 @@ function drawConnector(fromX, fromY, toX, toY) {
         layer.add(line);
         line.moveToBottom();
     } else {
-        // Draw L-shaped connector if not aligned
+        // L-shaped connector for parent-child
         const midY = fromY + (toY - fromY) / 2;
 
         const line = new Konva.Line({
@@ -777,20 +784,20 @@ function renderTree(positions, parentInfo = null) {
         if (pos.isTable) {
             // Render table node
             const { node, x, y, parentX, parentY } = pos;
-            drawTableNode(node.jenis_jabatan, node.items, x, y);
+            const tableInfo = drawTableNode(node.jenis_jabatan, node.items, x, y);
 
-            // Draw connector from parent
+            // Draw horizontal connector from parent node (same level)
             if (parentX !== undefined && parentY !== undefined) {
-                drawConnector(parentX, parentY, x, y);
+                drawConnector(parentX, parentY, tableInfo.centerX, parentY, true);
             }
         } else {
             // Render struktural node
             const { node, x, y } = pos;
             const nodeInfo = drawBoxNode(node, x, y);
 
-            // Draw connector from parent if exists
+            // Draw connector from parent if exists (vertical)
             if (parentInfo) {
-                drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y);
+                drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y, false);
             }
 
             // Recursively render children
