@@ -28,9 +28,7 @@ class OpdController extends Controller
     public function index(Request $request)
     {
         // Gunakan withCount untuk efisiensi - tidak load semua relasi
-        $query = Opd::query()
-            ->withCount(['asns', 'jabatans'])
-            ->select('id', 'nama', 'created_at');
+        $query = Opd::query()->withCount(['asns', 'jabatans']);
 
         // Search functionality
         if ($request->filled('search')) {
