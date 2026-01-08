@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OpdController;
+use App\Http\Controllers\OpdImportController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
@@ -87,6 +88,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{opd}/asn', [OpdController::class, 'storeAsn'])->name('opds.asn.store');
             Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
             Route::delete('/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->name('opds.asn.destroy');
+
+            // Import ASN dari CSV
+            Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form');
+            Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template');
+            Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview');
+            Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process');
+            Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single');
+            Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session');
         });
 
         // API routes

@@ -22,32 +22,17 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <!-- Total OPD -->
         <div class="card">
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-gray-600 mb-1">Total OPD</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->total() }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['total_opd'] }}</p>
                     </div>
                     <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="20" data-height="20"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Bagian -->
-        <div class="card">
-            <div class="p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-600 mb-1">Total Jabatan</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum('jabatans_count') }}</p>
-                    </div>
-                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span class="iconify text-green-600" data-icon="mdi:folder-multiple" data-width="20" data-height="20"></span>
                     </div>
                 </div>
             </div>
@@ -58,11 +43,26 @@
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
+                        <p class="text-xs text-gray-600 mb-1">Total Jabatan</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['total_jabatan'] }}</p>
+                    </div>
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <span class="iconify text-green-600" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total ASN -->
+        <div class="card">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
                         <p class="text-xs text-gray-600 mb-1">Total ASN</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->sum('asns_count') }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['total_asn'] }}</p>
                     </div>
                     <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span class="iconify text-purple-600" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
+                        <span class="iconify text-purple-600" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
                     </div>
                 </div>
             </div>
@@ -73,8 +73,8 @@
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-gray-600 mb-1">Halaman Ini</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $opds->count() }}</p>
+                        <p class="text-xs text-gray-600 mb-1">Ditampilkan</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $opds->count() }}/{{ $opds->total() }}</p>
                     </div>
                     <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-gray-600" data-icon="mdi:view-list" data-width="20" data-height="20"></span>
@@ -82,8 +82,6 @@
                 </div>
             </div>
         </div>
-
-
     </div>
 
     <div>
@@ -172,7 +170,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="badge badge-primary">{{ $opd->jabatans_count }}</span>
+                                        <span class="badge badge-primary">{{ $opd->total_jabatan_count }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="badge badge-gray">{{ $opd->asns_count }}</span>

@@ -33,22 +33,47 @@ class Opd extends Model
     }
 
     /**
-     * Mendapatkan semua jabatan termasuk sub-jabatan
+     * Mendapatkan semua jabatan termasuk sub-jabatan (SUPER OPTIMIZED)
+     * Menggunakan hanya 2 query untuk menghindari N+1 problem
      */
     public function getAllJabatans()
     {
-        $allJabatans = collect();
-
-        // Dapatkan jabatan kepala (root)
-        $jabatanKepala = $this->jabatanKepala()->get();
-
-        foreach ($jabatanKepala as $kepala) {
-            $allJabatans->push($kepala);
-            // Dapatkan semua descendants
-            $allJabatans = $allJabatans->merge($kepala->getAllDescendants());
+        // Get all root jabatan IDs for this OPD
+        $rootJabatanIds = Jabatan::where('opd_id', $this->id)
+                                  ->whereNull('parent_id')
+                                  ->pluck('id')
+                                  ->toArray();
+        
+        if (empty($rootJabatanIds)) {
+            return collect();
         }
 
-        return $allJabatans;
+        // Get ALL jabatans at once (no filtering by OPD - will collect all)
+        // This is faster than querying per level
+        $allJabatans = Jabatan::with(['asns'])
+                              ->get()
+                              ->keyBy('id');
+        
+        // Build list of IDs belonging to this OPD using in-memory traversal
+        $opdJabatanIds = $rootJabatanIds;
+        $queue = $rootJabatanIds;
+        
+        while (!empty($queue)) {
+            $currentId = array_shift($queue);
+            
+            // Find children of current jabatan
+            foreach ($allJabatans as $jabatan) {
+                if ($jabatan->parent_id == $currentId && !in_array($jabatan->id, $opdJabatanIds)) {
+                    $opdJabatanIds[] = $jabatan->id;
+                    $queue[] = $jabatan->id;
+                }
+            }
+        }
+
+        // Return only jabatans belonging to this OPD
+        return $allJabatans->whereIn('id', $opdJabatanIds)
+                           ->sortBy('nama')
+                           ->values();
     }
 
     /**

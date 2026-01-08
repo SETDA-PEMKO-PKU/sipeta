@@ -27,8 +27,8 @@ class OpdController extends Controller
      */
     public function index(Request $request)
     {
-        // Gunakan withCount untuk efisiensi - tidak load semua relasi
-        $query = Opd::query()->withCount(['asns', 'jabatans']);
+        // Gunakan withCount untuk efisiensi
+        $query = Opd::query()->withCount(['asns']);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -48,8 +48,65 @@ class OpdController extends Controller
         $opds = $query->orderBy('nama')
                      ->paginate($perPage)
                      ->withQueryString();
+
+        // Calculate total jabatan per OPD using a single efficient query
+        // Get all OPD IDs on current page
+        $opdIds = $opds->pluck('id')->toArray();
         
-        return view('opds.index', compact('opds'));
+        // Get all root jabatan IDs for these OPDs
+        $rootJabatanByOpd = Jabatan::whereIn('opd_id', $opdIds)
+            ->whereNull('parent_id')
+            ->select('id', 'opd_id')
+            ->get()
+            ->groupBy('opd_id');
+        
+        // Calculate total jabatan count per OPD (including all descendants)
+        $jabatanCountByOpd = [];
+        foreach ($opdIds as $opdId) {
+            $rootIds = isset($rootJabatanByOpd[$opdId]) 
+                ? $rootJabatanByOpd[$opdId]->pluck('id')->toArray() 
+                : [];
+            
+            if (empty($rootIds)) {
+                $jabatanCountByOpd[$opdId] = 0;
+                continue;
+            }
+
+            // Count all jabatan in hierarchy using iterative approach
+            $allIds = $rootIds;
+            $currentIds = $rootIds;
+            $maxDepth = 20;
+            $depth = 0;
+            
+            while (!empty($currentIds) && $depth < $maxDepth) {
+                $childIds = Jabatan::whereIn('parent_id', $currentIds)
+                    ->pluck('id')
+                    ->toArray();
+                
+                if (empty($childIds)) break;
+                
+                $allIds = array_merge($allIds, $childIds);
+                $currentIds = $childIds;
+                $depth++;
+            }
+            
+            $jabatanCountByOpd[$opdId] = count($allIds);
+        }
+
+        // Attach jabatan count to each OPD
+        $opds->getCollection()->transform(function ($opd) use ($jabatanCountByOpd) {
+            $opd->total_jabatan_count = $jabatanCountByOpd[$opd->id] ?? 0;
+            return $opd;
+        });
+
+        // Calculate stats - total dari semua OPD
+        $stats = [
+            'total_opd' => Opd::count(),
+            'total_jabatan' => Jabatan::count(),
+            'total_asn' => Asn::count(),
+        ];
+        
+        return view('opds.index', compact('opds', 'stats'));
     }
 
     /**
@@ -78,16 +135,76 @@ class OpdController extends Controller
      */
     public function show($id)
     {
-        $opd = Opd::with([
-            'jabatanKepala.children.children.children',
-            'jabatanKepala.asns',
-            'asns.jabatan'
-        ])->findOrFail($id);
+        // Load OPD with basic relations only
+        $opd = Opd::with(['asns'])->findOrFail($id);
 
-        // Tambahkan semua jabatan (termasuk jabatan kepala OPD)
-        $opd->allJabatans = $opd->getAllJabatans();
+        // Get root jabatan IDs for this OPD
+        $rootIds = Jabatan::where('opd_id', $id)
+                          ->whereNull('parent_id')
+                          ->pluck('id')
+                          ->toArray();
+
+        // Collect all jabatan IDs using efficient batch query
+        $allJabatanIds = $this->collectAllJabatanIds($rootIds);
+        
+        // Stats
+        $opd->total_jabatan_count = count($allJabatanIds);
+        $opd->total_asn_count = $opd->asns->count();
+        
+        // Get jabatan data with ASN count (lightweight)
+        $allJabatans = collect();
+        if (!empty($allJabatanIds)) {
+            $allJabatans = Jabatan::whereIn('id', $allJabatanIds)
+                                  ->withCount('asns')
+                                  ->get();
+        }
+        
+        $opd->total_kebutuhan = $allJabatans->sum('kebutuhan');
+        $opd->allJabatans = $allJabatans;
+
+        // Load jabatan tree for display (only 4 levels deep with children loaded separately)
+        $opd->jabatanTree = Jabatan::where('opd_id', $id)
+                                   ->whereNull('parent_id')
+                                   ->with(['asns', 'children' => function($q) {
+                                       $q->with(['asns', 'children' => function($q2) {
+                                           $q2->with(['asns', 'children' => function($q3) {
+                                               $q3->with(['asns', 'children.asns']);
+                                           }]);
+                                       }]);
+                                   }])
+                                   ->get();
 
         return view('opds.show', compact('opd'));
+    }
+
+    /**
+     * Helper: Collect all jabatan IDs in hierarchy (optimized with batch query)
+     */
+    private function collectAllJabatanIds(array $rootIds): array
+    {
+        if (empty($rootIds)) {
+            return [];
+        }
+
+        $allIds = $rootIds;
+        $currentIds = $rootIds;
+        $maxDepth = 10;
+        $depth = 0;
+
+        while (!empty($currentIds) && $depth < $maxDepth) {
+            // Batch query for all children at this level
+            $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
+            
+            if (empty($childIds)) {
+                break;
+            }
+
+            $allIds = array_merge($allIds, $childIds);
+            $currentIds = $childIds;
+            $depth++;
+        }
+
+        return $allIds;
     }
 
     /**

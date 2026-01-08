@@ -30,6 +30,12 @@
                     <span class="iconify" data-icon="mdi:file-tree" data-width="18" data-height="18"></span>
                     <span class="ml-2">Peta Jabatan</span>
                 </a>
+                @if(auth('admin')->user()->canManageAsn())
+                <a href="{{ route('admin.opds.import.form', $opd->id) }}" class="btn" style="background-color: #10b981; border-color: #10b981; color: white;">
+                    <span class="iconify" data-icon="mdi:upload" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Import CSV</span>
+                </a>
+                @endif
                 <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
                     <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
                     <span class="ml-2">Export</span>
@@ -73,7 +79,7 @@
                             <span class="iconify text-blue-500" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
                             <span class="stat-label">Total Jabatan</span>
                         </div>
-                        <div class="stat-value text-primary-600">{{ $opd->getAllJabatans()->count() }}</div>
+                        <div class="stat-value text-primary-600">{{ $opd->allJabatans->count() }}</div>
                     </div>
                 </div>
             </div>
@@ -98,7 +104,7 @@
                             <span class="stat-label">Pemenuhan</span>
                         </div>
                         @php
-                            $totalKebutuhan = $opd->getAllJabatans()->sum('kebutuhan');
+                            $totalKebutuhan = $opd->allJabatans->sum('kebutuhan');
                             $persentase = $totalKebutuhan > 0 ? round(($opd->asns->count() / $totalKebutuhan) * 100, 1) : 0;
                         @endphp
                         <div class="stat-value text-purple-600">{{ $persentase }}%</div>
@@ -122,10 +128,10 @@
                 @endif
             </div>
             <div class="card-body">
-                @if($opd->jabatanKepala->count() > 0)
+                @if($opd->jabatanTree && $opd->jabatanTree->count() > 0)
                     <div class="tree">
                         <!-- Root Jabatan -->
-                        @foreach($opd->jabatanKepala as $jabatan)
+                        @foreach($opd->jabatanTree as $jabatan)
                             @include('opds.partials.tree-jabatan', [
                                 'jabatan' => $jabatan,
                                 'opd' => $opd,
@@ -176,7 +182,7 @@
                             <span x-show="selectedParentId == ''" class="iconify text-blue-500 ml-auto" data-icon="mdi:check-circle" data-width="16" data-height="16"></span>
                         </div>
 
-                        @if($opd->getAllJabatans()->count() > 0)
+                        @if($opd->allJabatans->count() > 0)
                             @php
                                 function renderJabatanTree($jabatans, $parentId = null, $level = 0) {
                                     $filtered = $jabatans->where('parent_id', $parentId);
@@ -198,7 +204,7 @@
                                         renderJabatanTree($jabatans, $jabatan->id, $level + 1);
                                     }
                                 }
-                                renderJabatanTree($opd->getAllJabatans());
+                                renderJabatanTree($opd->allJabatans);
                             @endphp
                         @endif
                     </div>
@@ -252,7 +258,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Parent Jabatan</label>
                         <select name="parent_jabatan_id" x-model="editJabatan.parent_id" class="input w-full">
                             <option value="">Tidak ada (Jabatan Root/Kepala)</option>
-                            @foreach($opd->getAllJabatans() as $j)
+                            @foreach($opd->allJabatans as $j)
                                 <option value="{{ $j->id }}" x-bind:disabled="editJabatan && editJabatan.id == {{ $j->id }}">
                                     {{ str_repeat('—', $j->getPath()->count() - 1) }} {{ $j->nama }}
                                 </option>
@@ -307,7 +313,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
                     <select name="jabatan_id" required class="input w-full">
                         <option value="">Pilih Jabatan</option>
-                        @foreach($opd->getAllJabatans() as $jabatan)
+                        @foreach($opd->allJabatans as $jabatan)
                             <option value="{{ $jabatan->id }}">
                                 {{ str_repeat('—', $jabatan->getPath()->count() - 1) }} {{ $jabatan->nama }}
                             </option>
@@ -344,7 +350,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
                         <select name="jabatan_id" x-model="editAsn.jabatan_id" required class="input w-full">
                             <option value="">Pilih Jabatan</option>
-                            @foreach($opd->getAllJabatans() as $jabatan)
+                            @foreach($opd->allJabatans as $jabatan)
                                 <option value="{{ $jabatan->id }}">
                                     {{ str_repeat('—', $jabatan->getPath()->count() - 1) }} {{ $jabatan->nama }}
                                 </option>
