@@ -27,16 +27,27 @@ class OpdController extends Controller
      */
     public function index(Request $request)
     {
+        $query = Opd::with(['jabatanKepala.asns', 'asns']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('nama', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('id', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
         // Per page options
         $perPage = $request->get('per_page', 10);
         if (!in_array($perPage, [10, 15, 25, 50, 100])) {
             $perPage = 10;
         }
 
-        $opds = Opd::with(['jabatanKepala.asns', 'asns'])
-                   ->orderBy('nama')
-                   ->paginate($perPage)
-                   ->withQueryString();
+        $opds = $query->orderBy('nama')
+                     ->paginate($perPage)
+                     ->withQueryString();
+        
         return view('opds.index', compact('opds'));
     }
 

@@ -115,38 +115,41 @@
             <!-- Compact Search & Filter Bar -->
             <div class="card mb-3 animate-slide-up">
                 <div class="p-3">
-                    <div class="flex items-center gap-3">
+                    <form method="GET" action="{{ route('admin.opds.index') }}" class="flex items-center gap-3">
+                        <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
                         <div class="flex-1 relative">
                             <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" data-icon="mdi:magnify" data-width="16" data-height="16"></span>
                             <input
                                 type="text"
-                                x-model="searchQuery"
-                                @input.debounce.300ms="performSearch()"
+                                name="search"
+                                value="{{ request('search') }}"
                                 placeholder="Cari nama OPD atau ID..."
                                 class="input pl-9 pr-9 w-full text-sm"
                             >
-                            <button
-                                x-show="searchQuery"
-                                @click="clearSearch()"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            @if(request('search'))
+                            <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}"
+                               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                 <span class="iconify" data-icon="mdi:close" data-width="16" data-height="16"></span>
-                            </button>
+                            </a>
+                            @endif
                         </div>
-                        <div class="flex items-center gap-2 text-xs">
-                            <span class="text-gray-500">Urut:</span>
-                            <button @click="sortBy = 'name'; performSort()"
-                                    :class="sortBy === 'name' ? 'text-primary-600 font-semibold' : 'text-gray-600'"
-                                    class="hover:text-primary-600">
-                                <span class="iconify" data-icon="mdi:sort-alphabetical-ascending" data-width="16" data-height="16"></span>
-                            </button>
-                            <button @click="sortBy = 'id'; performSort()"
-                                    :class="sortBy === 'id' ? 'text-primary-600 font-semibold' : 'text-gray-600'"
-                                    class="hover:text-primary-600">
-                                <span class="iconify" data-icon="mdi:sort-numeric-ascending" data-width="16" data-height="16"></span>
-                            </button>
+                        <button type="submit" class="btn btn-primary text-sm px-4 py-1.5">
+                            <span class="iconify" data-icon="mdi:magnify" data-width="14" data-height="14"></span>
+                            <span class="ml-1">Cari</span>
+                        </button>
+                        @if(request('search'))
+                        <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm px-4 py-1.5">
+                            <span class="iconify" data-icon="mdi:refresh" data-width="14" data-height="14"></span>
+                            <span class="ml-1">Reset</span>
+                        </a>
+                        @endif
+                        <div class="text-xs text-gray-500 whitespace-nowrap">
+                            {{ $opds->total() }} OPD
+                            @if(request('search'))
+                            <span class="text-primary-600">ditemukan</span>
+                            @endif
                         </div>
-                        <div class="text-xs text-gray-500" x-text="searchResults + ' OPD'"></div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
@@ -163,10 +166,8 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($opds->sortBy('nama') as $opd)
-                                <tr class="hover:bg-gray-50 transition-colors opd-row"
-                                    data-opd-id="{{ $opd->id }}"
-                                    data-opd-name="{{ strtolower($opd->nama) }}">
+                            @foreach($opds as $opd)
+                                <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3 max-w-md">
                                             <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
@@ -210,14 +211,19 @@
                     </table>
                 </div>
 
+                @if($opds->isEmpty() && request('search'))
                 <!-- No Results -->
-                <div x-show="searchResults === 0 && searchQuery"
-                     class="p-8 text-center">
+                <div class="p-8 text-center">
                     <div class="flex justify-center mb-3">
                         <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
                     </div>
-                    <p class="text-sm text-gray-500">Tidak ada hasil untuk "<span x-text="searchQuery"></span>"</p>
+                    <p class="text-sm text-gray-500">Tidak ada hasil untuk "<strong>{{ request('search') }}</strong>"</p>
+                    <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm mt-3">
+                        <span class="iconify" data-icon="mdi:arrow-left" data-width="14" data-height="14"></span>
+                        <span class="ml-1">Kembali ke semua OPD</span>
+                    </a>
                 </div>
+                @endif
             </div>
 
             <!-- Pagination with Per Page Selector -->
@@ -226,6 +232,9 @@
                 <div class="flex items-center gap-2">
                     <label class="text-sm text-gray-600">Tampilkan:</label>
                     <form method="GET" action="{{ route('admin.opds.index') }}" class="inline-block">
+                        @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
                         <select name="per_page"
                                 onchange="this.form.submit()"
                                 class="input text-sm py-1 px-2 pr-8 w-auto">
@@ -361,54 +370,6 @@
 <script>
 function opdIndex() {
     return {
-        searchQuery: '',
-        searchResults: {{ $opds->count() }},
-        totalOpds: {{ $opds->count() }},
-        sortBy: 'name',
-
-        performSearch() {
-            const rows = document.querySelectorAll('.opd-row');
-            let count = 0;
-
-            rows.forEach(row => {
-                const name = row.dataset.opdName;
-                const id = row.dataset.opdId;
-                const query = this.searchQuery.toLowerCase();
-
-                if (name.includes(query) || id.includes(query)) {
-                    row.style.display = '';
-                    count++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            this.searchResults = count;
-        },
-
-        clearSearch() {
-            this.searchQuery = '';
-            this.searchResults = this.totalOpds;
-            document.querySelectorAll('.opd-row').forEach(row => {
-                row.style.display = '';
-            });
-        },
-
-        performSort() {
-            const tbody = document.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('.opd-row'));
-
-            rows.sort((a, b) => {
-                if (this.sortBy === 'name') {
-                    return a.dataset.opdName.localeCompare(b.dataset.opdName);
-                } else {
-                    return parseInt(a.dataset.opdId) - parseInt(b.dataset.opdId);
-                }
-            });
-
-            rows.forEach(row => tbody.appendChild(row));
-        },
-
         openEditModal(opdId, opdNama) {
             document.getElementById('edit_nama_opd').value = opdNama;
             document.getElementById('editOpdForm').action = '{{ route("admin.opds.update", ":id") }}'.replace(':id', opdId);
