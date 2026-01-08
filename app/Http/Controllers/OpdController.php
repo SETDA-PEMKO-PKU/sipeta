@@ -27,14 +27,17 @@ class OpdController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Opd::with(['jabatanKepala.asns', 'asns']);
+        // Gunakan withCount untuk efisiensi - tidak load semua relasi
+        $query = Opd::query()
+            ->withCount(['asns', 'jabatans'])
+            ->select('id', 'nama', 'created_at');
 
         // Search functionality
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function($q) use ($searchTerm) {
                 $q->where('nama', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('id', 'like', '%' . $searchTerm . '%');
+                  ->orWhere('id', $searchTerm); // Exact match untuk ID
             });
         }
 
