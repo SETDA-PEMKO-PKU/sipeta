@@ -31,9 +31,15 @@
     <!-- Header with Add Button -->
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800">Daftar Jabatan</h2>
-        <a href="{{ route('admin.jabatan.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-            Tambah Jabatan
-        </a>
+        <div class="flex gap-3">
+            <a href="{{ route('admin.jabatan.import.form') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2">
+                <span class="iconify" data-icon="mdi:file-upload" data-width="18" data-height="18"></span>
+                Import Excel
+            </a>
+            <a href="{{ route('admin.jabatan.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                Tambah Jabatan
+            </a>
+        </div>
     </div>
 
     <!-- Filters -->

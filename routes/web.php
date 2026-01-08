@@ -52,6 +52,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Jabatan Management (with OPD access check)
         Route::resource('jabatan', \App\Http\Controllers\Admin\OpdJabatanController::class)->middleware('check.opd.access');
 
+        // Jabatan Import Routes
+        Route::prefix('jabatan-import')->name('jabatan.import.')->middleware('check.opd.access')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\JabatanImportController::class, 'showImportForm'])->name('form');
+            Route::get('/download-template', [\App\Http\Controllers\Admin\JabatanImportController::class, 'downloadTemplate'])->name('download-template');
+            Route::post('/preview', [\App\Http\Controllers\Admin\JabatanImportController::class, 'previewImport'])->name('preview');
+            Route::post('/process', [\App\Http\Controllers\Admin\JabatanImportController::class, 'processImport'])->name('process');
+            Route::post('/single', [\App\Http\Controllers\Admin\JabatanImportController::class, 'importSingleRow'])->name('single');
+            Route::post('/clear-session', [\App\Http\Controllers\Admin\JabatanImportController::class, 'clearImportSession'])->name('clear-session');
+        });
+
         // Analytics Routes (with OPD access check)
         Route::prefix('analytics')->name('analytics.')->middleware('check.opd.access')->group(function () {
             Route::get('overview', [AnalyticsController::class, 'overview'])->name('overview');
