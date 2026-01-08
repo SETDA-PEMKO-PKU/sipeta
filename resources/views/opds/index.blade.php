@@ -102,48 +102,50 @@
             </div>
         @endif
 
-        @if($opds->count() > 0)
-            <!-- Compact Search & Filter Bar -->
-            <div class="card mb-3 animate-slide-up">
-                <div class="p-3">
-                    <form method="GET" action="{{ route('admin.opds.index') }}" class="flex items-center gap-3">
-                        <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
-                        <div class="flex-1 relative">
-                            <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" data-icon="mdi:magnify" data-width="16" data-height="16"></span>
-                            <input
-                                type="text"
-                                name="search"
-                                value="{{ request('search') }}"
-                                placeholder="Cari nama OPD atau ID..."
-                                class="input pl-9 pr-9 w-full text-sm"
-                            >
-                            @if(request('search'))
-                            <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}"
-                               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                <span class="iconify" data-icon="mdi:close" data-width="16" data-height="16"></span>
-                            </a>
-                            @endif
-                        </div>
-                        <button type="submit" class="btn btn-primary text-sm px-4 py-1.5">
-                            <span class="iconify" data-icon="mdi:magnify" data-width="14" data-height="14"></span>
-                            <span class="ml-1">Cari</span>
-                        </button>
+        <!-- Compact Search & Filter Bar - Selalu tampil -->
+        @if($opds->total() > 0 || request('search'))
+        <div class="card mb-3 animate-slide-up">
+            <div class="p-3">
+                <form method="GET" action="{{ route('admin.opds.index') }}" class="flex items-center gap-3">
+                    <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
+                    <div class="flex-1 relative">
+                        <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" data-icon="mdi:magnify" data-width="16" data-height="16"></span>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ request('search') }}"
+                            placeholder="Cari nama OPD atau ID..."
+                            class="input pl-9 pr-9 w-full text-sm"
+                        >
                         @if(request('search'))
-                        <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm px-4 py-1.5">
-                            <span class="iconify" data-icon="mdi:refresh" data-width="14" data-height="14"></span>
-                            <span class="ml-1">Reset</span>
+                        <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}"
+                           class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <span class="iconify" data-icon="mdi:close" data-width="16" data-height="16"></span>
                         </a>
                         @endif
-                        <div class="text-xs text-gray-500 whitespace-nowrap">
-                            {{ $opds->total() }} OPD
-                            @if(request('search'))
-                            <span class="text-primary-600">ditemukan</span>
-                            @endif
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary text-sm px-4 py-1.5">
+                        <span class="iconify" data-icon="mdi:magnify" data-width="14" data-height="14"></span>
+                        <span class="ml-1">Cari</span>
+                    </button>
+                    @if(request('search'))
+                    <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm px-4 py-1.5">
+                        <span class="iconify" data-icon="mdi:refresh" data-width="14" data-height="14"></span>
+                        <span class="ml-1">Reset</span>
+                    </a>
+                    @endif
+                    <div class="text-xs text-gray-500 whitespace-nowrap">
+                        {{ $opds->total() }} OPD
+                        @if(request('search'))
+                        <span class="text-primary-600">ditemukan</span>
+                        @endif
+                    </div>
+                </form>
             </div>
+        </div>
+        @endif
 
+        @if($opds->count() > 0)
             <!-- OPD Table List -->
             <div class="card">
                 <div class="overflow-x-auto">
@@ -202,14 +204,14 @@
                     </table>
                 </div>
 
-                @if($opds->isEmpty() && request('search'))
+                @if($opds->isEmpty())
                 <!-- No Results -->
                 <div class="p-8 text-center">
                     <div class="flex justify-center mb-3">
                         <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
                     </div>
-                    <p class="text-sm text-gray-500">Tidak ada hasil untuk "<strong>{{ request('search') }}</strong>"</p>
-                    <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm mt-3">
+                    <p class="text-sm text-gray-500 mb-3">Tidak ada hasil untuk "<strong>{{ request('search') }}</strong>"</p>
+                    <a href="{{ route('admin.opds.index', ['per_page' => request('per_page', 10)]) }}" class="btn btn-outline text-sm">
                         <span class="iconify" data-icon="mdi:arrow-left" data-width="14" data-height="14"></span>
                         <span class="ml-1">Kembali ke semua OPD</span>
                     </a>
@@ -217,6 +219,7 @@
                 @endif
             </div>
 
+            @if($opds->count() > 0)
             <!-- Pagination with Per Page Selector -->
             <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <!-- Per Page Selector -->
@@ -244,6 +247,7 @@
                     {{ $opds->links('vendor.pagination.custom') }}
                 </div>
             </div>
+            @endif
 
         @else
             <!-- Empty State -->
