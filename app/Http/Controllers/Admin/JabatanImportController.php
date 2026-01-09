@@ -270,32 +270,57 @@ class JabatanImportController extends Controller
                     continue;
                 }
 
-                // Check for duplicate
-                $existing = Jabatan::where('nama', $row['nama'])
-                    ->where('opd_id', $opdId)
-                    ->first();
-
-                if ($existing) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Find parent_id
+                // Find parent_id FIRST (before duplicate check)
                 $parentId = null;
                 if (!empty($row['parent_nama'])) {
-                    // First check in createdJabatans
-                    $parentKey = strtolower(trim($row['parent_nama'])) . '_' . $opdId;
-                    if (isset($createdJabatans[$parentKey])) {
-                        $parentId = $createdJabatans[$parentKey];
-                    } else {
-                        // Then check in database
+                    // First check in createdJabatans (jabatan yang baru dibuat di sesi ini)
+                    $parentKey = strtolower(trim($row['parent_nama'])) . '_' . $opdId . '_' . ($row['parent_nama'] ?? '');
+                    
+                    // Try exact match with parent nama
+                    foreach ($createdJabatans as $key => $id) {
+                        if (strpos($key, strtolower(trim($row['parent_nama'])) . '_' . $opdId) === 0) {
+                            $parentId = $id;
+                            break;
+                        }
+                    }
+                    
+                    if (!$parentId) {
+                        // Then check in database - search in all jabatan belonging to this OPD hierarchy
+                        // First try with opd_id directly
                         $parent = Jabatan::where('nama', $row['parent_nama'])
                             ->where('opd_id', $opdId)
                             ->first();
+                        
+                        if (!$parent) {
+                            // If not found, search in all jabatan IDs that belong to this OPD
+                            $allOpdJabatanIds = $this->getAllJabatanIdsForOpd($opdId);
+                            $parent = Jabatan::where('nama', $row['parent_nama'])
+                                ->whereIn('id', $allOpdJabatanIds)
+                                ->first();
+                        }
+                        
                         if ($parent) {
                             $parentId = $parent->id;
                         }
                     }
+                }
+
+                // Check for duplicate - now considering parent_id
+                // Jabatan dianggap duplikat jika nama DAN parent_id sama
+                $existingQuery = Jabatan::where('nama', $row['nama']);
+                
+                if ($parentId) {
+                    $existingQuery->where('parent_id', $parentId);
+                } else {
+                    // Root jabatan - check by opd_id
+                    $existingQuery->where('opd_id', $opdId)->whereNull('parent_id');
+                }
+                
+                $existing = $existingQuery->first();
+
+                if ($existing) {
+                    $skipped++;
+                    continue;
                 }
 
                 // Create new jabatan
@@ -308,8 +333,8 @@ class JabatanImportController extends Controller
                     'opd_id' => $opdId
                 ]);
 
-                // Store for parent lookup
-                $jabatanKey = strtolower(trim($row['nama'])) . '_' . $opdId;
+                // Store for parent lookup - include parent info in key for uniqueness
+                $jabatanKey = strtolower(trim($row['nama'])) . '_' . $opdId . '_' . $parentId;
                 $createdJabatans[$jabatanKey] = $jabatan->id;
 
                 $imported++;
@@ -368,30 +393,48 @@ class JabatanImportController extends Controller
                 ], 403);
             }
 
-            // Check if already exists
-            $existing = Jabatan::where('nama', $nama)
-                ->where('opd_id', $opdId)
-                ->first();
+            // Find parent_id FIRST (before duplicate check)
+            $parentId = null;
+            if (!empty($parentNama)) {
+                // First try with opd_id directly
+                $parent = Jabatan::where('nama', $parentNama)
+                    ->where('opd_id', $opdId)
+                    ->first();
+                
+                if (!$parent) {
+                    // If not found, search in all jabatan IDs that belong to this OPD
+                    $allOpdJabatanIds = $this->getAllJabatanIdsForOpd($opdId);
+                    $parent = Jabatan::where('nama', $parentNama)
+                        ->whereIn('id', $allOpdJabatanIds)
+                        ->first();
+                }
+                
+                if ($parent) {
+                    $parentId = $parent->id;
+                }
+            }
+
+            // Check if already exists - considering parent_id
+            // Jabatan dianggap duplikat jika nama DAN parent_id sama
+            $existingQuery = Jabatan::where('nama', $nama);
+            
+            if ($parentId) {
+                $existingQuery->where('parent_id', $parentId);
+            } else {
+                // Root jabatan - check by opd_id
+                $existingQuery->where('opd_id', $opdId)->whereNull('parent_id');
+            }
+            
+            $existing = $existingQuery->first();
 
             if ($existing) {
                 return response()->json([
                     'success' => true,
                     'status' => 'skipped',
-                    'message' => 'Jabatan dengan nama ini sudah ada di OPD ini',
+                    'message' => 'Jabatan dengan nama dan atasan yang sama sudah ada',
                     'index' => $index,
                     'data' => ['nama' => $nama, 'existing_id' => $existing->id]
                 ]);
-            }
-
-            // Find parent_id
-            $parentId = null;
-            if (!empty($parentNama)) {
-                $parent = Jabatan::where('nama', $parentNama)
-                    ->where('opd_id', $opdId)
-                    ->first();
-                if ($parent) {
-                    $parentId = $parent->id;
-                }
             }
 
             // Create new jabatan
@@ -580,12 +623,50 @@ class JabatanImportController extends Controller
                 $opdNama = $opd ? $opd->nama : '-';
             }
 
-            // Check existing jabatan
-            $existingJabatan = null;
-            if (!empty($nama) && !empty($opdId) && is_numeric($opdId)) {
-                $existingJabatan = Jabatan::where('nama', $nama)
+            // Find parent_id for duplicate check
+            $parentId = null;
+            if (!empty($parentNama) && !empty($opdId) && is_numeric($opdId)) {
+                // First try with opd_id directly
+                $parent = Jabatan::where('nama', $parentNama)
                     ->where('opd_id', $opdId)
                     ->first();
+                
+                if (!$parent) {
+                    // If not found, search in all jabatan IDs that belong to this OPD
+                    $allOpdJabatanIds = $this->getAllJabatanIdsForOpd($opdId);
+                    if (!empty($allOpdJabatanIds)) {
+                        $parent = Jabatan::where('nama', $parentNama)
+                            ->whereIn('id', $allOpdJabatanIds)
+                            ->first();
+                    }
+                }
+                
+                if ($parent) {
+                    $parentId = $parent->id;
+                }
+            }
+
+            // Check existing jabatan - considering parent_id
+            // Jabatan dianggap duplikat jika nama DAN parent_id sama
+            $existingJabatan = null;
+            if (!empty($nama) && !empty($opdId) && is_numeric($opdId)) {
+                $existingQuery = Jabatan::where('nama', $nama);
+                
+                if ($parentId) {
+                    // Has parent - check by parent_id
+                    $existingQuery->where('parent_id', $parentId);
+                } else {
+                    // Root jabatan or parent not found yet - check by opd_id only
+                    // But only mark as existing if it's truly a root jabatan
+                    if (empty($parentNama)) {
+                        $existingQuery->where('opd_id', $opdId)->whereNull('parent_id');
+                    } else {
+                        // Parent nama provided but not found - will be created, so no existing check needed
+                        $existingQuery->whereRaw('1=0'); // Never matches
+                    }
+                }
+                
+                $existingJabatan = $existingQuery->first();
             }
 
             $rowResult = [
@@ -597,7 +678,7 @@ class JabatanImportController extends Controller
                 'parent_nama' => $parentNama,
                 'opd_id' => $opdId,
                 'opd_nama' => $opdNama,
-                'existing_info' => $existingJabatan ? ['id' => $existingJabatan->id] : null,
+                'existing_info' => $existingJabatan ? ['id' => $existingJabatan->id, 'parent_id' => $existingJabatan->parent_id] : null,
                 'errors' => $errors
             ];
 
@@ -620,5 +701,42 @@ class JabatanImportController extends Controller
             'existing_count' => count($existing),
             'invalid_count' => count($invalid)
         ];
+    }
+
+    /**
+     * Get all jabatan IDs belonging to an OPD (including all nested children)
+     */
+    private function getAllJabatanIdsForOpd($opdId)
+    {
+        // Get root jabatan IDs for this OPD
+        $rootIds = Jabatan::where('opd_id', $opdId)
+                          ->whereNull('parent_id')
+                          ->pluck('id')
+                          ->toArray();
+        
+        if (empty($rootIds)) {
+            // Try getting all jabatan with this opd_id
+            return Jabatan::where('opd_id', $opdId)->pluck('id')->toArray();
+        }
+
+        // Collect all descendant IDs
+        $allIds = $rootIds;
+        $currentIds = $rootIds;
+        $maxDepth = 15;
+        $depth = 0;
+
+        while (!empty($currentIds) && $depth < $maxDepth) {
+            $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
+            
+            if (empty($childIds)) {
+                break;
+            }
+
+            $allIds = array_merge($allIds, $childIds);
+            $currentIds = $childIds;
+            $depth++;
+        }
+
+        return $allIds;
     }
 }
