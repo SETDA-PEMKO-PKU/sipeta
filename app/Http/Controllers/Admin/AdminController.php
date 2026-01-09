@@ -265,6 +265,93 @@ class AdminController extends Controller
     }
 
     /**
+     * Show form to reset and download all Admin OPD passwords.
+     */
+    public function showResetPasswordForm()
+    {
+        // Get all Admin OPD with their OPD
+        $adminOpds = Admin::with('opd')
+            ->where('role', Admin::ROLE_ADMIN_OPD)
+            ->whereNotNull('opd_id')
+            ->orderBy('name')
+            ->get();
+
+        $totalAdminOpd = $adminOpds->count();
+
+        $previewData = $adminOpds->map(function ($admin) {
+            return [
+                'admin_id' => $admin->id,
+                'admin_name' => $admin->name,
+                'email' => $admin->email,
+                'opd_nama' => $admin->opd->nama ?? '-',
+            ];
+        });
+
+        return view('admin.admins.reset-password', compact(
+            'totalAdminOpd',
+            'previewData'
+        ));
+    }
+
+    /**
+     * Reset password for single admin (AJAX endpoint).
+     */
+    public function resetSingleAdminPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'admin_id' => 'required|exists:admins,id',
+        ]);
+
+        $admin = Admin::with('opd')->findOrFail($validated['admin_id']);
+        $password = Str::random(8);
+
+        $admin->update([
+            'password' => Hash::make($password),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'admin_id' => $admin->id,
+                'opd_id' => $admin->opd_id,
+                'opd_nama' => $admin->opd->nama ?? '-',
+                'admin_name' => $admin->name,
+                'email' => $admin->email,
+                'password' => $password,
+            ],
+        ]);
+    }
+
+    /**
+     * Download Excel from reset password data.
+     */
+    public function downloadResetPasswordExcel(Request $request)
+    {
+        $validated = $request->validate([
+            'data' => 'required|array|min:1',
+            'data.*.admin_id' => 'required',
+            'data.*.opd_nama' => 'required|string',
+            'data.*.admin_name' => 'required|string',
+            'data.*.email' => 'required|string',
+            'data.*.password' => 'required|string',
+        ]);
+
+        $admins = collect($validated['data'])->map(function ($item) {
+            return [
+                'opd_id' => $item['admin_id'],
+                'opd_nama' => $item['opd_nama'],
+                'admin_name' => $item['admin_name'],
+                'email' => $item['email'],
+                'password' => $item['password'],
+            ];
+        });
+
+        $filename = 'admin_opd_reset_password_' . date('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new AdminOpdExport($admins), $filename);
+    }
+
+    /**
      * Bulk delete admins.
      */
     public function bulkDestroy(Request $request)

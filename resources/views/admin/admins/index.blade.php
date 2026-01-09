@@ -11,7 +11,11 @@
             <h2 class="text-2xl font-bold text-gray-900">Daftar Administrator</h2>
             <p class="text-gray-600 mt-1">Kelola akun administrator sistem</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.admins.reset-password') }}" class="btn bg-orange-600 hover:bg-orange-700 text-white">
+                <span class="iconify" data-icon="mdi:lock-reset" data-width="18" data-height="18"></span>
+                <span class="ml-2">Reset Password</span>
+            </a>
             <a href="{{ route('admin.admins.generate-opd') }}" class="btn btn-outline">
                 <span class="iconify" data-icon="mdi:account-multiple-plus" data-width="18" data-height="18"></span>
                 <span class="ml-2">Generate Admin OPD</span>

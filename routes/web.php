@@ -48,6 +48,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
         Route::post('admins-generate-opd/single', [AdminController::class, 'generateSingleOpdAdmin'])->name('admins.generate-opd.single');
         Route::post('admins-generate-opd/download', [AdminController::class, 'downloadGeneratedExcel'])->name('admins.generate-opd.download');
+        Route::get('admins-reset-password', [AdminController::class, 'showResetPasswordForm'])->name('admins.reset-password');
+        Route::post('admins-reset-password/single', [AdminController::class, 'resetSingleAdminPassword'])->name('admins.reset-password.single');
+        Route::post('admins-reset-password/download', [AdminController::class, 'downloadResetPasswordExcel'])->name('admins.reset-password.download');
         Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
 
         // Pegawai Management (with OPD access check)
