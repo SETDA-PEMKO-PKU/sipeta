@@ -141,32 +141,78 @@ class OpdController extends Controller
         // Stats - simple counts
         $opd->total_asn_count = $opd->asns->count();
         
-        // Count jabatan efficiently
-        $opd->total_jabatan_count = Jabatan::where('opd_id', $id)->count() + 
-            Jabatan::whereHas('parent', function($q) use ($id) {
-                $q->where('opd_id', $id);
-            })->count();
+        // Get all jabatan IDs for this OPD efficiently
+        $rootIds = Jabatan::where('opd_id', $id)->whereNull('parent_id')->pluck('id')->toArray();
+        $allJabatanIds = $this->collectAllJabatanIds($rootIds);
+        
+        $opd->total_jabatan_count = count($allJabatanIds);
+        
+        // Calculate total kebutuhan from all jabatan
+        $opd->total_kebutuhan = Jabatan::whereIn('id', $allJabatanIds)->sum('kebutuhan');
 
-        // Get kebutuhan sum from root jabatan and immediate children only
+        // Load jabatan tree with deep nesting (6 levels should cover most cases)
+        // Using recursive eager loading helper
         $rootJabatans = Jabatan::where('opd_id', $id)
                                ->whereNull('parent_id')
                                ->withCount('asns')
-                               ->with(['children' => function($q) {
-                                   $q->withCount('asns')
-                                     ->with(['children' => function($q2) {
-                                         $q2->withCount('asns');
-                                     }]);
-                               }])
+                               ->with(['asns'])
                                ->get();
         
-        $opd->total_kebutuhan = $rootJabatans->sum('kebutuhan') + 
-                                $rootJabatans->flatMap->children->sum('kebutuhan') +
-                                $rootJabatans->flatMap->children->flatMap->children->sum('kebutuhan');
+        // Load all children recursively using a helper
+        $this->loadAllChildrenRecursively($rootJabatans);
         
-        $opd->allJabatans = $rootJabatans;
+        $opd->allJabatans = $this->flattenJabatanTree($rootJabatans);
         $opd->jabatanTree = $rootJabatans;
 
         return view('opds.show', compact('opd'));
+    }
+
+    /**
+     * Helper: Load all children recursively for a collection of jabatan
+     */
+    private function loadAllChildrenRecursively($jabatans, $depth = 0, $maxDepth = 10)
+    {
+        if ($depth >= $maxDepth || $jabatans->isEmpty()) {
+            return;
+        }
+
+        // Get all jabatan IDs
+        $jabatanIds = $jabatans->pluck('id')->toArray();
+        
+        // Load all children in one query
+        $allChildren = Jabatan::whereIn('parent_id', $jabatanIds)
+                              ->withCount('asns')
+                              ->with(['asns'])
+                              ->get()
+                              ->groupBy('parent_id');
+
+        // Assign children to each jabatan
+        foreach ($jabatans as $jabatan) {
+            $children = $allChildren->get($jabatan->id, collect());
+            $jabatan->setRelation('children', $children);
+            
+            // Recursively load grandchildren
+            if ($children->isNotEmpty()) {
+                $this->loadAllChildrenRecursively($children, $depth + 1, $maxDepth);
+            }
+        }
+    }
+
+    /**
+     * Helper: Flatten jabatan tree to a collection
+     */
+    private function flattenJabatanTree($jabatans)
+    {
+        $result = collect();
+        
+        foreach ($jabatans as $jabatan) {
+            $result->push($jabatan);
+            if ($jabatan->children && $jabatan->children->isNotEmpty()) {
+                $result = $result->merge($this->flattenJabatanTree($jabatan->children));
+            }
+        }
+        
+        return $result;
     }
 
     /**
