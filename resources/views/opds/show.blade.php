@@ -79,7 +79,7 @@
                             <span class="iconify text-blue-500" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
                             <span class="stat-label">Total Jabatan</span>
                         </div>
-                        <div class="stat-value text-primary-600">{{ $opd->allJabatans->count() }}</div>
+                        <div class="stat-value text-primary-600">{{ $opd->total_jabatan_count }}</div>
                     </div>
                 </div>
             </div>

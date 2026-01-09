@@ -583,10 +583,19 @@ class OpdController extends Controller
      */
     public function petaJabatan($id)
     {
-        $opd = Opd::with([
-            'jabatanKepala.children.children.children.asns',
-            'jabatanKepala.asns'
-        ])->findOrFail($id);
+        $opd = Opd::findOrFail($id);
+        
+        // Load jabatan tree with all levels using recursive helper
+        $jabatanKepala = Jabatan::where('opd_id', $id)
+                                ->whereNull('parent_id')
+                                ->withCount('asns')
+                                ->with(['asns'])
+                                ->get();
+        
+        // Load all children recursively
+        $this->loadAllChildrenRecursively($jabatanKepala);
+        
+        $opd->setRelation('jabatanKepala', $jabatanKepala);
 
         return view('opds.peta-jabatan', compact('opd'));
     }
