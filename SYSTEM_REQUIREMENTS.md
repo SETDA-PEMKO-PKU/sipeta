@@ -89,7 +89,7 @@ Dokumen spesifikasi kebutuhan sistem untuk pengelolaan peta jabatan dan kepegawa
 - **Actor**: Super Admin, Admin Organisasi
 - **Input**:
   - Nama Jabatan
-  - Jenis Jabatan (Struktural/Fungsional)
+  - Jenis Jabatan (Struktural/Fungsional/Pelaksana)
   - Kelas Jabatan (dropdown)
   - Kebutuhan Formasi (integer)
   - OPD (dropdown)

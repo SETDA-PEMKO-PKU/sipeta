@@ -145,7 +145,7 @@
                         <p>Isi data jabatan sesuai kolom yang tersedia:</p>
                         <ul class="list-disc list-inside mt-1 text-xs">
                             <li><strong>nama</strong> - Nama jabatan (wajib)</li>
-                            <li><strong>jenis_jabatan</strong> - Struktural/Fungsional</li>
+                            <li><strong>jenis_jabatan</strong> - Struktural/Fungsional/Pelaksana</li>
                             <li><strong>kelas</strong> - Kelas jabatan (1-17)</li>
                             <li><strong>kebutuhan</strong> - Jumlah formasi</li>
                             <li><strong>parent_nama</strong> - Nama jabatan atasan</li>

@@ -81,7 +81,7 @@ class JabatanImportController extends Controller
         $headers = ['nama', 'jenis_jabatan', 'kelas', 'kebutuhan', 'parent_nama', 'opd_id'];
         $headerDescriptions = [
             'Nama Jabatan (wajib)',
-            'Jenis Jabatan (Struktural/Fungsional)',
+            'Jenis Jabatan (Struktural/Fungsional/Pelaksana)',
             'Kelas Jabatan (1-17)',
             'Jumlah Kebutuhan Formasi',
             'Nama Jabatan Parent (opsional)',
@@ -553,9 +553,9 @@ class JabatanImportController extends Controller
 
             // Validate jenis_jabatan (optional but must be valid if provided)
             if (!empty($jenisJabatan)) {
-                $validJenis = ['struktural', 'fungsional'];
+                $validJenis = ['struktural', 'fungsional', 'pelaksana'];
                 if (!in_array(strtolower($jenisJabatan), $validJenis)) {
-                    $errors[] = 'Jenis jabatan harus "Struktural" atau "Fungsional"';
+                    $errors[] = 'Jenis jabatan harus "Struktural", "Fungsional", atau "Pelaksana"';
                 }
             }
 
