@@ -187,65 +187,78 @@ class AdminController extends Controller
     }
 
     /**
-     * Process generating admin OPD accounts and download Excel.
+     * Generate single admin for one OPD (AJAX endpoint).
      */
-    public function processGenerateOpd(Request $request)
+    public function generateSingleOpdAdmin(Request $request)
     {
-        // Get OPD IDs that already have admin
-        $opdIdsWithAdmin = Admin::where('role', Admin::ROLE_ADMIN_OPD)
-            ->whereNotNull('opd_id')
-            ->pluck('opd_id')
-            ->unique()
-            ->toArray();
+        $validated = $request->validate([
+            'opd_id' => 'required|exists:opds,id',
+        ]);
 
-        // Get OPDs without admin
-        $opdsWithoutAdmin = Opd::whereNotIn('id', $opdIdsWithAdmin)
-            ->orderBy('nama')
-            ->get();
+        $opd = Opd::findOrFail($validated['opd_id']);
 
-        if ($opdsWithoutAdmin->isEmpty()) {
-            return redirect()->route('admin.admins.index')
-                ->with('info', 'Semua OPD sudah memiliki admin');
+        // Check if OPD already has admin
+        $existingOpdAdmin = Admin::where('role', Admin::ROLE_ADMIN_OPD)
+            ->where('opd_id', $opd->id)
+            ->first();
+
+        if ($existingOpdAdmin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OPD sudah memiliki admin',
+            ], 400);
         }
 
-        $generatedAdmins = collect();
+        $email = $this->convertToEmail($opd->nama);
+        $password = Str::random(8);
 
-        foreach ($opdsWithoutAdmin as $opd) {
-            $email = $this->convertToEmail($opd->nama);
-            $password = Str::random(8);
+        // Check if email already exists
+        if (Admin::where('email', $email)->exists()) {
+            $counter = 1;
+            do {
+                $newEmail = preg_replace('/@pku\.go\.id$/', '', $email) . $counter . '@pku.go.id';
+                $counter++;
+            } while (Admin::where('email', $newEmail)->exists());
+            $email = $newEmail;
+        }
 
-            // Check if email already exists
-            $existingAdmin = Admin::where('email', $email)->first();
-            if ($existingAdmin) {
-                // If email exists, add number suffix
-                $counter = 1;
-                do {
-                    $email = $this->convertToEmail($opd->nama) . $counter;
-                    $email = str_replace('@pku.go.id', '', $email) . '@pku.go.id';
-                    $counter++;
-                } while (Admin::where('email', $email)->exists());
-            }
+        // Create admin
+        Admin::create([
+            'name' => 'Admin ' . $opd->nama,
+            'email' => $email,
+            'password' => Hash::make($password),
+            'role' => Admin::ROLE_ADMIN_OPD,
+            'opd_id' => $opd->id,
+            'is_active' => true,
+        ]);
 
-            // Create admin
-            Admin::create([
-                'name' => 'Admin ' . $opd->nama,
-                'email' => $email,
-                'password' => Hash::make($password),
-                'role' => Admin::ROLE_ADMIN_OPD,
-                'opd_id' => $opd->id,
-                'is_active' => true,
-            ]);
-
-            $generatedAdmins->push([
+        return response()->json([
+            'success' => true,
+            'data' => [
                 'opd_id' => $opd->id,
                 'opd_nama' => $opd->nama,
                 'admin_name' => 'Admin ' . $opd->nama,
                 'email' => $email,
                 'password' => $password,
-            ]);
-        }
+            ],
+        ]);
+    }
 
-        // Generate filename with timestamp
+    /**
+     * Download Excel from generated admin data.
+     */
+    public function downloadGeneratedExcel(Request $request)
+    {
+        $validated = $request->validate([
+            'data' => 'required|array|min:1',
+            'data.*.opd_id' => 'required',
+            'data.*.opd_nama' => 'required|string',
+            'data.*.admin_name' => 'required|string',
+            'data.*.email' => 'required|string',
+            'data.*.password' => 'required|string',
+        ]);
+
+        $generatedAdmins = collect($validated['data']);
         $filename = 'admin_opd_' . date('Y-m-d_His') . '.xlsx';
 
         return Excel::download(new AdminOpdExport($generatedAdmins), $filename);

@@ -83,15 +83,29 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">OPD Belum Punya Admin</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $opdWithoutAdmin }}</p>
+                    <p class="text-2xl font-bold text-gray-900" id="remainingCount">{{ $opdWithoutAdmin }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Preview Table -->
     @if($opdWithoutAdmin > 0)
-    <div class="card mb-6">
+    <!-- Progress Section (Hidden initially) -->
+    <div id="progressSection" class="card mb-6 hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Proses Generate Admin</h3>
+                <span id="progressText" class="text-sm text-gray-600">0 / {{ $opdWithoutAdmin }}</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                <div id="progressBar" class="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="currentOpdName" class="text-sm text-gray-600">Mempersiapkan...</p>
+        </div>
+    </div>
+
+    <!-- Preview Table -->
+    <div id="previewSection" class="card mb-6">
         <div class="p-6 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-900">Preview Admin yang Akan Digenerate</h3>
             <p class="text-sm text-gray-500 mt-1">Berikut daftar OPD yang belum memiliki admin dan email yang akan digenerate</p>
@@ -108,7 +122,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($previewData as $index => $item)
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50" id="row-{{ $item['opd_id'] }}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $index + 1 }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $item['opd_nama'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $item['admin_name'] }}</td>
@@ -123,19 +137,40 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-4">
-        <form action="{{ route('admin.admins.generate-opd.process') }}" method="POST" 
-              onsubmit="return confirm('Apakah Anda yakin ingin generate {{ $opdWithoutAdmin }} akun admin OPD? Proses ini akan membuat akun baru dan mengunduh file Excel.')">
-            @csrf
-            <button type="submit" class="btn btn-primary">
-                <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
-                <span class="ml-2">Generate & Download Excel</span>
-            </button>
-        </form>
+    <div id="actionButtons" class="flex items-center gap-4">
+        <button type="button" onclick="startGenerate()" class="btn btn-primary" id="generateBtn">
+            <span class="iconify" data-icon="mdi:play" data-width="18" data-height="18"></span>
+            <span class="ml-2">Mulai Generate</span>
+        </button>
         <a href="{{ route('admin.admins.index') }}" class="btn btn-outline">
             <span class="iconify" data-icon="mdi:close" data-width="18" data-height="18"></span>
             <span class="ml-2">Batal</span>
         </a>
+    </div>
+
+    <!-- Download Button (Hidden initially) -->
+    <div id="downloadSection" class="hidden">
+        <div class="card p-6 bg-green-50 border-green-200">
+            <div class="flex items-center gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="iconify text-green-600" data-icon="mdi:check-circle" data-width="28" data-height="28"></span>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-green-800">Generate Selesai!</h3>
+                    <p class="text-green-700 text-sm" id="successMessage">0 admin berhasil digenerate</p>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="downloadExcel()" class="btn btn-primary">
+                        <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
+                        <span class="ml-2">Download Excel</span>
+                    </button>
+                    <a href="{{ route('admin.admins.index') }}" class="btn btn-outline">
+                        <span class="iconify" data-icon="mdi:arrow-left" data-width="18" data-height="18"></span>
+                        <span class="ml-2">Kembali</span>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
     @else
     <div class="card">
@@ -153,4 +188,142 @@
     </div>
     @endif
 </div>
+
+@if($opdWithoutAdmin > 0)
+<script>
+const opdList = @json($previewData);
+let generatedAdmins = [];
+let currentIndex = 0;
+let isGenerating = false;
+
+async function startGenerate() {
+    if (isGenerating) return;
+    isGenerating = true;
+    
+    // Show progress, hide preview
+    document.getElementById('progressSection').classList.remove('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
+    document.getElementById('generateBtn').disabled = true;
+    
+    // Start processing
+    await processNextOpd();
+}
+
+async function processNextOpd() {
+    if (currentIndex >= opdList.length) {
+        // All done
+        finishGenerate();
+        return;
+    }
+    
+    const opd = opdList[currentIndex];
+    const total = opdList.length;
+    
+    // Update progress UI
+    document.getElementById('currentOpdName').textContent = `Membuat admin untuk: ${opd.opd_nama}`;
+    document.getElementById('progressText').textContent = `${currentIndex + 1} / ${total}`;
+    document.getElementById('progressBar').style.width = `${((currentIndex + 1) / total) * 100}%`;
+    
+    // Highlight current row
+    const row = document.getElementById(`row-${opd.opd_id}`);
+    if (row) {
+        row.classList.add('bg-yellow-50');
+    }
+    
+    try {
+        const response = await fetch('{{ route("admin.admins.generate-opd.single") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ opd_id: opd.opd_id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            generatedAdmins.push(result.data);
+            
+            // Mark row as success
+            if (row) {
+                row.classList.remove('bg-yellow-50');
+                row.classList.add('bg-green-50');
+                const firstCell = row.querySelector('td');
+                if (firstCell) {
+                    firstCell.innerHTML = `<span class="iconify text-green-600" data-icon="mdi:check-circle" data-width="20" data-height="20"></span>`;
+                }
+            }
+        } else {
+            // Mark row as error
+            if (row) {
+                row.classList.remove('bg-yellow-50');
+                row.classList.add('bg-red-50');
+            }
+        }
+    } catch (error) {
+        console.error('Error generating admin for OPD:', opd.opd_nama, error);
+        if (row) {
+            row.classList.remove('bg-yellow-50');
+            row.classList.add('bg-red-50');
+        }
+    }
+    
+    currentIndex++;
+    
+    // Small delay to prevent overwhelming the server
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Process next
+    await processNextOpd();
+}
+
+function finishGenerate() {
+    isGenerating = false;
+    
+    document.getElementById('progressSection').classList.add('hidden');
+    document.getElementById('previewSection').classList.add('hidden');
+    document.getElementById('downloadSection').classList.remove('hidden');
+    document.getElementById('successMessage').textContent = `${generatedAdmins.length} admin berhasil digenerate`;
+    
+    // Update remaining count
+    document.getElementById('remainingCount').textContent = '0';
+}
+
+function downloadExcel() {
+    if (generatedAdmins.length === 0) {
+        alert('Tidak ada data untuk diunduh');
+        return;
+    }
+    
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.admins.generate-opd.download") }}';
+    
+    // Add CSRF token
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = '_token';
+    csrf.value = '{{ csrf_token() }}';
+    form.appendChild(csrf);
+    
+    // Add data as JSON
+    generatedAdmins.forEach((admin, index) => {
+        Object.keys(admin).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `data[${index}][${key}]`;
+            input.value = admin[key];
+            form.appendChild(input);
+        });
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+@endif
 @endsection

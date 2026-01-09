@@ -46,7 +46,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin Management
         Route::resource('admins', AdminController::class);
         Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
-        Route::post('admins-generate-opd', [AdminController::class, 'processGenerateOpd'])->name('admins.generate-opd.process');
+        Route::post('admins-generate-opd/single', [AdminController::class, 'generateSingleOpdAdmin'])->name('admins.generate-opd.single');
+        Route::post('admins-generate-opd/download', [AdminController::class, 'downloadGeneratedExcel'])->name('admins.generate-opd.download');
         Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
 
         // Pegawai Management (with OPD access check)
