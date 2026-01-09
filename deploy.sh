@@ -27,6 +27,7 @@ sudo chmod -R 775 /home/kirimi/sipeta/bootstrap/cache
 # Clear cache
 sudo -u www-data php artisan config:clear
 sudo -u www-data php artisan cache:clear
+sudo -u www-data php artisan optimize:clear
 
 # Restart
 sudo systemctl restart php8.3-fpm nginx
