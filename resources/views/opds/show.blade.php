@@ -121,10 +121,16 @@
                     Struktur Organisasi
                 </h3>
                 @if(auth('admin')->user()->canManageOpdJabatan())
-                <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-sm btn-primary">
-                    <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
-                    <span class="ml-1">Jabatan</span>
-                </button>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.jabatan.import.form', ['opd_id' => $opd->id]) }}" class="btn btn-sm" style="background-color: #f59e0b; border-color: #f59e0b; color: white;">
+                        <span class="iconify" data-icon="mdi:file-import" data-width="16" data-height="16"></span>
+                        <span class="ml-1">Import Jabatan</span>
+                    </a>
+                    <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-sm btn-primary">
+                        <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
+                        <span class="ml-1">Jabatan</span>
+                    </button>
+                </div>
                 @endif
             </div>
             <div class="card-body">
