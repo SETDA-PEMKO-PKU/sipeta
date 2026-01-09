@@ -45,6 +45,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Admin Management
         Route::resource('admins', AdminController::class);
+        Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
+        Route::post('admins-generate-opd', [AdminController::class, 'processGenerateOpd'])->name('admins.generate-opd.process');
+        Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
 
         // Pegawai Management (with OPD access check)
         Route::resource('pegawai', PegawaiController::class)->middleware('check.opd.access');
