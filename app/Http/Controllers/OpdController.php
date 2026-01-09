@@ -138,41 +138,33 @@ class OpdController extends Controller
         // Load OPD with basic relations only
         $opd = Opd::with(['asns'])->findOrFail($id);
 
-        // Get root jabatan IDs for this OPD
-        $rootIds = Jabatan::where('opd_id', $id)
-                          ->whereNull('parent_id')
-                          ->pluck('id')
-                          ->toArray();
-
-        // Collect all jabatan IDs using efficient batch query
-        $allJabatanIds = $this->collectAllJabatanIds($rootIds);
-        
-        // Stats
-        $opd->total_jabatan_count = count($allJabatanIds);
+        // Stats - simple counts
         $opd->total_asn_count = $opd->asns->count();
         
-        // Get jabatan data with ASN count (lightweight)
-        $allJabatans = collect();
-        if (!empty($allJabatanIds)) {
-            $allJabatans = Jabatan::whereIn('id', $allJabatanIds)
-                                  ->withCount('asns')
-                                  ->get();
-        }
-        
-        $opd->total_kebutuhan = $allJabatans->sum('kebutuhan');
-        $opd->allJabatans = $allJabatans;
+        // Count jabatan efficiently
+        $opd->total_jabatan_count = Jabatan::where('opd_id', $id)->count() + 
+            Jabatan::whereHas('parent', function($q) use ($id) {
+                $q->where('opd_id', $id);
+            })->count();
 
-        // Load jabatan tree for display (only 4 levels deep with children loaded separately)
-        $opd->jabatanTree = Jabatan::where('opd_id', $id)
-                                   ->whereNull('parent_id')
-                                   ->with(['asns', 'children' => function($q) {
-                                       $q->with(['asns', 'children' => function($q2) {
-                                           $q2->with(['asns', 'children' => function($q3) {
-                                               $q3->with(['asns', 'children.asns']);
-                                           }]);
-                                       }]);
-                                   }])
-                                   ->get();
+        // Get kebutuhan sum from root jabatan and immediate children only
+        $rootJabatans = Jabatan::where('opd_id', $id)
+                               ->whereNull('parent_id')
+                               ->withCount('asns')
+                               ->with(['children' => function($q) {
+                                   $q->withCount('asns')
+                                     ->with(['children' => function($q2) {
+                                         $q2->withCount('asns');
+                                     }]);
+                               }])
+                               ->get();
+        
+        $opd->total_kebutuhan = $rootJabatans->sum('kebutuhan') + 
+                                $rootJabatans->flatMap->children->sum('kebutuhan') +
+                                $rootJabatans->flatMap->children->flatMap->children->sum('kebutuhan');
+        
+        $opd->allJabatans = $rootJabatans;
+        $opd->jabatanTree = $rootJabatans;
 
         return view('opds.show', compact('opd'));
     }
