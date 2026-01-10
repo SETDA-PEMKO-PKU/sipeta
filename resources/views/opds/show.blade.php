@@ -30,7 +30,7 @@
                     <span class="iconify" data-icon="mdi:file-tree" data-width="18" data-height="18"></span>
                     <span class="ml-2">Peta Jabatan</span>
                 </a>
-                @if(auth('admin')->user()->canManageAsn())
+                @if(auth('admin')->user()->canManageOpdJabatan())
                 <a href="{{ route('admin.opds.import.form', $opd->id) }}" class="btn" style="background-color: #10b981; border-color: #10b981; color: white;">
                     <span class="iconify" data-icon="mdi:upload" data-width="18" data-height="18"></span>
                     <span class="ml-2">Import CSV</span>

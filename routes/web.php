@@ -106,13 +106,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
             Route::delete('/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->name('opds.asn.destroy');
 
-            // Import ASN dari CSV
-            Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form');
-            Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template');
-            Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview');
-            Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process');
-            Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single');
-            Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session');
+            // Import ASN dari CSV (dengan OPD access check)
+            Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form')->middleware('check.opd.access');
+            Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template')->middleware('check.opd.access');
+            Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview')->middleware('check.opd.access');
+            Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process')->middleware('check.opd.access');
+            Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single')->middleware('check.opd.access');
+            Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session')->middleware('check.opd.access');
         });
 
         // API routes
