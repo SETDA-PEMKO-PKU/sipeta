@@ -30,6 +30,12 @@ class OpdController extends Controller
         // Gunakan withCount untuk efisiensi
         $query = Opd::query()->withCount(['asns']);
 
+        // Filter untuk Admin OPD - hanya tampilkan OPD miliknya
+        $admin = auth('admin')->user();
+        if ($admin && $admin->isAdminOpd() && $admin->opd_id) {
+            $query->where('id', $admin->opd_id);
+        }
+
         // Search functionality
         if ($request->filled('search')) {
             $searchTerm = $request->search;
@@ -99,12 +105,40 @@ class OpdController extends Controller
             return $opd;
         });
 
-        // Calculate stats - total dari semua OPD
-        $stats = [
-            'total_opd' => Opd::count(),
-            'total_jabatan' => Jabatan::count(),
-            'total_asn' => Asn::count(),
-        ];
+        // Calculate stats - filter based on admin's OPD access
+        if ($admin && $admin->isAdminOpd() && $admin->opd_id) {
+            // Admin OPD hanya lihat stats OPD miliknya
+            $opdId = $admin->opd_id;
+            
+            // Get all jabatan IDs for this OPD
+            $rootIds = Jabatan::where('opd_id', $opdId)->whereNull('parent_id')->pluck('id')->toArray();
+            $allJabatanIds = [];
+            $currentIds = $rootIds;
+            $maxDepth = 20;
+            $depth = 0;
+            $allJabatanIds = $rootIds;
+            
+            while (!empty($currentIds) && $depth < $maxDepth) {
+                $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
+                if (empty($childIds)) break;
+                $allJabatanIds = array_merge($allJabatanIds, $childIds);
+                $currentIds = $childIds;
+                $depth++;
+            }
+            
+            $stats = [
+                'total_opd' => 1,
+                'total_jabatan' => count($allJabatanIds),
+                'total_asn' => Asn::where('opd_id', $opdId)->count(),
+            ];
+        } else {
+            // Super admin / other roles lihat semua
+            $stats = [
+                'total_opd' => Opd::count(),
+                'total_jabatan' => Jabatan::count(),
+                'total_asn' => Asn::count(),
+            ];
+        }
         
         return view('opds.index', compact('opds', 'stats'));
     }

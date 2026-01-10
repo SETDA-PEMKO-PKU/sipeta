@@ -90,29 +90,33 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
             Route::post('/', [OpdController::class, 'store'])->name('opds.store');
-            Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
-            Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
-            Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');
-            Route::put('/{id}', [OpdController::class, 'update'])->name('opds.update');
-            Route::delete('/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');
+            
+            // Routes yang memerlukan OPD access check
+            Route::middleware('check.opd.access')->group(function () {
+                Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
+                Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
+                Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');
+                Route::put('/{id}', [OpdController::class, 'update'])->name('opds.update');
+                Route::delete('/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');
 
-            // CRUD Jabatan dalam OPD
-            Route::post('/{opd}/jabatan', [OpdController::class, 'storeJabatan'])->name('opds.jabatan.store');
-            Route::put('/{opd}/jabatan/{jabatan}', [OpdController::class, 'updateJabatan'])->name('opds.jabatan.update');
-            Route::delete('/{opd}/jabatan/{jabatan}', [OpdController::class, 'destroyJabatan'])->name('opds.jabatan.destroy');
+                // CRUD Jabatan dalam OPD
+                Route::post('/{opd}/jabatan', [OpdController::class, 'storeJabatan'])->name('opds.jabatan.store');
+                Route::put('/{opd}/jabatan/{jabatan}', [OpdController::class, 'updateJabatan'])->name('opds.jabatan.update');
+                Route::delete('/{opd}/jabatan/{jabatan}', [OpdController::class, 'destroyJabatan'])->name('opds.jabatan.destroy');
 
-            // CRUD ASN dalam OPD
-            Route::post('/{opd}/asn', [OpdController::class, 'storeAsn'])->name('opds.asn.store');
-            Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
-            Route::delete('/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->name('opds.asn.destroy');
+                // CRUD ASN dalam OPD
+                Route::post('/{opd}/asn', [OpdController::class, 'storeAsn'])->name('opds.asn.store');
+                Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
+                Route::delete('/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->name('opds.asn.destroy');
 
-            // Import ASN dari CSV (dengan OPD access check)
-            Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form')->middleware('check.opd.access');
-            Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template')->middleware('check.opd.access');
-            Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview')->middleware('check.opd.access');
-            Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process')->middleware('check.opd.access');
-            Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single')->middleware('check.opd.access');
-            Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session')->middleware('check.opd.access');
+                // Import ASN dari CSV
+                Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form');
+                Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template');
+                Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview');
+                Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process');
+                Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single');
+                Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session');
+            });
         });
 
         // API routes
