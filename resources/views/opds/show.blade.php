@@ -13,6 +13,7 @@
             </a>
             <div class="flex-1">
                 <h2 class="text-2xl font-bold text-gray-900" x-show="!editingNama">{{ $opd->nama }}</h2>
+                @if(auth('admin')->user()->canManageOpdJabatan())
                 <form action="{{ route('admin.opds.update', $opd->id) }}" method="POST" x-show="editingNama" @submit="editingNama = false" class="flex items-center gap-2">
                     @csrf
                     @method('PUT')
@@ -20,12 +21,15 @@
                     <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
                     <button type="button" @click="editingNama = false" class="btn btn-outline btn-sm">Batal</button>
                 </form>
+                @endif
             </div>
             <div class="flex gap-2">
+                @if(auth('admin')->user()->canManageOpdJabatan())
                 <button @click="editingNama = !editingNama" class="btn btn-outline" x-show="!editingNama">
                     <span class="iconify" data-icon="mdi:pencil" data-width="18" data-height="18"></span>
                     <span class="ml-2">Edit Nama</span>
                 </button>
+                @endif
                 <a href="{{ route('admin.opds.peta-jabatan', $opd->id) }}" class="btn" style="background-color: #8b5cf6; border-color: #8b5cf6; color: white;">
                     <span class="iconify" data-icon="mdi:file-tree" data-width="18" data-height="18"></span>
                     <span class="ml-2">Peta Jabatan</span>

@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Opd;
 use App\Models\Jabatan;
 use App\Models\Asn;
+use App\Models\AdminActivityLog;
+use App\Traits\LogsAdminActivity;
 use Illuminate\Http\Request;
 
 class OpdController extends Controller
 {
+    use LogsAdminActivity;
     /**
      * Apply middleware untuk permission check
      */
@@ -159,6 +162,9 @@ class OpdController extends Controller
         $opd = Opd::create([
             'nama' => $request->nama
         ]);
+
+        // Log activity
+        $this->logCreate($opd, "Membuat OPD baru: {$opd->nama}");
 
         return redirect()->route('admin.opds.index')
                         ->with('success', 'OPD "' . $opd->nama . '" berhasil ditambahkan!');
@@ -358,7 +364,10 @@ class OpdController extends Controller
             $jabatanData['opd_id'] = $opdId;
         }
 
-        Jabatan::create($jabatanData);
+        $jabatan = Jabatan::create($jabatanData);
+
+        // Log activity
+        $this->logCreate($jabatan, "Membuat jabatan baru: {$jabatan->nama} di OPD ID {$opdId}");
 
         return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Jabatan berhasil ditambahkan!');
@@ -421,7 +430,13 @@ class OpdController extends Controller
             $updateData['opd_id'] = null;
         }
 
+        // Simpan data lama untuk log
+        $oldData = $jabatan->toArray();
+
         $jabatan->update($updateData);
+
+        // Log activity
+        $this->logUpdate($jabatan, $oldData, "Mengubah jabatan: {$jabatan->nama}");
 
         return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Jabatan berhasil diperbarui!');
@@ -470,6 +485,9 @@ class OpdController extends Controller
                             ->with('error', 'Tidak dapat menghapus jabatan yang memiliki ASN!');
         }
 
+        // Log activity sebelum menghapus
+        $this->logDelete($jabatan, "Menghapus jabatan: {$jabatan->nama} dari OPD ID {$opdId}");
+
         $jabatan->delete();
 
         return redirect()->route('admin.opds.show', $opdId)
@@ -491,9 +509,14 @@ class OpdController extends Controller
 
         $opd = Opd::findOrFail($id);
         $oldNama = $opd->nama;
+        $oldData = $opd->toArray();
+        
         $opd->update([
             'nama' => $request->nama
         ]);
+
+        // Log activity
+        $this->logUpdate($opd, $oldData, "Mengubah nama OPD dari '{$oldNama}' menjadi '{$opd->nama}'");
 
         return redirect()->route('admin.opds.index')
                         ->with('success', 'OPD "' . $oldNama . '" berhasil diubah menjadi "' . $opd->nama . '"');
@@ -520,6 +543,9 @@ class OpdController extends Controller
                                 ->with('error', 'Tidak dapat menghapus OPD "' . $opd->nama . '" karena jabatan "' . $jabatan->nama . '" masih memiliki ASN!');
             }
         }
+
+        // Log activity sebelum menghapus
+        $this->logDelete($opd, "Menghapus OPD: {$opd->nama} beserta semua jabatan");
 
         // Hapus semua jabatan yang terkait dengan OPD ini
         // (akan otomatis menghapus child jabatan karena cascade)
@@ -551,12 +577,22 @@ class OpdController extends Controller
             return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
         }
 
-        Asn::create([
+        $asn = Asn::create([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
             'opd_id' => $opdId
         ]);
+
+        // Log activity
+        AdminActivityLog::log(
+            AdminActivityLog::ACTION_CREATE,
+            AdminActivityLog::MODULE_ASN,
+            "Menambahkan ASN baru: {$asn->nama} (NIP: {$asn->nip}) ke OPD ID {$opdId}",
+            $asn,
+            null,
+            $asn->toArray()
+        );
 
         return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'ASN berhasil ditambahkan!');
@@ -585,12 +621,25 @@ class OpdController extends Controller
             return back()->withErrors(['jabatan_id' => 'Jabatan tidak valid untuk OPD ini.']);
         }
 
+        // Simpan data lama untuk log
+        $oldData = $asn->toArray();
+
         $asn->update([
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
             'opd_id' => $opdId
         ]);
+
+        // Log activity
+        AdminActivityLog::log(
+            AdminActivityLog::ACTION_UPDATE,
+            AdminActivityLog::MODULE_ASN,
+            "Mengubah data ASN: {$asn->nama} (NIP: {$asn->nip})",
+            $asn,
+            $oldData,
+            $asn->toArray()
+        );
 
         return redirect()->route('admin.opds.show', $opdId)
                         ->with('success', 'Data ASN berhasil diperbarui!');
@@ -606,6 +655,17 @@ class OpdController extends Controller
                   ->firstOrFail();
 
         $namaAsn = $asn->nama;
+        
+        // Log activity sebelum menghapus
+        AdminActivityLog::log(
+            AdminActivityLog::ACTION_DELETE,
+            AdminActivityLog::MODULE_ASN,
+            "Menghapus ASN: {$asn->nama} (NIP: {$asn->nip}) dari OPD ID {$opdId}",
+            $asn,
+            $asn->toArray(),
+            null
+        );
+        
         $asn->delete();
 
         return redirect()->route('admin.opds.show', $opdId)
@@ -725,6 +785,9 @@ class OpdController extends Controller
             }
             fclose($file);
         };
+
+        // Log export activity
+        $this->logExport(AdminActivityLog::MODULE_OPD, "Export data OPD: {$opd->nama}");
 
         return response()->stream($callback, 200, $headers);
     }

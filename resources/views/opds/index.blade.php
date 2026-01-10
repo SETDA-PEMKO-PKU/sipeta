@@ -253,10 +253,14 @@
                 <span class="iconify text-gray-300" data-icon="mdi:office-building" data-width="64" data-height="64"></span>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 mt-4">Belum Ada Data OPD</h3>
                 <p class="text-sm text-gray-500 mb-4">Sistem belum memiliki data Organisasi Perangkat Daerah</p>
+                @if(auth('admin')->user()->canManageOpdJabatan())
                 <button @click="$dispatch('open-modal', 'add-opd')" class="btn btn-primary">
                     <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
                     <span class="ml-2">Tambah OPD Pertama</span>
                 </button>
+                @else
+                <p class="text-xs text-gray-400">Hubungi Super Admin untuk menambah OPD</p>
+                @endif
             </div>
         @endif
     </div>

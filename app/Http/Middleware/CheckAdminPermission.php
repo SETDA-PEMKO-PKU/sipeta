@@ -29,6 +29,11 @@ class CheckAdminPermission
 
         // Check specific permissions
         switch ($permission) {
+            case 'super_admin_only':
+                // Only super admin can access - others are already denied above
+                abort(403, 'Hanya Super Admin yang dapat mengakses fitur ini');
+                break;
+
             case 'manage_asn':
                 if (!$admin->canManageAsn()) {
                     abort(403, 'Anda tidak memiliki akses untuk mengelola ASN');

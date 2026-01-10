@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\ActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,15 +44,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Admin Management
-        Route::resource('admins', AdminController::class);
-        Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
-        Route::post('admins-generate-opd/single', [AdminController::class, 'generateSingleOpdAdmin'])->name('admins.generate-opd.single');
-        Route::post('admins-generate-opd/download', [AdminController::class, 'downloadGeneratedExcel'])->name('admins.generate-opd.download');
-        Route::get('admins-reset-password', [AdminController::class, 'showResetPasswordForm'])->name('admins.reset-password');
-        Route::post('admins-reset-password/single', [AdminController::class, 'resetSingleAdminPassword'])->name('admins.reset-password.single');
-        Route::post('admins-reset-password/download', [AdminController::class, 'downloadResetPasswordExcel'])->name('admins.reset-password.download');
-        Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
+        // Admin Management (Super Admin only)
+        Route::middleware('admin.permission:super_admin_only')->group(function () {
+            Route::resource('admins', AdminController::class);
+            Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
+            Route::post('admins-generate-opd/single', [AdminController::class, 'generateSingleOpdAdmin'])->name('admins.generate-opd.single');
+            Route::post('admins-generate-opd/download', [AdminController::class, 'downloadGeneratedExcel'])->name('admins.generate-opd.download');
+            Route::get('admins-reset-password', [AdminController::class, 'showResetPasswordForm'])->name('admins.reset-password');
+            Route::post('admins-reset-password/single', [AdminController::class, 'resetSingleAdminPassword'])->name('admins.reset-password.single');
+            Route::post('admins-reset-password/download', [AdminController::class, 'downloadResetPasswordExcel'])->name('admins.reset-password.download');
+            Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
+
+            // Activity Logs (Super Admin only)
+            Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+                Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+                Route::get('/export', [ActivityLogController::class, 'export'])->name('export');
+                Route::get('/stats', [ActivityLogController::class, 'stats'])->name('stats');
+                Route::get('/{activityLog}', [ActivityLogController::class, 'show'])->name('show');
+            });
+        });
 
         // Pegawai Management (with OPD access check)
         Route::resource('pegawai', PegawaiController::class)->middleware('check.opd.access');

@@ -77,18 +77,19 @@ class Admin extends Authenticatable
     }
 
     /**
-     * Check if admin can manage ASN (tambah ASN)
-     * Only super_admin and admin_bkpsdm can manage ASN
+     * Check if admin can manage ASN (tambah, edit, hapus ASN)
+     * Super Admin, Admin BKPSDM, and Admin OPD can manage ASN
+     * Admin OPD can only manage ASN in their own OPD
      */
     public function canManageAsn(): bool
     {
-        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN_BKPSDM]);
+        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN_BKPSDM, self::ROLE_ADMIN_OPD]);
     }
 
     /**
      * Check if admin can manage OPD and Jabatan
      * Only super_admin and admin_organisasi can manage OPD and Jabatan
-     * Admin OPD can only import ASN/pegawai data
+     * Admin OPD CANNOT manage OPD or Jabatan
      */
     public function canManageOpdJabatan(): bool
     {
