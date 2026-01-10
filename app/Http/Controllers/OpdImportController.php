@@ -19,7 +19,7 @@ class OpdImportController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('admin.permission:manage_opd_jabatan');
+        $this->middleware('admin.permission:import_asn');
     }
 
     /**

@@ -41,6 +41,12 @@ class CheckAdminPermission
                 }
                 break;
 
+            case 'import_asn':
+                if (!$admin->canImportAsn()) {
+                    abort(403, 'Anda tidak memiliki akses untuk import data ASN');
+                }
+                break;
+
             default:
                 abort(403, 'Permission tidak valid');
         }
