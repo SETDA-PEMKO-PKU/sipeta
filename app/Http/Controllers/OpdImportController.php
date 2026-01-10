@@ -36,8 +36,8 @@ class OpdImportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Import ASN');
 
-        // Header
-        $headers = ['no', 'jabatan_id', 'jabatan', 'kebutuhan_ke', 'nip', 'nama'];
+        // Header - dengan kolom atasan
+        $headers = ['no', 'jabatan_id', 'jabatan', 'atasan', 'kebutuhan_ke', 'nip', 'nama'];
         $sheet->fromArray($headers, null, 'A1');
 
         // Style header
@@ -46,7 +46,7 @@ class OpdImportController extends Controller
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
         ];
-        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
 
         // Data rows
         $row = 2;
@@ -54,25 +54,35 @@ class OpdImportController extends Controller
         foreach ($allJabatans as $jabatan) {
             $kebutuhan = max(1, $jabatan->kebutuhan);
             
+            // Get parent jabatan name
+            $atasanNama = '-';
+            if ($jabatan->parent_id) {
+                $parent = Jabatan::find($jabatan->parent_id);
+                if ($parent) {
+                    $atasanNama = $parent->nama;
+                }
+            }
+            
             for ($i = 1; $i <= $kebutuhan; $i++) {
                 $sheet->setCellValue('A' . $row, $no++);
                 $sheet->setCellValue('B' . $row, $jabatan->id);
                 $sheet->setCellValue('C' . $row, $jabatan->nama);
-                $sheet->setCellValue('D' . $row, $i . ' dari ' . $kebutuhan);
-                $sheet->setCellValue('E' . $row, ''); // NIP - diisi user
-                $sheet->setCellValue('F' . $row, ''); // Nama - diisi user
+                $sheet->setCellValue('D' . $row, $atasanNama);
+                $sheet->setCellValue('E' . $row, $i . ' dari ' . $kebutuhan);
+                $sheet->setCellValue('F' . $row, ''); // NIP - diisi user
+                $sheet->setCellValue('G' . $row, ''); // Nama - diisi user
                 $row++;
             }
         }
 
         // Auto-size columns
-        foreach (range('A', 'F') as $col) {
+        foreach (range('A', 'G') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // Protect columns A-D (readonly), allow E-F to be edited
-        $sheet->getStyle('A2:D' . ($row - 1))->getProtection()->setLocked(\PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED);
-        $sheet->getStyle('E2:F' . ($row - 1))->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        // Protect columns A-E (readonly), allow F-G to be edited
+        $sheet->getStyle('A2:E' . ($row - 1))->getProtection()->setLocked(\PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED);
+        $sheet->getStyle('F2:G' . ($row - 1))->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
 
         // Generate filename
         $filename = 'template_import_asn_' . str_replace(' ', '_', strtolower($opd->nama)) . '_' . date('Y-m-d') . '.xlsx';
