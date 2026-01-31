@@ -69,7 +69,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-gray-600 mb-1">Struktural</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $pegawais->filter(function($p) { return $p->jabatan && $p->jabatan->jenis_jabatan === 'Struktural'; })->count() }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $totalStruktural }}</p>
                     </div>
                     <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-purple-600" data-icon="mdi:account-tie" data-width="20" data-height="20"></span>
@@ -84,7 +84,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-gray-600 mb-1">Fungsional</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $pegawais->filter(function($p) { return $p->jabatan && $p->jabatan->jenis_jabatan === 'Fungsional'; })->count() }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $totalFungsional }}</p>
                     </div>
                     <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
                         <span class="iconify text-yellow-600" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>

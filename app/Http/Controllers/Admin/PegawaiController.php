@@ -61,6 +61,19 @@ class PegawaiController extends Controller
             $perPage = 15;
         }
 
+        // Clone query untuk statistik sebelum pagination
+        $statsQuery = clone $query;
+
+        // Statistik - hitung dari total query (bukan paginated)
+        $totalPegawai = $statsQuery->count();
+        $totalOpd = (clone $statsQuery)->distinct('opd_id')->count('opd_id');
+        $totalStruktural = (clone $statsQuery)->whereHas('jabatan', function($q) {
+            $q->where('jenis_jabatan', 'Struktural');
+        })->count();
+        $totalFungsional = (clone $statsQuery)->whereHas('jabatan', function($q) {
+            $q->where('jenis_jabatan', 'Fungsional');
+        })->count();
+
         $pegawais = $query->orderBy('nama')->paginate($perPage)->withQueryString();
 
         // Data untuk filter dropdown - filter OPD based on accessible OPDs
@@ -85,14 +98,12 @@ class PegawaiController extends Controller
                                 ->orderBy('kelas', 'desc')
                                 ->pluck('kelas');
 
-        // Statistik
-        $totalPegawai = $pegawais->count();
-        $totalOpd = $pegawais->pluck('opd_id')->unique()->count();
-
         return view('admin.pegawai.index', compact(
             'pegawais',
             'totalPegawai',
             'totalOpd',
+            'totalStruktural',
+            'totalFungsional',
             'opds',
             'jabatans',
             'jenisJabatans',

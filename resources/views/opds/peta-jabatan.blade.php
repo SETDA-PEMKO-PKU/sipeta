@@ -904,113 +904,77 @@ function printCanvas(orientation = 'landscape') {
     // Get the full canvas content bounds
     const layerRect = layer.getClientRect();
     
-    // A4 dimensions in pixels at 96 DPI (standard screen)
-    // A4 Landscape: 297mm x 210mm, with 10mm margins: 277mm x 190mm
-    // A4 Portrait: 210mm x 297mm, with 10mm margins: 190mm x 277mm
-    let a4Width, a4Height;
+    // Add padding around content
+    const padding = 50;
+    const contentWidth = layerRect.width + padding * 2;
+    const contentHeight = layerRect.height + padding * 2;
     
-    if (orientation === 'landscape') {
-        a4Width = 1047;  // ~277mm at 96 DPI
-        a4Height = 718;  // ~190mm at 96 DPI
-    } else {
-        a4Width = 718;   // ~190mm at 96 DPI
-        a4Height = 1047; // ~277mm at 96 DPI
-    }
+    // Save current stage state
+    const oldScale = stage.scaleX();
+    const oldX = stage.x();
+    const oldY = stage.y();
     
-    // Calculate content dimensions with padding
-    const contentWidth = layerRect.width + 100;
-    const contentHeight = layerRect.height + 100;
+    // Reset stage transform for export
+    stage.scale({ x: 1, y: 1 });
+    stage.position({ x: -layerRect.x + padding, y: -layerRect.y + padding });
     
-    // Calculate scale to fit content into A4
-    const scaleX = a4Width / contentWidth;
-    const scaleY = a4Height / contentHeight;
-    const fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only scale down if needed
+    // Temporarily resize stage to fit content
+    const oldWidth = stage.width();
+    const oldHeight = stage.height();
+    stage.width(contentWidth);
+    stage.height(contentHeight);
     
-    // Calculate final dimensions
-    const finalWidth = Math.max(contentWidth * fitScale, a4Width);
-    const finalHeight = Math.max(contentHeight * fitScale, a4Height);
-    
-    // Create a temporary stage with proper size
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    document.body.appendChild(tempContainer);
-    
-    const tempStage = new Konva.Stage({
-        container: tempContainer,
-        width: finalWidth,
-        height: finalHeight
-    });
-    
-    // Add white background
-    const tempLayer = new Konva.Layer();
-    tempStage.add(tempLayer);
-    
-    const background = new Konva.Rect({
-        x: 0,
-        y: 0,
-        width: finalWidth,
-        height: finalHeight,
-        fill: '#FFFFFF'
-    });
-    tempLayer.add(background);
-    
-    // Clone all shapes from original layer
-    layer.getChildren().forEach(child => {
-        const cloned = child.clone();
-        tempLayer.add(cloned);
-    });
-    
-    // Calculate centering offset
-    const offsetX = (finalWidth - contentWidth * fitScale) / 2 - layerRect.x * fitScale + 50 * fitScale;
-    const offsetY = (finalHeight - contentHeight * fitScale) / 2 - layerRect.y * fitScale + 50 * fitScale;
-    
-    // Apply transformation to all children except background
-    tempLayer.getChildren().forEach((child, index) => {
-        if (index > 0) { // Skip background
-            child.x(child.x() * fitScale + offsetX);
-            child.y(child.y() * fitScale + offsetY);
-            child.scaleX((child.scaleX() || 1) * fitScale);
-            child.scaleY((child.scaleY() || 1) * fitScale);
-        }
-    });
-    
-    tempLayer.draw();
-    
-    // Generate high quality image
-    const uri = tempStage.toDataURL({ 
+    // Generate image with all content visible
+    const uri = stage.toDataURL({ 
         pixelRatio: 2,
         mimeType: 'image/png',
         quality: 1
     });
+    
+    // Restore stage state
+    stage.width(oldWidth);
+    stage.height(oldHeight);
+    stage.scale({ x: oldScale, y: oldScale });
+    stage.position({ x: oldX, y: oldY });
     
     // Set the print image
     const printImg = document.getElementById('print-image');
     printImg.src = uri;
     
     // Update print styles based on orientation
-    const styleEl = document.getElementById('print-orientation-style') || document.createElement('style');
-    styleEl.id = 'print-orientation-style';
-    styleEl.textContent = `@media print { @page { size: A4 ${orientation}; margin: 10mm; } }`;
-    if (!document.getElementById('print-orientation-style')) {
+    let styleEl = document.getElementById('print-orientation-style');
+    if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'print-orientation-style';
         document.head.appendChild(styleEl);
     }
-    
-    // Clean up
-    tempStage.destroy();
-    document.body.removeChild(tempContainer);
+    styleEl.textContent = `
+        @media print { 
+            @page { 
+                size: A4 ${orientation}; 
+                margin: 10mm; 
+            }
+            #print-image {
+                max-width: 100% !important;
+                max-height: ${orientation === 'landscape' ? '180mm' : '267mm'} !important;
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important;
+            }
+        }
+    `;
     
     // Wait for image to load, then print
     printImg.onload = function() {
         setTimeout(() => {
             window.print();
-        }, 150);
+        }, 200);
     };
     
     // Fallback timeout in case onload doesn't fire
     setTimeout(() => {
         window.print();
-    }, 500);
+    }, 600);
 }
 
 // Initialize everything
