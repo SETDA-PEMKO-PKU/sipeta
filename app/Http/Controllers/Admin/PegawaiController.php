@@ -26,10 +26,28 @@ class PegawaiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Asn::with(['jabatan.parent', 'opd']);
+        $query = Asn::with(['jabatan.parent', 'opd', 'bagian']);
 
         // Apply OPD scope for admin OPD
         $query = $this->applyOpdScope($query);
+
+        // Search berdasarkan nama, NIP, OPD, atau Jabatan
+        if ($request->filled('search')) {
+            $searchTerm = strtolower($request->search);
+            $query->where(function($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"])
+                  ->orWhereRaw('LOWER(nip) LIKE ?', ["%{$searchTerm}%"])
+                  ->orWhereHas('opd', function($q) use ($searchTerm) {
+                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+                  })
+                  ->orWhereHas('jabatan', function($q) use ($searchTerm) {
+                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+                  })
+                  ->orWhereHas('bagian', function($q) use ($searchTerm) {
+                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+                  });
+            });
+        }
 
         // Filter berdasarkan OPD
         if ($request->filled('opd_id')) {

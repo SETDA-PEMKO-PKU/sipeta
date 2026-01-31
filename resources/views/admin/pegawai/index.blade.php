@@ -114,36 +114,36 @@
             <!-- Filter Panel -->
             <div class="card mb-3 animate-slide-up">
                 <div class="card-body p-4">
-                    <form method="GET" action="{{ route('admin.pegawai.index') }}" class="space-y-4">
+                    <form method="GET" action="{{ route('admin.pegawai.index') }}" class="space-y-4" x-data="searchForm()">
                         <!-- Search Bar -->
                         <div class="flex items-center gap-3">
                             <div class="flex-1 relative">
                                 <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" data-icon="mdi:magnify" data-width="16" data-height="16"></span>
                                 <input
                                     type="text"
-                                    x-model="searchQuery"
-                                    @input.debounce.300ms="performSearch()"
+                                    name="search"
+                                    value="{{ request('search') }}"
+                                    @input.debounce.300ms="$el.form.requestSubmit()"
                                     placeholder="Cari nama, NIP, atau OPD..."
                                     class="input pl-9 pr-9 w-full text-sm"
                                 >
-                                <button
-                                    type="button"
-                                    x-show="searchQuery"
-                                    @click="clearSearch()"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                @if(request('search'))
+                                <a href="{{ request()->fullUrlWithQuery(['search' => null, 'page' => null]) }}"
+                                   class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                     <span class="iconify" data-icon="mdi:close" data-width="16" data-height="16"></span>
-                                </button>
+                                </a>
+                                @endif
                             </div>
                             <button type="button"
                                     @click="showFilters = !showFilters"
                                     class="btn btn-outline flex items-center gap-2">
                                 <span class="iconify" data-icon="mdi:filter-variant" data-width="16" data-height="16"></span>
                                 <span>Filter</span>
-                                @if(request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
-                                    <span class="badge badge-primary badge-sm">{{ collect(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas'])->filter(fn($key) => request()->filled($key))->count() }}</span>
+                                @if(request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas', 'search']))
+                                    <span class="badge badge-primary badge-sm">{{ collect(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas', 'search'])->filter(fn($key) => request()->filled($key))->count() }}</span>
                                 @endif
                             </button>
-                            <div class="text-xs text-gray-500" x-text="searchResults + ' Pegawai'"></div>
+                            <div class="text-xs text-gray-500">{{ $pegawais->total() }} Pegawai</div>
                         </div>
 
                         <!-- Filter Options (Collapsible) -->
@@ -220,36 +220,43 @@
                     </form>
 
                     <!-- Active Filters Display -->
-                    @if(request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
+                    @if(request()->hasAny(['search', 'opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']))
                         <div class="mt-3 pt-3 border-t border-gray-200">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-xs font-medium text-gray-600">Filter Aktif:</span>
 
+                                @if(request('search'))
+                                    <span class="badge badge-info">
+                                        Pencarian: {{ request('search') }}
+                                        <a href="{{ request()->fullUrlWithQuery(['search' => null, 'page' => null]) }}" class="ml-1 hover:text-white">×</a>
+                                    </span>
+                                @endif
+
                                 @if(request('opd_id'))
                                     <span class="badge badge-primary">
                                         OPD: {{ $opds->find(request('opd_id'))->nama ?? '' }}
-                                        <a href="{{ route('admin.pegawai.index', array_filter(request()->except('opd_id'))) }}" class="ml-1 hover:text-white">×</a>
+                                        <a href="{{ request()->fullUrlWithQuery(['opd_id' => null, 'page' => null]) }}" class="ml-1 hover:text-white">×</a>
                                     </span>
                                 @endif
 
                                 @if(request('jabatan_id'))
                                     <span class="badge badge-purple">
                                         Jabatan: {{ $jabatans->find(request('jabatan_id'))->nama ?? '' }}
-                                        <a href="{{ route('admin.pegawai.index', array_filter(request()->except('jabatan_id'))) }}" class="ml-1 hover:text-white">×</a>
+                                        <a href="{{ request()->fullUrlWithQuery(['jabatan_id' => null, 'page' => null]) }}" class="ml-1 hover:text-white">×</a>
                                     </span>
                                 @endif
 
                                 @if(request('jenis_jabatan'))
-                                    <span class="badge badge-info">
+                                    <span class="badge badge-success">
                                         Jenis: {{ request('jenis_jabatan') }}
-                                        <a href="{{ route('admin.pegawai.index', array_filter(request()->except('jenis_jabatan'))) }}" class="ml-1 hover:text-white">×</a>
+                                        <a href="{{ request()->fullUrlWithQuery(['jenis_jabatan' => null, 'page' => null]) }}" class="ml-1 hover:text-white">×</a>
                                     </span>
                                 @endif
 
                                 @if(request('kelas'))
                                     <span class="badge badge-warning">
                                         Kelas: {{ request('kelas') }}
-                                        <a href="{{ route('admin.pegawai.index', array_filter(request()->except('kelas'))) }}" class="ml-1 hover:text-white">×</a>
+                                        <a href="{{ request()->fullUrlWithQuery(['kelas' => null, 'page' => null]) }}" class="ml-1 hover:text-white">×</a>
                                     </span>
                                 @endif
                             </div>
@@ -353,11 +360,12 @@
                 </div>
 
                 <!-- No Results from Search -->
-                <div x-show="searchResults === 0 && searchQuery && {{ $pegawais->count() }} > 0"
-                     class="p-8 text-center border-t border-gray-200">
+                @if(request()->filled('search') && $pegawais->count() === 0)
+                <div class="p-8 text-center border-t border-gray-200">
                     <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
-                    <p class="text-sm text-gray-500 mt-2">Tidak ada hasil untuk "<span x-text="searchQuery"></span>"</p>
+                    <p class="text-sm text-gray-500 mt-2">Tidak ada hasil untuk "{{ request('search') }}"</p>
                 </div>
+                @endif
             </div>
 
             <!-- Pagination with Per Page Selector -->
@@ -367,7 +375,9 @@
                     <label class="text-sm text-gray-600">Tampilkan:</label>
                     <form method="GET" action="{{ route('admin.pegawai.index') }}" class="inline-block">
                         @foreach(request()->except('per_page', 'page') as $key => $value)
-                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @if($key !== 'per_page' && $key !== 'page')
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
                         @endforeach
                         <select name="per_page"
                                 onchange="this.form.submit()"
@@ -429,47 +439,19 @@
 <script>
 function pegawaiIndex() {
     return {
-        searchQuery: '',
-        searchResults: {{ $pegawais->total() }},
-        totalPegawais: {{ $pegawais->total() }},
-        showFilters: {{ request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas']) ? 'true' : 'false' }},
-
-        performSearch() {
-            const rows = document.querySelectorAll('.pegawai-row');
-            let count = 0;
-
-            rows.forEach(row => {
-                const nama = row.dataset.pegawaiNama || '';
-                const nip = row.dataset.pegawaiNip || '';
-                const opd = row.dataset.pegawaiOpd || '';
-                const jabatan = row.dataset.pegawaiJabatan || '';
-                const bagian = row.dataset.pegawaiBagian || '';
-                const query = this.searchQuery.toLowerCase();
-
-                if (nama.includes(query) || nip.includes(query) || opd.includes(query) || jabatan.includes(query) || bagian.includes(query)) {
-                    row.style.display = '';
-                    count++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            this.searchResults = count;
-        },
-
-        clearSearch() {
-            this.searchQuery = '';
-            this.searchResults = this.totalPegawais;
-            document.querySelectorAll('.pegawai-row').forEach(row => {
-                row.style.display = '';
-            });
-        },
+        showFilters: {{ request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas', 'search']) ? 'true' : 'false' }},
 
         deletePegawai(id, nama) {
             document.getElementById('delete_pegawai_nama').textContent = nama;
             document.getElementById('deletePegawaiForm').action = `/admin/pegawai/${id}`;
             this.$dispatch('open-modal', 'delete-pegawai');
         }
+    }
+}
+
+function searchForm() {
+    return {
+        showFilters: {{ request()->hasAny(['opd_id', 'jabatan_id', 'jenis_jabatan', 'kelas', 'search']) ? 'true' : 'false' }}
     }
 }
 </script>
