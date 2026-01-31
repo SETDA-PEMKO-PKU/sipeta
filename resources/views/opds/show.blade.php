@@ -117,6 +117,109 @@
             </div>
         </div>
 
+        <!-- Statistik Per Kelas Jabatan -->
+        @php
+            // Group all jabatan by kelas
+            $jabatanByKelas = $opd->allJabatans->whereNotNull('kelas')->groupBy('kelas')->sortKeys();
+            
+            // Calculate stats per kelas
+            $statsPerKelas = $jabatanByKelas->map(function($jabatans, $kelas) {
+                $kebutuhan = $jabatans->sum('kebutuhan');
+                $bezetting = $jabatans->sum(function($j) { return $j->asns->count(); });
+                $selisih = $bezetting - $kebutuhan;
+                return [
+                    'kelas' => $kelas,
+                    'kebutuhan' => $kebutuhan,
+                    'bezetting' => $bezetting,
+                    'selisih' => $selisih,
+                    'jumlah_jabatan' => $jabatans->count()
+                ];
+            });
+        @endphp
+
+        @if($statsPerKelas->count() > 0)
+        <div class="card bg-white shadow-sm mb-6">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <span class="iconify text-orange-500" data-icon="mdi:layers" data-width="20" data-height="20"></span>
+                    Statistik Per Kelas Jabatan
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Kelas Jabatan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Jumlah Jabatan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Kebutuhan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Bezetting</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Selisih</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($statsPerKelas->sortKeysDesc() as $stat)
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        Kelas {{ $stat['kelas'] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center text-gray-600">{{ $stat['jumlah_jabatan'] }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="font-medium text-orange-600">{{ $stat['kebutuhan'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="font-medium text-green-600">{{ $stat['bezetting'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if($stat['selisih'] > 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                            +{{ $stat['selisih'] }}
+                                        </span>
+                                    @elseif($stat['selisih'] < 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                            {{ $stat['selisih'] }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            0
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-50 font-semibold">
+                                <td class="px-4 py-3 text-gray-700">Total</td>
+                                <td class="px-4 py-3 text-center text-gray-700">{{ $statsPerKelas->sum('jumlah_jabatan') }}</td>
+                                <td class="px-4 py-3 text-center text-orange-600">{{ $statsPerKelas->sum('kebutuhan') }}</td>
+                                <td class="px-4 py-3 text-center text-green-600">{{ $statsPerKelas->sum('bezetting') }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    @php $totalSelisih = $statsPerKelas->sum('selisih'); @endphp
+                                    @if($totalSelisih > 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                            +{{ $totalSelisih }}
+                                        </span>
+                                    @elseif($totalSelisih < 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                            {{ $totalSelisih }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            0
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Struktur Organisasi -->
         <div class="card bg-white shadow-sm">
             <div class="card-header flex justify-between items-center">

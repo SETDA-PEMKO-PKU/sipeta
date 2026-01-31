@@ -51,6 +51,12 @@ class AdminActivityLog extends Model
     const MODULE_ASN = 'asn';
     const MODULE_ADMIN = 'admin';
     const MODULE_ANALYTICS = 'analytics';
+    const MODULE_MUTASI = 'mutasi';
+
+    /**
+     * Additional action for mutation
+     */
+    const ACTION_MUTASI = 'mutasi';
 
     /**
      * Get the admin that owns the activity log.
@@ -146,6 +152,7 @@ class AdminActivityLog extends Model
             self::ACTION_VIEW => 'Lihat Data',
             self::ACTION_EXPORT => 'Export Data',
             self::ACTION_IMPORT => 'Import Data',
+            self::ACTION_MUTASI => 'Mutasi Pegawai',
             default => ucfirst($this->action),
         };
     }
@@ -163,6 +170,7 @@ class AdminActivityLog extends Model
             self::MODULE_ASN => 'ASN',
             self::MODULE_ADMIN => 'Admin',
             self::MODULE_ANALYTICS => 'Analytics',
+            self::MODULE_MUTASI => 'Mutasi Pegawai',
             default => ucfirst($this->module ?? '-'),
         };
     }
@@ -181,6 +189,7 @@ class AdminActivityLog extends Model
             self::ACTION_VIEW => 'gray',
             self::ACTION_EXPORT => 'secondary',
             self::ACTION_IMPORT => 'secondary',
+            self::ACTION_MUTASI => 'accent',
             default => 'gray',
         };
     }

@@ -73,6 +73,7 @@ class ActivityLogController extends Controller
             AdminActivityLog::ACTION_VIEW => 'Lihat Data',
             AdminActivityLog::ACTION_EXPORT => 'Export Data',
             AdminActivityLog::ACTION_IMPORT => 'Import Data',
+            AdminActivityLog::ACTION_MUTASI => 'Mutasi Pegawai',
         ];
 
         // Get unique modules for filter
@@ -84,6 +85,7 @@ class ActivityLogController extends Controller
             AdminActivityLog::MODULE_ASN => 'ASN',
             AdminActivityLog::MODULE_ADMIN => 'Admin',
             AdminActivityLog::MODULE_ANALYTICS => 'Analytics',
+            AdminActivityLog::MODULE_MUTASI => 'Mutasi Pegawai',
         ];
 
         return view('admin.activity-logs.index', compact('logs', 'admins', 'actions', 'modules'));

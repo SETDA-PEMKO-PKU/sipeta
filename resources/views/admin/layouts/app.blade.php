@@ -69,6 +69,14 @@
                 </a>
                 @endif
 
+                @if(auth('admin')->user()->canMutasiAsn())
+                <a href="{{ route('admin.mutasi.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.mutasi.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:swap-horizontal" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Mutasi Pegawai</span>
+                </a>
+                @endif
+
                 <div class="pt-4 pb-2 px-4">
                     <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analisis</span>
                 </div>

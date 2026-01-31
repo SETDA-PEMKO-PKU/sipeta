@@ -52,6 +52,12 @@ class CheckAdminPermission
                 }
                 break;
 
+            case 'mutasi_asn':
+                if (!$admin->canMutasiAsn()) {
+                    abort(403, 'Anda tidak memiliki akses untuk mutasi pegawai. Hanya Super Admin dan Admin BKPSDM yang dapat mengakses fitur ini.');
+                }
+                break;
+
             default:
                 abort(403, 'Permission tidak valid');
         }

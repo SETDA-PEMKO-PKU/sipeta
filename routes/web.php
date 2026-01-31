@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\MutasiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/stats', [ActivityLogController::class, 'stats'])->name('stats');
                 Route::get('/{activityLog}', [ActivityLogController::class, 'show'])->name('show');
             });
+        });
+
+        // Mutasi Pegawai (Super Admin and Admin BKPSDM only)
+        Route::prefix('mutasi')->name('mutasi.')->group(function () {
+            Route::get('/', [MutasiController::class, 'index'])->name('index');
+            Route::get('/create', [MutasiController::class, 'create'])->name('create');
+            Route::post('/', [MutasiController::class, 'store'])->name('store');
+            Route::get('/export', [MutasiController::class, 'export'])->name('export');
+            Route::get('/search-asn', [MutasiController::class, 'searchAsn'])->name('search-asn');
+            Route::get('/jabatan/{opdId}', [MutasiController::class, 'getJabatanByOpd'])->name('jabatan');
+            Route::get('/riwayat/{asnId}', [MutasiController::class, 'riwayatAsn'])->name('riwayat');
+            Route::get('/{mutasi}', [MutasiController::class, 'show'])->name('show');
         });
 
         // Pegawai Management (with OPD access check)

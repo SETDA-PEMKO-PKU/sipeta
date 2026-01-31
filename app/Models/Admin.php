@@ -107,6 +107,15 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Check if admin can mutasi ASN
+     * Only Super Admin and Admin BKPSDM can do mutasi
+     */
+    public function canMutasiAsn(): bool
+    {
+        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN_BKPSDM]);
+    }
+
+    /**
      * Check if admin is admin OPD
      */
     public function isAdminOpd(): bool

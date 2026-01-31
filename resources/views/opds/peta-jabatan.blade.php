@@ -66,21 +66,132 @@
     }
 
     @media print {
+        /* Reset body */
         body {
-            background: white;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
-        .no-print {
+
+        /* Hide sidebar */
+        body > div > div.fixed {
             display: none !important;
         }
-        #canvas-container {
-            height: auto;
-            min-height: 800px;
-            page-break-inside: avoid;
+
+        /* Hide header/topbar */
+        header {
+            display: none !important;
         }
+
+        /* Hide navigation elements */
+        .no-print,
+        nav,
         .canvas-controls,
         .zoom-level {
             display: none !important;
         }
+
+        /* Reset main content area */
+        .lg\:ml-64 {
+            margin-left: 0 !important;
+        }
+
+        main {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .p-4, .lg\:p-8 {
+            padding: 0 !important;
+        }
+
+        /* Make canvas container full page */
+        #canvas-container {
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            border: none !important;
+            overflow: visible !important;
+            page-break-inside: avoid;
+        }
+
+        /* Hide shadow on wrapper */
+        .bg-white.rounded-lg.shadow-sm {
+            box-shadow: none !important;
+            padding: 10mm !important;
+        }
+
+        /* Print header for the chart */
+        .print-header {
+            display: block !important;
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+
+        /* Show print image, hide canvas */
+        #print-image-container {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+        }
+
+        #print-image {
+            max-width: 100% !important;
+            max-height: 180mm !important; /* A4 landscape height minus margins */
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+        }
+
+        #canvas-container {
+            display: none !important;
+        }
+
+        /* Page setup - A4 landscape for wider org charts */
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+    }
+
+    /* For portrait mode printing (smaller charts) */
+    @media print and (orientation: portrait) {
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        
+        #print-image {
+            max-height: 257mm !important; /* A4 portrait height minus margins */
+        }
+    }
+
+    .print-header {
+        display: none;
+    }
+
+    /* Print orientation selector */
+    .print-orientation-selector {
+        display: none;
+    }
+
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        right: 0;
+        margin-top: 0.5rem;
+    }
+
+    .dropdown-menu.hidden {
+        display: none;
     }
 </style>
 @endpush
@@ -100,10 +211,23 @@
         </div>
 
         <div class="flex gap-2">
-            <button onclick="window.print()" class="btn btn-outline">
-                <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
-                <span class="ml-2">Cetak</span>
-            </button>
+            <div class="dropdown no-print">
+                <button onclick="togglePrintMenu()" class="btn btn-outline">
+                    <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Cetak</span>
+                    <span class="iconify ml-1" data-icon="mdi:chevron-down" data-width="16" data-height="16"></span>
+                </button>
+                <div id="print-menu" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <button onclick="printCanvas('landscape')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2">
+                        <span class="iconify" data-icon="mdi:page-layout-header" data-width="18" data-height="18" style="transform: rotate(90deg);"></span>
+                        A4 Landscape
+                    </button>
+                    <button onclick="printCanvas('portrait')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2">
+                        <span class="iconify" data-icon="mdi:page-layout-header" data-width="18" data-height="18"></span>
+                        A4 Portrait
+                    </button>
+                </div>
+            </div>
             <button onclick="exportCanvas()" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
                 <span class="ml-2">Export PNG</span>
@@ -113,6 +237,17 @@
 
     <!-- Organizational Chart Canvas -->
     <div class="bg-white rounded-lg shadow-sm p-6">
+        <!-- Print Header (only visible when printing) -->
+        <div class="print-header">
+            <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">Peta Jabatan</h1>
+            <p style="font-size: 14px; color: #666;">{{ $opd->nama }}</p>
+        </div>
+
+        <!-- Print Image Container (only visible when printing) -->
+        <div id="print-image-container" style="display: none; text-align: center;">
+            <img id="print-image" style="max-width: 100%; height: auto;" />
+        </div>
+
         @if($opd->jabatanKepala->count() > 0)
             <div id="canvas-container">
                 <div class="canvas-controls no-print">
@@ -743,6 +878,139 @@ function exportCanvas() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// Toggle print menu
+function togglePrintMenu() {
+    const menu = document.getElementById('print-menu');
+    menu.classList.toggle('hidden');
+}
+
+// Close print menu when clicking outside
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('print-menu');
+    const btn = e.target.closest('.dropdown');
+    if (!btn && menu && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+    }
+});
+
+// Print canvas
+function printCanvas(orientation = 'landscape') {
+    // Close menu
+    const menu = document.getElementById('print-menu');
+    if (menu) menu.classList.add('hidden');
+    
+    // Get the full canvas content bounds
+    const layerRect = layer.getClientRect();
+    
+    // A4 dimensions in pixels at 96 DPI (standard screen)
+    // A4 Landscape: 297mm x 210mm, with 10mm margins: 277mm x 190mm
+    // A4 Portrait: 210mm x 297mm, with 10mm margins: 190mm x 277mm
+    let a4Width, a4Height;
+    
+    if (orientation === 'landscape') {
+        a4Width = 1047;  // ~277mm at 96 DPI
+        a4Height = 718;  // ~190mm at 96 DPI
+    } else {
+        a4Width = 718;   // ~190mm at 96 DPI
+        a4Height = 1047; // ~277mm at 96 DPI
+    }
+    
+    // Calculate content dimensions with padding
+    const contentWidth = layerRect.width + 100;
+    const contentHeight = layerRect.height + 100;
+    
+    // Calculate scale to fit content into A4
+    const scaleX = a4Width / contentWidth;
+    const scaleY = a4Height / contentHeight;
+    const fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only scale down if needed
+    
+    // Calculate final dimensions
+    const finalWidth = Math.max(contentWidth * fitScale, a4Width);
+    const finalHeight = Math.max(contentHeight * fitScale, a4Height);
+    
+    // Create a temporary stage with proper size
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    document.body.appendChild(tempContainer);
+    
+    const tempStage = new Konva.Stage({
+        container: tempContainer,
+        width: finalWidth,
+        height: finalHeight
+    });
+    
+    // Add white background
+    const tempLayer = new Konva.Layer();
+    tempStage.add(tempLayer);
+    
+    const background = new Konva.Rect({
+        x: 0,
+        y: 0,
+        width: finalWidth,
+        height: finalHeight,
+        fill: '#FFFFFF'
+    });
+    tempLayer.add(background);
+    
+    // Clone all shapes from original layer
+    layer.getChildren().forEach(child => {
+        const cloned = child.clone();
+        tempLayer.add(cloned);
+    });
+    
+    // Calculate centering offset
+    const offsetX = (finalWidth - contentWidth * fitScale) / 2 - layerRect.x * fitScale + 50 * fitScale;
+    const offsetY = (finalHeight - contentHeight * fitScale) / 2 - layerRect.y * fitScale + 50 * fitScale;
+    
+    // Apply transformation to all children except background
+    tempLayer.getChildren().forEach((child, index) => {
+        if (index > 0) { // Skip background
+            child.x(child.x() * fitScale + offsetX);
+            child.y(child.y() * fitScale + offsetY);
+            child.scaleX((child.scaleX() || 1) * fitScale);
+            child.scaleY((child.scaleY() || 1) * fitScale);
+        }
+    });
+    
+    tempLayer.draw();
+    
+    // Generate high quality image
+    const uri = tempStage.toDataURL({ 
+        pixelRatio: 2,
+        mimeType: 'image/png',
+        quality: 1
+    });
+    
+    // Set the print image
+    const printImg = document.getElementById('print-image');
+    printImg.src = uri;
+    
+    // Update print styles based on orientation
+    const styleEl = document.getElementById('print-orientation-style') || document.createElement('style');
+    styleEl.id = 'print-orientation-style';
+    styleEl.textContent = `@media print { @page { size: A4 ${orientation}; margin: 10mm; } }`;
+    if (!document.getElementById('print-orientation-style')) {
+        document.head.appendChild(styleEl);
+    }
+    
+    // Clean up
+    tempStage.destroy();
+    document.body.removeChild(tempContainer);
+    
+    // Wait for image to load, then print
+    printImg.onload = function() {
+        setTimeout(() => {
+            window.print();
+        }, 150);
+    };
+    
+    // Fallback timeout in case onload doesn't fire
+    setTimeout(() => {
+        window.print();
+    }, 500);
 }
 
 // Initialize everything
