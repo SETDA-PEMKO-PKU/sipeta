@@ -120,16 +120,28 @@
         /* Hide shadow on wrapper */
         .bg-white.rounded-lg.shadow-sm {
             box-shadow: none !important;
-            padding: 10mm !important;
+            padding: 5mm !important;
         }
 
         /* Print header for the chart */
         .print-header {
             display: block !important;
             text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #333;
+        }
+
+        .print-header h1 {
+            font-size: 16pt !important;
+            font-weight: bold;
+            margin: 0 0 4px 0;
+        }
+
+        .print-header p {
+            font-size: 12pt !important;
+            color: #666;
+            margin: 0;
         }
 
         /* Show print image, hide canvas */
@@ -137,36 +149,43 @@
             display: block !important;
             width: 100% !important;
             text-align: center !important;
+            page-break-inside: avoid;
         }
 
         #print-image {
             max-width: 100% !important;
-            max-height: 180mm !important; /* A4 landscape height minus margins */
+            max-height: 100% !important;
             width: auto !important;
             height: auto !important;
             object-fit: contain !important;
+            display: block !important;
+            margin: 0 auto !important;
         }
 
         #canvas-container {
             display: none !important;
         }
 
-        /* Page setup - A4 landscape for wider org charts */
+        /* Default A4 landscape */
         @page {
             size: A4 landscape;
-            margin: 10mm;
+            margin: 5mm;
         }
     }
 
-    /* For portrait mode printing (smaller charts) */
+    /* For portrait mode printing */
     @media print and (orientation: portrait) {
         @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 5mm;
         }
-        
-        #print-image {
-            max-height: 257mm !important; /* A4 portrait height minus margins */
+    }
+
+    /* For larger charts - use A3 */
+    @media print and (min-width: 1000px) {
+        @page {
+            size: A3 landscape;
+            margin: 5mm;
         }
     }
 
@@ -900,81 +919,120 @@ function printCanvas(orientation = 'landscape') {
     // Close menu
     const menu = document.getElementById('print-menu');
     if (menu) menu.classList.add('hidden');
-    
+
     // Get the full canvas content bounds
-    const layerRect = layer.getClientRect();
-    
+    const layerRect = layer.getClientRect({ relativeTo: layer });
+
     // Add padding around content
-    const padding = 50;
-    const contentWidth = layerRect.width + padding * 2;
-    const contentHeight = layerRect.height + padding * 2;
-    
+    const padding = 40;
+    const contentWidth = Math.ceil(layerRect.width + padding * 2);
+    const contentHeight = Math.ceil(layerRect.height + padding * 2);
+
     // Save current stage state
     const oldScale = stage.scaleX();
     const oldX = stage.x();
     const oldY = stage.y();
-    
+
     // Reset stage transform for export
     stage.scale({ x: 1, y: 1 });
     stage.position({ x: -layerRect.x + padding, y: -layerRect.y + padding });
-    
+
     // Temporarily resize stage to fit content
     const oldWidth = stage.width();
     const oldHeight = stage.height();
     stage.width(contentWidth);
     stage.height(contentHeight);
-    
+
+    // Use higher pixel ratio for better quality
+    const pixelRatio = Math.min(3, window.devicePixelRatio || 2);
+
     // Generate image with all content visible
-    const uri = stage.toDataURL({ 
-        pixelRatio: 2,
+    const uri = stage.toDataURL({
+        pixelRatio: pixelRatio,
         mimeType: 'image/png',
         quality: 1
     });
-    
+
     // Restore stage state
     stage.width(oldWidth);
     stage.height(oldHeight);
     stage.scale({ x: oldScale, y: oldScale });
     stage.position({ x: oldX, y: oldY });
-    
+
     // Set the print image
     const printImg = document.getElementById('print-image');
     printImg.src = uri;
-    
-    // Update print styles based on orientation
+
+    // Determine best page size based on content dimensions
+    const aspectRatio = contentWidth / contentHeight;
+    let pageSize, pageMargin;
+
+    // A4 dimensions in mm
+    const A4_WIDTH = 297;
+    const A4_HEIGHT = 210;
+
+    // A3 dimensions in mm
+    const A3_WIDTH = 420;
+    const A3_HEIGHT = 297;
+
+    // Determine if we need A3 based on content size
+    const needsA3 = contentWidth > 2000 || contentHeight > 1500;
+
+    if (needsA3) {
+        pageSize = aspectRatio > 1 ? 'A3 landscape' : 'A3 portrait';
+        pageMargin = '5mm';
+    } else {
+        pageSize = aspectRatio > 1 ? 'A4 landscape' : 'A4 portrait';
+        pageMargin = '5mm';
+    }
+
+    // Update print styles
     let styleEl = document.getElementById('print-orientation-style');
     if (!styleEl) {
         styleEl = document.createElement('style');
         styleEl.id = 'print-orientation-style';
         document.head.appendChild(styleEl);
     }
+
     styleEl.textContent = `
-        @media print { 
-            @page { 
-                size: A4 ${orientation}; 
-                margin: 10mm; 
+        @media print {
+            @page {
+                size: ${pageSize};
+                margin: ${pageMargin};
+            }
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             #print-image {
                 max-width: 100% !important;
-                max-height: ${orientation === 'landscape' ? '180mm' : '267mm'} !important;
+                max-height: calc(100vh - 30mm) !important;
                 width: auto !important;
                 height: auto !important;
                 object-fit: contain !important;
+                display: block !important;
+                margin: 0 auto !important;
+            }
+            .print-header {
+                page-break-after: avoid;
+            }
+            #print-image-container {
+                page-break-inside: avoid;
             }
         }
     `;
-    
+
     // Wait for image to load, then print
     printImg.onload = function() {
         setTimeout(() => {
             window.print();
-        }, 200);
+        }, 300);
     };
-    
+
     // Fallback timeout in case onload doesn't fire
     setTimeout(() => {
         window.print();
-    }, 600);
+    }, 800);
 }
 
 // Initialize everything
