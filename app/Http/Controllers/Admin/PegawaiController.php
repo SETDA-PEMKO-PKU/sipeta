@@ -26,7 +26,7 @@ class PegawaiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Asn::with(['jabatan.parent', 'opd', 'bagian']);
+        $query = Asn::with(['jabatan.parent', 'opd']);
 
         // Apply OPD scope for admin OPD
         $query = $this->applyOpdScope($query);
@@ -41,9 +41,6 @@ class PegawaiController extends Controller
                       $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
                   })
                   ->orWhereHas('jabatan', function($q) use ($searchTerm) {
-                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
-                  })
-                  ->orWhereHas('bagian', function($q) use ($searchTerm) {
                       $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
                   });
             });
