@@ -192,26 +192,6 @@
     .print-header {
         display: none;
     }
-
-    /* Print orientation selector */
-    .print-orientation-selector {
-        display: none;
-    }
-
-    .dropdown {
-        position: relative;
-        display: inline-block;
-    }
-
-    .dropdown-menu {
-        position: absolute;
-        right: 0;
-        margin-top: 0.5rem;
-    }
-
-    .dropdown-menu.hidden {
-        display: none;
-    }
 </style>
 @endpush
 
@@ -230,23 +210,10 @@
         </div>
 
         <div class="flex gap-2">
-            <div class="dropdown no-print">
-                <button onclick="togglePrintMenu()" class="btn btn-outline">
-                    <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
-                    <span class="ml-2">Cetak</span>
-                    <span class="iconify ml-1" data-icon="mdi:chevron-down" data-width="16" data-height="16"></span>
-                </button>
-                <div id="print-menu" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                    <button onclick="printCanvas('landscape')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2">
-                        <span class="iconify" data-icon="mdi:page-layout-header" data-width="18" data-height="18" style="transform: rotate(90deg);"></span>
-                        A4 Landscape
-                    </button>
-                    <button onclick="printCanvas('portrait')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2">
-                        <span class="iconify" data-icon="mdi:page-layout-header" data-width="18" data-height="18"></span>
-                        A4 Portrait
-                    </button>
-                </div>
-            </div>
+            <button onclick="printCanvas('landscape')" class="btn btn-outline">
+                <span class="iconify" data-icon="mdi:printer" data-width="18" data-height="18"></span>
+                <span class="ml-2">Cetak</span>
+            </button>
             <button onclick="exportCanvas()" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
                 <span class="ml-2">Export PNG</span>
@@ -450,7 +417,9 @@ function processOrgData(nodes, parentNode = null) {
             bezetting: node.asns ? node.asns.length : 0,
             selisih: (node.asns ? node.asns.length : 0) - node.kebutuhan,
             parent: parentNode,
-            children: []
+            children: [],
+            // Calculate height for this node
+            layoutHeight: calculateNodeHeight(node)
         };
 
         if (node.children && node.children.length > 0) {
@@ -461,6 +430,26 @@ function processOrgData(nodes, parentNode = null) {
     });
 
     return processed;
+}
+
+// Calculate the height of a node before rendering
+function calculateNodeHeight(node) {
+    const headerHeight = 25;
+    const minNamaHeight = 30;
+    const kelasHeight = 25;
+
+    // Create temporary Konva.Text to measure actual height
+    const tempText = new Konva.Text({
+        width: CONFIG.boxWidth - CONFIG.padding * 2,
+        text: node.nama,
+        fontSize: CONFIG.fontSize,
+        fontFamily: 'Arial',
+        wrap: 'word',
+        lineHeight: 1.2
+    });
+
+    const actualNamaHeight = Math.max(minNamaHeight, tempText.height() + CONFIG.padding);
+    return headerHeight + actualNamaHeight + kelasHeight;
 }
 
 // Calculate tree layout - treat tables as siblings of struktural nodes
@@ -510,7 +499,23 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
     allNodes.forEach((node, index) => {
         if (node.isTable) {
             // Table width is fixed
-            node.layoutWidth = 280;
+            node.layoutWidth = 350;
+            // Calculate table height using actual text measurement
+            const headerHeight = 25;
+            const columnHeaderHeight = 25;
+            const minRowHeight = CONFIG.tableRowHeight;
+            const rowHeights = node.items.map(item => {
+                const tempText = new Konva.Text({
+                    width: 210,
+                    text: item.nama,
+                    fontSize: 8,
+                    fontFamily: 'Arial',
+                    wrap: 'word',
+                    lineHeight: 1.2
+                });
+                return Math.max(minRowHeight, tempText.height() + 4);
+            });
+            node.layoutHeight = headerHeight + columnHeaderHeight + rowHeights.reduce((sum, h) => sum + h, 0);
         } else {
             // Struktural node
             let nodeWidth = CONFIG.boxWidth;
@@ -558,9 +563,10 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
                 y: nodeY
             });
 
-            // Position children recursively
+            // Position children recursively - use actual node height
             if (node.childLayout) {
-                const childY = y + CONFIG.verticalGap + CONFIG.boxHeight;
+                const nodeHeight = node.layoutHeight || CONFIG.boxHeight;
+                const childY = y + CONFIG.verticalGap + nodeHeight;
                 node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
             }
         }
@@ -923,27 +929,8 @@ function exportCanvas() {
     document.body.removeChild(link);
 }
 
-// Toggle print menu
-function togglePrintMenu() {
-    const menu = document.getElementById('print-menu');
-    menu.classList.toggle('hidden');
-}
-
-// Close print menu when clicking outside
-document.addEventListener('click', function(e) {
-    const menu = document.getElementById('print-menu');
-    const btn = e.target.closest('.dropdown');
-    if (!btn && menu && !menu.classList.contains('hidden')) {
-        menu.classList.add('hidden');
-    }
-});
-
 // Print canvas
 function printCanvas(orientation = 'landscape') {
-    // Close menu
-    const menu = document.getElementById('print-menu');
-    if (menu) menu.classList.add('hidden');
-
     // Get the full canvas content bounds
     const layerRect = layer.getClientRect({ relativeTo: layer });
 
