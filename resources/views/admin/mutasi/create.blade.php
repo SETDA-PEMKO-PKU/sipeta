@@ -318,7 +318,7 @@ function mutasiForm() {
             // Load atasan list (structural positions only)
             this.loadingAtasan = true;
             try {
-                const response = await fetch(`{{ route('admin.mutasi.jabatan-struktural', ['opdId' => '']) }}${this.opdTujuanId}`);
+                const response = await fetch(`/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`);
                 this.atasanList = await response.json();
             } catch (error) {
                 console.error('Error loading atasan:', error);
@@ -339,7 +339,7 @@ function mutasiForm() {
             // Load jabatan under selected atasan
             this.loadingJabatan = true;
             try {
-                const response = await fetch(`{{ route('admin.mutasi.jabatan-by-atasan', ['opdId' => '', 'atasanId' => '']) }}${this.opdTujuanId}/${this.atasanId}`);
+                const response = await fetch(`/admin/mutasi/jabatan-by-atasan/${this.opdTujuanId}/${this.atasanId}`);
                 this.jabatanTujuanList = await response.json();
             } catch (error) {
                 console.error('Error loading jabatan:', error);
