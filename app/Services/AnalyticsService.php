@@ -91,33 +91,42 @@ class AnalyticsService
      */
     public function getTopOpdByStaffing($limit = 10, $accessibleOpdIds = null)
     {
+        // First get all OPDs with their ASN count
         $query = Opd::withCount('asns');
-        
+
         if ($accessibleOpdIds !== null) {
             $query->whereIn('id', $accessibleOpdIds);
         }
-        
-        return $query->orderBy('asns_count', 'desc')
+
+        $opds = $query->orderBy('asns_count', 'desc')
             ->limit($limit)
-            ->get()
-            ->map(function ($opd) {
-                return [
-                    'nama' => $opd->nama,
-                    'bezetting' => $opd->asns_count,
-                    'kebutuhan' => $this->getKebutuhanByOpd($opd->id),
-                    'selisih' => $opd->asns_count - $this->getKebutuhanByOpd($opd->id),
-                ];
-            });
+            ->get();
+
+        // Get all jabatans for these OPDs in a SINGLE query with eager loading
+        $opdIds = $opds->pluck('id');
+        $allJabatans = Jabatan::whereIn('opd_id', $opdIds)->get();
+
+        // Group by opd_id for efficient lookup
+        $kebutuhanByOpd = $allJabatans->groupBy('opd_id')
+            ->map(fn($jabatans) => $jabatans->sum('kebutuhan'));
+
+        return $opds->map(function ($opd) use ($kebutuhanByOpd) {
+            $kebutuhan = $kebutuhanByOpd->get($opd->id, 0);
+            return [
+                'nama' => $opd->nama,
+                'bezetting' => $opd->asns_count,
+                'kebutuhan' => $kebutuhan,
+                'selisih' => $opd->asns_count - $kebutuhan,
+            ];
+        });
     }
 
     /**
-     * Get kebutuhan by OPD
+     * Get kebutuhan by OPD - optimized version
      */
     public function getKebutuhanByOpd($opdId)
     {
-        $opd = Opd::findOrFail($opdId);
-        $allJabatans = $opd->getAllJabatans();
-        return $allJabatans->sum('kebutuhan');
+        return Jabatan::where('opd_id', $opdId)->sum('kebutuhan');
     }
 
     /**
@@ -125,69 +134,139 @@ class AnalyticsService
      */
     public function getUnderstaffedPositions($limit = 10, $accessibleOpdIds = null)
     {
+        // Get jabatan kebutuhan - bezetting gap using subquery
         $query = Jabatan::select('jabatans.*', DB::raw('kebutuhan - (SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) as gap'))
-            ->with(['parent']);
-        
+            ->with(['parent', 'opdLangsung']);
+
         if ($accessibleOpdIds !== null) {
             $query->whereIn('opd_id', $accessibleOpdIds);
         }
-        
-        return $query->havingRaw('gap > 0')
+
+        $results = $query->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
-            ->get()
-            ->map(function ($jabatan) {
-                $bezetting = $jabatan->asns()->count();
-                $opdId = $jabatan->getOpdId();
-                $opd = $opdId ? Opd::find($opdId) : null;
+            ->get();
 
-                return [
-                    'id' => $jabatan->id,
-                    'nama_jabatan' => $jabatan->nama,
-                    'jenis_jabatan' => $jabatan->jenis_jabatan,
-                    'kelas' => $jabatan->kelas,
-                    'opd' => $opd ? $opd->nama : '-',
-                    'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
-                    'kebutuhan' => $jabatan->kebutuhan,
-                    'bezetting' => $bezetting,
-                    'gap' => $jabatan->kebutuhan - $bezetting,
-                ];
-            });
+        // Get related OPDs in a single query for jabatans without direct opd_id
+        $jabatanIdsNeedingOpdLookup = $results->filter(fn($j) => !$j->opd_id)->pluck('id');
+
+        $opdMap = collect();
+        if ($jabatanIdsNeedingOpdLookup->isNotEmpty()) {
+            // Build a map from jabatan_id to opd_id using parent relationships
+            $allParentIds = $results->whereNotNull('parent_id')->pluck('parent_id')->unique();
+            $parentJabatans = Jabatan::with('opdLangsung')
+                ->whereIn('id', $allParentIds)
+                ->get()
+                ->keyBy('id');
+
+            // Map jabatan -> parent -> opd
+            foreach ($jabatanIdsNeedingOpdLookup as $jabatanId) {
+                $jabatan = $results->first(fn($j) => $j->id === $jabatanId);
+                if ($jabatan && $jabatan->parent_id) {
+                    $parent = $parentJabatans->get($jabatan->parent_id);
+                    if ($parent && $parent->opd_id) {
+                        $opdMap->put($jabatanId, $parent->opd_id);
+                    }
+                }
+            }
+        }
+
+        // Get all OPDs needed
+        $neededOpdIds = $results->pluck('opd_id')->filter()->merge($opdMap->values())->unique();
+        $opds = $neededOpdIds->isNotEmpty()
+            ? Opd::whereIn('id', $neededOpdIds)->get()->keyBy('id')
+            : collect();
+
+        return $results->map(function ($jabatan) use ($opdMap, $opds) {
+            // Calculate bezetting from gap (gap = kebutuhan - bezetting, so bezetting = kebutuhan - gap)
+            $bezetting = $jabatan->kebutuhan - $jabatan->gap;
+
+            // Get OPD - try direct opd_id first, then lookup via map
+            $opdId = $jabatan->opd_id ?? $opdMap->get($jabatan->id);
+            $opd = $opdId ? $opds->get($opdId) : null;
+
+            return [
+                'id' => $jabatan->id,
+                'nama_jabatan' => $jabatan->nama,
+                'jenis_jabatan' => $jabatan->jenis_jabatan,
+                'kelas' => $jabatan->kelas,
+                'opd' => $opd ? $opd->nama : '-',
+                'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
+                'kebutuhan' => $jabatan->kebutuhan,
+                'bezetting' => $bezetting,
+                'gap' => $jabatan->gap,
+            ];
+        });
     }
 
     /**
-     * Get overstaffed positions
+     * Get overstaffed positions - optimized
      */
     public function getOverstaffedPositions($limit = 10, $accessibleOpdIds = null)
     {
+        // Get jabatan where bezetting > kebutuhan
         $query = Jabatan::select('jabatans.*', DB::raw('(SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id) - kebutuhan as gap'))
-            ->with(['parent']);
-        
+            ->with(['parent', 'opdLangsung']);
+
         if ($accessibleOpdIds !== null) {
             $query->whereIn('opd_id', $accessibleOpdIds);
         }
-        
-        return $query->havingRaw('gap > 0')
+
+        $results = $query->havingRaw('gap > 0')
             ->orderBy('gap', 'desc')
             ->limit($limit)
-            ->get()
-            ->map(function ($jabatan) {
-                $bezetting = $jabatan->asns()->count();
-                $opdId = $jabatan->getOpdId();
-                $opd = $opdId ? Opd::find($opdId) : null;
+            ->get();
 
-                return [
-                    'id' => $jabatan->id,
-                    'nama_jabatan' => $jabatan->nama,
-                    'jenis_jabatan' => $jabatan->jenis_jabatan,
-                    'kelas' => $jabatan->kelas,
-                    'opd' => $opd ? $opd->nama : '-',
-                    'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
-                    'kebutuhan' => $jabatan->kebutuhan,
-                    'bezetting' => $bezetting,
-                    'gap' => $bezetting - $jabatan->kebutuhan,
-                ];
-            });
+        // Get related OPDs in a single query for jabatans without direct opd_id
+        $jabatanIdsNeedingOpdLookup = $results->filter(fn($j) => !$j->opd_id)->pluck('id');
+
+        $opdMap = collect();
+        if ($jabatanIdsNeedingOpdLookup->isNotEmpty()) {
+            // Build a map from jabatan_id to opd_id using parent relationships
+            $allParentIds = $results->whereNotNull('parent_id')->pluck('parent_id')->unique();
+            $parentJabatans = Jabatan::with('opdLangsung')
+                ->whereIn('id', $allParentIds)
+                ->get()
+                ->keyBy('id');
+
+            // Map jabatan -> parent -> opd
+            foreach ($jabatanIdsNeedingOpdLookup as $jabatanId) {
+                $jabatan = $results->first(fn($j) => $j->id === $jabatanId);
+                if ($jabatan && $jabatan->parent_id) {
+                    $parent = $parentJabatans->get($jabatan->parent_id);
+                    if ($parent && $parent->opd_id) {
+                        $opdMap->put($jabatanId, $parent->opd_id);
+                    }
+                }
+            }
+        }
+
+        // Get all OPDs needed
+        $neededOpdIds = $results->pluck('opd_id')->filter()->merge($opdMap->values())->unique();
+        $opds = $neededOpdIds->isNotEmpty()
+            ? Opd::whereIn('id', $neededOpdIds)->get()->keyBy('id')
+            : collect();
+
+        return $results->map(function ($jabatan) use ($opdMap, $opds) {
+            // Calculate bezetting from gap (gap = bezetting - kebutuhan, so bezetting = gap + kebutuhan)
+            $bezetting = $jabatan->gap + $jabatan->kebutuhan;
+
+            // Get OPD - try direct opd_id first, then lookup via map
+            $opdId = $jabatan->opd_id ?? $opdMap->get($jabatan->id);
+            $opd = $opdId ? $opds->get($opdId) : null;
+
+            return [
+                'id' => $jabatan->id,
+                'nama_jabatan' => $jabatan->nama,
+                'jenis_jabatan' => $jabatan->jenis_jabatan,
+                'kelas' => $jabatan->kelas,
+                'opd' => $opd ? $opd->nama : '-',
+                'parent_jabatan' => $jabatan->parent ? $jabatan->parent->nama : '-',
+                'kebutuhan' => $jabatan->kebutuhan,
+                'bezetting' => $bezetting,
+                'gap' => $jabatan->gap,
+            ];
+        });
     }
 
     /**
@@ -397,28 +476,24 @@ class AnalyticsService
     }
 
     /**
-     * Get jabatan kosong vs terisi
+     * Get jabatan kosong vs terisi - optimized using single query
      */
     public function getJabatanKosongVsTerisi($accessibleOpdIds = null)
     {
-        $query = Jabatan::where('kebutuhan', '>', 0);
-        
+        // Use LEFT JOIN with COUNT to get filled positions in one query
+        $query = Jabatan::select('jabatans.id', DB::raw('COUNT(asns.id) as asn_count'))
+            ->leftJoin('asns', 'jabatans.id', '=', 'asns.jabatan_id')
+            ->where('jabatans.kebutuhan', '>', 0)
+            ->groupBy('jabatans.id');
+
         if ($accessibleOpdIds !== null) {
-            $query->whereIn('opd_id', $accessibleOpdIds);
+            $query->whereIn('jabatans.opd_id', $accessibleOpdIds);
         }
-        
-        $allJabatan = $query->get();
 
-        $kosong = 0;
-        $terisi = 0;
+        $results = $query->get();
 
-        foreach ($allJabatan as $jabatan) {
-            if ($jabatan->asns()->count() == 0) {
-                $kosong++;
-            } else {
-                $terisi++;
-            }
-        }
+        $kosong = $results->where('asn_count', 0)->count();
+        $terisi = $results->where('asn_count', '>', 0)->count();
 
         return [
             'Kosong' => $kosong,
@@ -427,26 +502,28 @@ class AnalyticsService
     }
 
     /**
-     * Get average bezetting per jenis jabatan
+     * Get average bezetting per jenis jabatan - optimized
      */
     public function getAverageBezettingPerJenis($accessibleOpdIds = null)
     {
-        $query = Jabatan::select('jenis_jabatan');
-        
+        // Single query to get count and bezetting per jenis
+        $query = Jabatan::select('jenis_jabatan', DB::raw('COUNT(*) as jabatan_count'), DB::raw('SUM((SELECT COUNT(*) FROM asns WHERE asns.jabatan_id = jabatans.id)) as total_bezetting'))
+            ->where('kebutuhan', '>', 0)
+            ->groupBy('jenis_jabatan');
+
         if ($accessibleOpdIds !== null) {
             $query->whereIn('opd_id', $accessibleOpdIds);
         }
-        
-        return $query->get()
-            ->groupBy('jenis_jabatan')
-            ->map(function ($jabatans, $jenis) {
-                $totalBezetting = 0;
-                foreach ($jabatans as $jabatan) {
-                    $totalBezetting += $jabatan->asns()->count();
-                }
-                return round($totalBezetting / $jabatans->count(), 2);
-            })
-            ->toArray();
+
+        $results = $query->get();
+
+        return $results->mapWithKeys(function ($item) {
+            return [
+                $item->jenis_jabatan => $item->jabatan_count > 0
+                    ? round($item->total_bezetting / $item->jabatan_count, 2)
+                    : 0
+            ];
+        })->toArray();
     }
 
     /**
@@ -463,19 +540,29 @@ class AnalyticsService
     }
 
     /**
-     * Get gap heat map data (selisih per OPD)
+     * Get gap heat map data (selisih per OPD) - optimized
      */
     public function getGapHeatMapData($accessibleOpdIds = null)
     {
-        $query = Opd::query();
-        
+        // Get OPDs with their ASN count
+        $query = Opd::withCount('asns');
+
         if ($accessibleOpdIds !== null) {
             $query->whereIn('id', $accessibleOpdIds);
         }
-        
-        return $query->get()->map(function ($opd) {
-            $kebutuhan = $this->getKebutuhanByOpd($opd->id);
-            $bezetting = $opd->asns()->count();
+
+        $opds = $query->get();
+
+        // Get all jabatans for these OPDs in a SINGLE query
+        $opdIds = $opds->pluck('id');
+        $kebutuhanByOpd = Jabatan::select('opd_id', DB::raw('SUM(kebutuhan) as total_kebutuhan'))
+            ->whereIn('opd_id', $opdIds)
+            ->groupBy('opd_id')
+            ->pluck('total_kebutuhan', 'opd_id');
+
+        return $opds->map(function ($opd) use ($kebutuhanByOpd) {
+            $kebutuhan = $kebutuhanByOpd->get($opd->id, 0);
+            $bezetting = $opd->asns_count;
             $selisih = $bezetting - $kebutuhan;
 
             return [
@@ -485,7 +572,7 @@ class AnalyticsService
                 'selisih' => $selisih,
                 'persentase' => $kebutuhan > 0 ? round(($bezetting / $kebutuhan) * 100, 2) : 0,
             ];
-        })->sortBy('selisih');
+        })->sortBy('selisih')->values();
     }
 
     /**
