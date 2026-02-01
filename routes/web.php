@@ -73,6 +73,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/export', [MutasiController::class, 'export'])->name('export');
             Route::get('/search-asn', [MutasiController::class, 'searchAsn'])->name('search-asn');
             Route::get('/jabatan/{opdId}', [MutasiController::class, 'getJabatanByOpd'])->name('jabatan');
+            Route::get('/jabatan-struktural/{opdId}', [MutasiController::class, 'getJabatanStruktural'])->name('jabatan-struktural');
+            Route::get('/jabatan-by-atasan/{opdId}/{atasanId}', [MutasiController::class, 'getJabatanByAtasan'])->name('jabatan-by-atasan');
             Route::get('/riwayat/{asnId}', [MutasiController::class, 'riwayatAsn'])->name('riwayat');
             Route::get('/{mutasi}', [MutasiController::class, 'show'])->name('show');
         });

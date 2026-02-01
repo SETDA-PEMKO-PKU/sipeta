@@ -131,7 +131,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             OPD Tujuan <span class="text-red-500">*</span>
                         </label>
-                        <select name="opd_tujuan_id" x-model="opdTujuanId" @change="loadJabatanTujuan()" class="input w-full" required>
+                        <select name="opd_tujuan_id" x-model="opdTujuanId" @change="onOpdTujuanChange()" class="input w-full" required>
                             <option value="">-- Pilih OPD Tujuan --</option>
                             @foreach($opds as $opd)
                                 <option value="{{ $opd->id }}">{{ $opd->nama }}</option>
@@ -142,18 +142,38 @@
                         </p>
                     </div>
 
+                    <!-- Pilih Atasan -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Pilih Atasan (Jabatan Struktural)
+                        </label>
+                        <select name="atasan_id" x-model="atasanId" @change="loadJabatanTujuanByAtasan()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
+                            <option value="">-- Pilih Atasan Dahulu --</option>
+                            <template x-for="atasan in atasanList" :key="atasan.id">
+                                <option :value="atasan.id" x-text="atasan.nama"></option>
+                            </template>
+                        </select>
+                        <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
+                        <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
+                            Tidak ada jabatan struktural di OPD tujuan
+                        </p>
+                    </div>
+
                     <!-- Jabatan Tujuan -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Jabatan Tujuan
+                            Jabatan Tujuan (di bawah atasan yang dipilih)
                         </label>
-                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!opdTujuanId || loadingJabatan">
+                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan">
                             <option value="">-- Pilih Jabatan (Opsional) --</option>
                             <template x-for="jabatan in jabatanTujuanList" :key="jabatan.id">
-                                <option :value="jabatan.id" x-text="jabatan.nama"></option>
+                                <option :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
                             </template>
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
+                        <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
+                            Tidak ada jabatan di bawah atasan yang dipilih
+                        </p>
                     </div>
 
                     <!-- Tanggal Mutasi -->
@@ -226,8 +246,11 @@ function mutasiForm() {
         selectedAsn: @json($selectedAsn),
         jenisMutasi: '{{ old('jenis_mutasi', '') }}',
         opdTujuanId: '{{ old('opd_tujuan_id', '') }}',
+        atasanId: '{{ old('atasan_id', '') }}',
         jabatanTujuanId: '{{ old('jabatan_tujuan_id', '') }}',
+        atasanList: [],
         jabatanTujuanList: [],
+        loadingAtasan: false,
         loadingJabatan: false,
 
         init() {
@@ -235,7 +258,7 @@ function mutasiForm() {
                 this.searchQuery = this.selectedAsn.nama;
             }
             if (this.opdTujuanId) {
-                this.loadJabatanTujuan();
+                this.onOpdTujuanChange();
             }
         },
 
@@ -260,11 +283,11 @@ function mutasiForm() {
             this.searchQuery = asn.nama;
             this.showResults = false;
             this.searchResults = [];
-            
+
             // Auto-select OPD for internal mutation
             if (this.jenisMutasi === 'internal_opd') {
                 this.opdTujuanId = asn.opd_id;
-                this.loadJabatanTujuan();
+                this.onOpdTujuanChange();
             }
         },
 
@@ -277,19 +300,46 @@ function mutasiForm() {
         onJenisMutasiChange() {
             if (this.jenisMutasi === 'internal_opd' && this.selectedAsn) {
                 this.opdTujuanId = this.selectedAsn.opd_id;
-                this.loadJabatanTujuan();
+                this.onOpdTujuanChange();
             }
         },
 
-        async loadJabatanTujuan() {
+        async onOpdTujuanChange() {
+            // Reset atasan and jabatan selection
+            this.atasanId = '';
+            this.jabatanTujuanId = '';
+            this.atasanList = [];
+            this.jabatanTujuanList = [];
+
             if (!this.opdTujuanId) {
-                this.jabatanTujuanList = [];
                 return;
             }
 
+            // Load atasan list (structural positions only)
+            this.loadingAtasan = true;
+            try {
+                const response = await fetch(`{{ route('admin.mutasi.jabatan-struktural', ['opdId' => '']) }}${this.opdTujuanId}`);
+                this.atasanList = await response.json();
+            } catch (error) {
+                console.error('Error loading atasan:', error);
+            } finally {
+                this.loadingAtasan = false;
+            }
+        },
+
+        async loadJabatanTujuanByAtasan() {
+            // Reset jabatan selection
+            this.jabatanTujuanId = '';
+            this.jabatanTujuanList = [];
+
+            if (!this.opdTujuanId || !this.atasanId) {
+                return;
+            }
+
+            // Load jabatan under selected atasan
             this.loadingJabatan = true;
             try {
-                const response = await fetch(`{{ url('admin/mutasi/jabatan') }}/${this.opdTujuanId}`);
+                const response = await fetch(`{{ route('admin.mutasi.jabatan-by-atasan', ['opdId' => '', 'atasanId' => '']) }}${this.opdTujuanId}/${this.atasanId}`);
                 this.jabatanTujuanList = await response.json();
             } catch (error) {
                 console.error('Error loading jabatan:', error);

@@ -275,6 +275,88 @@ class MutasiController extends Controller
     }
 
     /**
+     * API endpoint untuk mendapatkan jabatan struktural saja (untuk pilihan atasan)
+     */
+    public function getJabatanStruktural($opdId)
+    {
+        $opd = Opd::with(['jabatanKepala.children.children.children'])->findOrFail($opdId);
+
+        $jabatans = [];
+
+        // Recursive function untuk mendapatkan hanya jabatan struktural
+        $addJabatanStruktural = function($jabatan, $level = 0) use (&$jabatans, &$addJabatanStruktural) {
+            // Hanya tambahkan jika jenis_jabatan bukan Pelaksana atau Fungsional
+            if (in_array($jabatan->jenis_jabatan, ['Struktural', 'Kepala', ''])) {
+                $prefix = str_repeat('— ', $level);
+
+                $jabatans[] = [
+                    'id' => $jabatan->id,
+                    'nama' => $prefix . $jabatan->nama,
+                    'parent_id' => $jabatan->parent_id,
+                    'level' => $level
+                ];
+
+                // Rekursif untuk children
+                foreach ($jabatan->children as $child) {
+                    $addJabatanStruktural($child, $level + 1);
+                }
+            }
+        };
+
+        // Proses semua jabatan kepala
+        foreach ($opd->jabatanKepala as $jabatan) {
+            $addJabatanStruktural($jabatan);
+        }
+
+        return response()->json($jabatans);
+    }
+
+    /**
+     * API endpoint untuk mendapatkan jabatan berdasarkan atasan (parent)
+     */
+    public function getJabatanByAtasan($opdId, $atasanId)
+    {
+        $opd = Opd::findOrFail($opdId);
+
+        // Jika atasanId adalah 0 atau null, cari jabatan kepala (tanpa parent)
+        if ($atasanId == '0' || $atasanId == 'null' || empty($atasanId)) {
+            $jabatans = Jabatan::where('opd_id', $opdId)
+                ->whereNull('parent_id')
+                ->orderBy('nama')
+                ->get()
+                ->map(function ($jabatan) {
+                    return [
+                        'id' => $jabatan->id,
+                        'nama' => $jabatan->nama,
+                        'jenis_jabatan' => $jabatan->jenis_jabatan,
+                        'kelas' => $jabatan->kelas,
+                    ];
+                });
+
+            return response()->json($jabatans);
+        }
+
+        // Validasi atasan ada di OPD ini
+        $atasan = Jabatan::where('opd_id', $opdId)->findOrFail($atasanId);
+
+        // Ambil semua jabatan anak dari atasan yang dipilih
+        $jabatans = Jabatan::where('opd_id', $opdId)
+            ->where('parent_id', $atasanId)
+            ->orderBy('nama')
+            ->get()
+            ->map(function ($jabatan) {
+                return [
+                    'id' => $jabatan->id,
+                    'nama' => $jabatan->nama,
+                    'jenis_jabatan' => $jabatan->jenis_jabatan,
+                    'kelas' => $jabatan->kelas,
+                ];
+            });
+
+        return response()->json($jabatans);
+    }
+
+    /**
      * Mendapatkan riwayat mutasi ASN
      */
     public function riwayatAsn($asnId)
