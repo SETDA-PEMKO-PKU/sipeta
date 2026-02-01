@@ -149,9 +149,7 @@
                         </label>
                         <select name="atasan_id" x-model="atasanId" @change="loadJabatanTujuanByAtasan()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
                             <option value="">-- Pilih Atasan Dahulu --</option>
-                            <template x-for="atasan in atasanList" :key="atasan.id">
-                                <option :value="atasan.id" x-text="atasan.nama"></option>
-                            </template>
+                            <option x-for="atasan in atasanList" :key="atasan.id" :value="atasan.id" x-text="atasan.nama"></option>
                         </select>
                         <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
@@ -166,9 +164,7 @@
                         </label>
                         <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan">
                             <option value="">-- Pilih Jabatan (Opsional) --</option>
-                            <template x-for="jabatan in jabatanTujuanList" :key="jabatan.id">
-                                <option :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
-                            </template>
+                            <option x-for="jabatan in jabatanTujuanList" :key="jabatan.id" :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
                         <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
@@ -305,8 +301,6 @@ function mutasiForm() {
         },
 
         async onOpdTujuanChange() {
-            console.log('onOpdTujuanChange called, opdTujuanId:', this.opdTujuanId);
-
             // Reset atasan and jabatan selection
             this.atasanId = '';
             this.jabatanTujuanId = '';
@@ -320,17 +314,8 @@ function mutasiForm() {
             // Load atasan list (structural positions only)
             this.loadingAtasan = true;
             try {
-                const url = `/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`;
-                console.log('Fetching from:', url);
-                const response = await fetch(url);
-                console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Parsed data:', data);
-                this.atasanList = data;
-                console.log('Assigned to atasanList:', this.atasanList);
-                this.$nextTick(() => {
-                    console.log('After nextTick, atasanList:', this.atasanList);
-                });
+                const response = await fetch(`/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`);
+                this.atasanList = await response.json();
             } catch (error) {
                 console.error('Error loading atasan:', error);
             } finally {
