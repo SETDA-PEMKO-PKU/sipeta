@@ -3,6 +3,29 @@
 @section('title', 'Kelola Admin')
 @section('page-title', 'Kelola Admin')
 
+@push('styles')
+<style>
+    .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    .admin-name-cell {
+        max-width: 200px;
+    }
+
+    .admin-email-cell {
+        max-width: 250px;
+    }
+
+    .admin-opd-cell {
+        max-width: 200px;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="p-4 lg:p-8">
     <!-- Header Actions -->
@@ -58,17 +81,17 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-center">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" 
+                            <th class="px-4 py-3 text-center" style="width: 40px;">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
                                        class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Admin</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Role</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">OPD</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Terdaftar</th>
-                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Aksi</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider admin-name-cell">Admin</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider admin-email-cell">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider" style="width: 140px;">Role</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider admin-opd-cell">OPD</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider" style="width: 100px;">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider" style="width: 100px;">Terdaftar</th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider" style="width: 180px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -83,23 +106,27 @@
                                         <span class="text-gray-300" title="Tidak bisa menghapus akun sendiri">-</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-6 py-4" style="max-width: 200px;">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                                             {{ strtoupper(substr($admin->name, 0, 1)) }}
                                         </div>
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-900">{{ $admin->name }}</div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-medium text-gray-900 truncate" title="{{ $admin->name }}">
+                                                {{ \Illuminate\Support\Str::limit($admin->name, 30) }}
+                                            </div>
                                             @if($admin->id === auth('admin')->id())
                                                 <span class="text-xs text-primary-600">(Anda)</span>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $admin->email }}</div>
+                                <td class="px-6 py-4" style="max-width: 250px;">
+                                    <div class="text-sm text-gray-900 truncate font-mono text-xs" title="{{ $admin->email }}">
+                                        {{ \Illuminate\Support\Str::limit($admin->email, 35) }}
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-6 py-4 whitespace-nowrap" style="width: 140px;">
                                     @if($admin->isSuperAdmin())
                                         <span class="badge badge-primary">Super Admin</span>
                                     @elseif($admin->isAdminOrganisasi())
@@ -112,24 +139,26 @@
                                         <span class="badge badge-gray">{{ $admin->role }}</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4" style="max-width: 200px;">
                                     @if($admin->opd)
-                                        <div class="text-sm text-gray-900">{{ $admin->opd->nama }}</div>
+                                        <div class="text-sm text-gray-900 truncate" title="{{ $admin->opd->nama }}">
+                                            {{ \Illuminate\Support\Str::limit($admin->opd->nama, 35) }}
+                                        </div>
                                     @else
                                         <span class="text-sm text-gray-400">-</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-6 py-4 whitespace-nowrap" style="width: 100px;">
                                     @if($admin->is_active)
                                         <span class="badge badge-success">Aktif</span>
                                     @else
                                         <span class="badge badge-error">Nonaktif</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600" style="width: 100px;">
                                     {{ $admin->created_at->format('d M Y') }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-center" style="width: 180px;">
                                     <div class="flex items-center justify-center gap-2">
                                         <a href="{{ route('admin.admins.edit', $admin) }}"
                                            class="inline-flex items-center px-3 py-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm">
