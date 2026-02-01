@@ -79,7 +79,7 @@
                                 </template>
                             </div>
                         </div>
-                        <input type="hidden" name="asn_id" x-model="selectedAsn?.id" required>
+                        <input type="hidden" name="asn_id" :value="selectedAsn?.id" required>
                     </div>
 
                     <!-- Selected ASN Card -->
@@ -149,7 +149,9 @@
                         </label>
                         <select name="atasan_id" x-model="atasanId" @change="loadJabatanTujuanByAtasan()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
                             <option value="">-- Pilih Atasan Dahulu --</option>
-                            <option x-for="atasan in atasanList" :key="atasan.id" :value="atasan.id" x-text="atasan.nama"></option>
+                            <template x-for="atasan in atasanList" :key="atasan.id">
+                                <option :value="atasan.id" x-text="atasan.nama"></option>
+                            </template>
                         </select>
                         <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
@@ -164,7 +166,9 @@
                         </label>
                         <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan">
                             <option value="">-- Pilih Jabatan (Opsional) --</option>
-                            <option x-for="jabatan in jabatanTujuanList" :key="jabatan.id" :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
+                            <template x-for="jabatan in jabatanTujuanList" :key="jabatan.id">
+                                <option :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
+                            </template>
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
                         <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
