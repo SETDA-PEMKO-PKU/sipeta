@@ -489,7 +489,7 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
             type: 'table',
             jenis_jabatan: 'Fungsional',
             items: fungsionalNodes,
-            layoutWidth: 280
+            layoutWidth: 350
         });
     }
 
@@ -499,7 +499,7 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
             type: 'table',
             jenis_jabatan: 'Pelaksana',
             items: pelaksanaNodes,
-            layoutWidth: 280
+            layoutWidth: 350
         });
     }
 
@@ -577,9 +577,28 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
 // Draw box node (Format: Header hitam + Nama + Kelas)
 function drawBoxNode(node, x, y) {
     const headerHeight = 25;
-    const namaHeight = 30;
+    const minNamaHeight = 30;
     const kelasHeight = 25;
-    const totalHeight = headerHeight + namaHeight + kelasHeight;
+
+    // Nama Jabatan - with wrapping for long names
+    const namaText = new Konva.Text({
+        x: CONFIG.padding,
+        y: 0,
+        width: CONFIG.boxWidth - CONFIG.padding * 2,
+        text: node.nama,
+        fontSize: CONFIG.fontSize,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        align: 'center',
+        verticalAlign: 'middle',
+        wrap: 'word',
+        lineHeight: 1.2
+    });
+
+    // Calculate actual nama height based on text
+    const actualNamaHeight = Math.max(minNamaHeight, namaText.height() + CONFIG.padding);
+    const totalHeight = headerHeight + actualNamaHeight + kelasHeight;
+
     const group = new Konva.Group({ x: x - CONFIG.boxWidth / 2, y: y });
 
     // Main box border
@@ -623,24 +642,13 @@ function drawBoxNode(node, x, y) {
     });
     group.add(headerLine);
 
-    // Nama Jabatan
-    const namaText = new Konva.Text({
-        x: CONFIG.padding,
-        y: headerHeight,
-        width: CONFIG.boxWidth - CONFIG.padding * 2,
-        height: namaHeight,
-        text: node.nama,
-        fontSize: CONFIG.fontSize,
-        fontFamily: 'Arial',
-        fill: '#000000',
-        align: 'center',
-        verticalAlign: 'middle'
-    });
+    // Position nama text
+    namaText.y(headerHeight);
     group.add(namaText);
 
     // Line separator before kelas
     const kelasLine = new Konva.Line({
-        points: [0, headerHeight + namaHeight, CONFIG.boxWidth, headerHeight + namaHeight],
+        points: [0, headerHeight + actualNamaHeight, CONFIG.boxWidth, headerHeight + actualNamaHeight],
         stroke: '#000000',
         strokeWidth: 1
     });
@@ -649,7 +657,7 @@ function drawBoxNode(node, x, y) {
     // Kelas
     const kelasText = new Konva.Text({
         x: CONFIG.padding,
-        y: headerHeight + namaHeight,
+        y: headerHeight + actualNamaHeight,
         width: CONFIG.boxWidth - CONFIG.padding * 2,
         height: kelasHeight,
         text: node.kelas ? 'Kelas ' + node.kelas : '-',
@@ -667,11 +675,25 @@ function drawBoxNode(node, x, y) {
 
 // Draw table node (single column, vertical layout)
 function drawTableNode(jenis, items, x, y) {
-    const tableWidth = 280;
+    const tableWidth = 350;
     const headerHeight = 25;
     const columnHeaderHeight = 25;
-    const rowHeight = CONFIG.tableRowHeight;
-    const totalHeight = headerHeight + columnHeaderHeight + (items.length * rowHeight);
+    const minRowHeight = CONFIG.tableRowHeight;
+
+    // Calculate row heights based on nama text wrapping
+    const rowHeights = items.map(item => {
+        const namaText = new Konva.Text({
+            width: 210,
+            text: item.nama,
+            fontSize: 8,
+            fontFamily: 'Arial',
+            wrap: 'word',
+            lineHeight: 1.2
+        });
+        return Math.max(minRowHeight, namaText.height() + 4);
+    });
+
+    const totalHeight = headerHeight + columnHeaderHeight + rowHeights.reduce((sum, h) => sum + h, 0);
 
     const group = new Konva.Group({ x: x - tableWidth / 2, y: y });
 
@@ -720,11 +742,11 @@ function drawTableNode(jenis, items, x, y) {
 
     // Column widths
     const colWidths = {
-        nama: 155,
+        nama: 210,
         kelas: 45,
-        b: 27,
-        k: 27,
-        s: 26
+        b: 32,
+        k: 32,
+        s: 31
     };
 
     let colX = 0;
@@ -765,12 +787,13 @@ function drawTableNode(jenis, items, x, y) {
     });
 
     // Data rows
+    let currentY = headerHeight + columnHeaderHeight;
     items.forEach((item, idx) => {
-        const rowY = headerHeight + columnHeaderHeight + (idx * rowHeight);
+        const rowHeight = rowHeights[idx];
 
         // Horizontal line
         const hLine = new Konva.Line({
-            points: [0, rowY, tableWidth, rowY],
+            points: [0, currentY, tableWidth, currentY],
             stroke: '#000000',
             strokeWidth: 0.5
         });
@@ -779,11 +802,8 @@ function drawTableNode(jenis, items, x, y) {
         // Row data
         let cellX = 0;
 
-        // Truncate nama if too long
-        const namaText = item.nama.length > 28 ? item.nama.substring(0, 25) + '...' : item.nama;
-
         const rowData = [
-            { text: namaText, width: colWidths.nama, align: 'left' },
+            { text: item.nama, width: colWidths.nama, align: 'left', wrap: true },
             { text: item.kelas || '-', width: colWidths.kelas, align: 'center' },
             { text: item.bezetting.toString(), width: colWidths.b, align: 'center' },
             { text: item.kebutuhan.toString(), width: colWidths.k, align: 'center' },
@@ -793,20 +813,24 @@ function drawTableNode(jenis, items, x, y) {
         rowData.forEach((cell) => {
             const cellText = new Konva.Text({
                 x: cellX + 2,
-                y: rowY + 1,
+                y: currentY + 2,
                 width: cell.width - 4,
-                height: rowHeight - 2,
+                height: rowHeight - 4,
                 text: cell.text,
                 fontSize: 8,
                 fontFamily: 'Arial',
                 fill: '#000000',
                 align: cell.align,
-                verticalAlign: 'middle'
+                verticalAlign: 'middle',
+                wrap: cell.wrap ? 'word' : 'none',
+                lineHeight: 1.2
             });
             group.add(cellText);
 
             cellX += cell.width;
         });
+
+        currentY += rowHeight;
     });
 
     layer.add(group);
