@@ -305,6 +305,8 @@ function mutasiForm() {
         },
 
         async onOpdTujuanChange() {
+            console.log('onOpdTujuanChange called, opdTujuanId:', this.opdTujuanId);
+
             // Reset atasan and jabatan selection
             this.atasanId = '';
             this.jabatanTujuanId = '';
@@ -318,8 +320,17 @@ function mutasiForm() {
             // Load atasan list (structural positions only)
             this.loadingAtasan = true;
             try {
-                const response = await fetch(`/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`);
-                this.atasanList = await response.json();
+                const url = `/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`;
+                console.log('Fetching from:', url);
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Parsed data:', data);
+                this.atasanList = data;
+                console.log('Assigned to atasanList:', this.atasanList);
+                this.$nextTick(() => {
+                    console.log('After nextTick, atasanList:', this.atasanList);
+                });
             } catch (error) {
                 console.error('Error loading atasan:', error);
             } finally {
