@@ -26,7 +26,10 @@
                         <div>
                             <label class="text-sm font-medium text-gray-500">Waktu</label>
                             <p class="mt-1 text-gray-900">
-                                {{ $activityLog->created_at->format('d F Y, H:i:s') }}
+                                {{ $activityLog->time_ago }}
+                            </p>
+                            <p class="mt-1 text-sm text-gray-500">
+                                {{ $activityLog->created_at->format('d F Y, H:i:s') }} WIB
                             </p>
                         </div>
                         <div>

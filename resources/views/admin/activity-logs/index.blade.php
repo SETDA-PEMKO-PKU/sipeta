@@ -229,10 +229,10 @@
                         <tr>
                             <td class="whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">
-                                    {{ $log->created_at->format('d M Y') }}
+                                    {{ $log->time_ago }}
                                 </div>
                                 <div class="text-xs text-gray-500">
-                                    {{ $log->created_at->format('H:i:s') }}
+                                    {{ $log->created_at->format('d M Y, H:i') }} WIB
                                 </div>
                             </td>
                             <td>

@@ -176,6 +176,37 @@ class AdminActivityLog extends Model
     }
 
     /**
+     * Get human-readable time difference in Indonesian
+     */
+    public function getTimeAgoAttribute(): string
+    {
+        $now = now();
+        $diff = $now->diffInSeconds($this->created_at);
+
+        if ($diff < 60) {
+            return 'baru saja';
+        } elseif ($diff < 3600) {
+            $minutes = floor($diff / 60);
+            return $minutes == 1 ? '1 menit yang lalu' : "{$minutes} menit yang lalu";
+        } elseif ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return $hours == 1 ? '1 jam yang lalu' : "{$hours} jam yang lalu";
+        } elseif ($diff < 604800) {
+            $days = floor($diff / 86400);
+            return $days == 1 ? 'kemarin' : "{$days} hari yang lalu";
+        } elseif ($diff < 2592000) {
+            $weeks = floor($diff / 604800);
+            return $weeks == 1 ? '1 minggu yang lalu' : "{$weeks} minggu yang lalu";
+        } elseif ($diff < 31536000) {
+            $months = floor($diff / 2592000);
+            return $months == 1 ? '1 bulan yang lalu' : "{$months} bulan yang lalu";
+        } else {
+            $years = floor($diff / 31536000);
+            return $years == 1 ? '1 tahun yang lalu' : "{$years} tahun yang lalu";
+        }
+    }
+
+    /**
      * Get action badge color
      */
     public function getActionColorAttribute(): string
