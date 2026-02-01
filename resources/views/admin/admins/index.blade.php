@@ -72,6 +72,41 @@
         </div>
     </div>
 
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="p-4">
+            <form method="GET" action="{{ route('admin.admins.index') }}" class="flex items-center gap-3">
+                <div class="flex-1 relative">
+                    <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" data-icon="mdi:magnify" data-width="16" data-height="16"></span>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Cari nama, email, atau role..."
+                        class="input pl-9 pr-9 w-full text-sm"
+                    >
+                    @if(request('search'))
+                    <a href="{{ request()->fullUrlWithQuery(['search' => null, 'page' => null]) }}"
+                       class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <span class="iconify" data-icon="mdi:close" data-width="16" data-height="16"></span>
+                    </a>
+                    @endif
+                </div>
+                @if(request('search'))
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">
+                        <span class="font-medium">{{ $admins->total() }}</span> hasil pencarian
+                    </span>
+                    <a href="{{ route('admin.admins.index') }}" class="btn btn-outline btn-sm">
+                        <span class="iconify" data-icon="mdi:close" data-width="14" data-height="14"></span>
+                        <span class="ml-1">Reset</span>
+                    </a>
+                </div>
+                @endif
+            </form>
+        </div>
+    </div>
+
     <!-- Admin List -->
     <div class="card">
         <div class="overflow-x-auto">
@@ -186,8 +221,13 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="px-6 py-12 text-center">
-                                    <span class="iconify text-gray-300" data-icon="mdi:account-group" data-width="48" data-height="48"></span>
-                                    <p class="text-gray-500 mt-2">Belum ada data admin</p>
+                                    @if(request('search'))
+                                        <span class="iconify text-gray-300" data-icon="mdi:magnify" data-width="48" data-height="48"></span>
+                                        <p class="text-gray-500 mt-2">Tidak ada hasil untuk "{{ request('search') }}"</p>
+                                    @else
+                                        <span class="iconify text-gray-300" data-icon="mdi:account-group" data-width="48" data-height="48"></span>
+                                        <p class="text-gray-500 mt-2">Belum ada data admin</p>
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse
@@ -203,6 +243,11 @@
         <div class="flex items-center gap-2">
             <label class="text-sm text-gray-600">Tampilkan:</label>
             <form method="GET" action="{{ route('admin.admins.index') }}" class="inline-block">
+                @foreach(request()->except('per_page', 'page') as $key => $value)
+                    @if($key !== 'per_page' && $key !== 'page')
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endif
+                @endforeach
                 <select name="per_page"
                         onchange="this.form.submit()"
                         class="input text-sm py-1 px-2 pr-8 w-auto">

@@ -25,8 +25,19 @@ class AdminController extends Controller
             $perPage = 10;
         }
 
-        $admins = Admin::with('opd')
-                       ->orderBy('created_at', 'desc')
+        $query = Admin::with('opd');
+
+        // Search berdasarkan nama, email, atau role
+        if ($request->filled('search')) {
+            $searchTerm = strtolower($request->search);
+            $query->where(function($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchTerm}%"])
+                  ->orWhereRaw('LOWER(email) LIKE ?', ["%{$searchTerm}%"])
+                  ->orWhere('role', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        $admins = $query->orderBy('created_at', 'desc')
                        ->paginate($perPage)
                        ->withQueryString();
         return view('admin.admins.index', compact('admins'));
