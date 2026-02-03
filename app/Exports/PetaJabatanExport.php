@@ -16,6 +16,11 @@ class PetaJabatanExport implements WithEvents, WithTitle
     protected $opd;
     protected $jabatanTree;
 
+    // Layout constants
+    const STRUKTURAL_WIDTH = 4;  // columns for struktural box
+    const TABLE_WIDTH = 5;       // columns for table (nama, kls, b, k, s)
+    const COL_GAP = 1;           // gap between horizontal siblings
+
     public function __construct(Opd $opd)
     {
         $this->opd = $opd;
@@ -78,93 +83,151 @@ class PetaJabatanExport implements WithEvents, WithTitle
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Set column widths
-                $sheet->getColumnDimension('A')->setWidth(40);
-                $sheet->getColumnDimension('B')->setWidth(8);
-                $sheet->getColumnDimension('C')->setWidth(8);
-                $sheet->getColumnDimension('D')->setWidth(8);
-                $sheet->getColumnDimension('E')->setWidth(8);
-
-                $currentRow = 1;
+                // Set default column width
+                $sheet->getDefaultColumnDimension()->setWidth(12);
 
                 // Draw the organizational chart
                 foreach ($this->jabatanTree as $kepala) {
-                    $currentRow = $this->drawJabatanNode($sheet, $kepala, $currentRow, 1);
-                    $currentRow += 2; // Gap between root nodes
+                    // Calculate the width needed for this tree
+                    $treeWidth = $this->calculateTreeWidth($kepala);
+                    $startCol = 1;
+                    $centerCol = $startCol + intval($treeWidth / 2) - intval(self::STRUKTURAL_WIDTH / 2);
+
+                    $this->drawJabatanTree($sheet, $kepala, 1, max(1, $centerCol));
                 }
             },
         ];
     }
 
     /**
-     * Draw a jabatan node (struktural box or table row)
+     * Calculate the total width (in columns) needed for a jabatan tree
      */
-    private function drawJabatanNode($sheet, $jabatan, $startRow, $startCol)
+    private function calculateTreeWidth($jabatan)
     {
-        $bezetting = $jabatan->asns ? $jabatan->asns->count() : 0;
-        $selisih = $bezetting - $jabatan->kebutuhan;
-        $selisihText = ($selisih >= 0 ? '+' : '') . $selisih;
+        $children = $jabatan->children ?? collect();
+        $strukturalChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Struktural');
 
+        if ($strukturalChildren->isEmpty()) {
+            // Leaf node - just need space for this node and its tables
+            return max(self::STRUKTURAL_WIDTH, self::TABLE_WIDTH);
+        }
+
+        // Sum of all children widths + gaps
+        $totalWidth = 0;
+        foreach ($strukturalChildren as $index => $child) {
+            if ($index > 0) {
+                $totalWidth += self::COL_GAP;
+            }
+            $totalWidth += $this->calculateTreeWidth($child);
+        }
+
+        return max($totalWidth, self::STRUKTURAL_WIDTH, self::TABLE_WIDTH);
+    }
+
+    /**
+     * Draw a complete jabatan tree starting from a node
+     * Returns the row after the last drawn element
+     */
+    private function drawJabatanTree($sheet, $jabatan, $startRow, $startCol)
+    {
         $currentRow = $startRow;
 
-        if ($jabatan->jenis_jabatan === 'Struktural') {
-            // Draw struktural box (3 rows: header, nama, kelas)
-            $colLetter = $this->getColumnLetter($startCol);
-            $endColLetter = $this->getColumnLetter($startCol + 3);
+        // Draw this struktural node
+        $boxEndRow = $this->drawStrukturalBox($sheet, $jabatan, $currentRow, $startCol);
+        $currentRow = $boxEndRow + 1; // Gap after box
 
-            // Row 1: Header "Jabatan Struktural"
-            $sheet->mergeCells("{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $sheet->setCellValue("{$colLetter}{$currentRow}", 'Jabatan Struktural');
-            $this->applyHeaderStyle($sheet, "{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $currentRow++;
+        // Get children separated by type
+        $children = $jabatan->children ?? collect();
+        $strukturalChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Struktural');
+        $pelaksanaChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Pelaksana');
+        $fungsionalChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Fungsional');
 
-            // Row 2: Nama Jabatan
-            $sheet->mergeCells("{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $sheet->setCellValue("{$colLetter}{$currentRow}", $jabatan->nama);
-            $this->applyNameStyle($sheet, "{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $currentRow++;
+        // Draw Pelaksana table below struktural box
+        if ($pelaksanaChildren->isNotEmpty()) {
+            $currentRow = $this->drawTable($sheet, 'Pelaksana', $pelaksanaChildren, $currentRow, $startCol);
+            $currentRow++; // Gap after table
+        }
 
-            // Row 3: Kelas
-            $sheet->mergeCells("{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $sheet->setCellValue("{$colLetter}{$currentRow}", 'Kelas ' . ($jabatan->kelas ?? '-'));
-            $this->applyKelasStyle($sheet, "{$colLetter}{$currentRow}:{$endColLetter}{$currentRow}");
-            $currentRow++;
+        // Draw Fungsional table below Pelaksana
+        if ($fungsionalChildren->isNotEmpty()) {
+            $currentRow = $this->drawTable($sheet, 'Fungsional', $fungsionalChildren, $currentRow, $startCol);
+            $currentRow++; // Gap after table
+        }
 
-            // Box border for struktural
-            $this->applyBoxBorder($sheet, "{$colLetter}{$startRow}:{$endColLetter}" . ($currentRow - 1));
+        // Draw struktural children horizontally
+        if ($strukturalChildren->isNotEmpty()) {
+            $childStartRow = $currentRow;
+            $childCol = $startCol;
+            $maxEndRow = $currentRow;
 
-            $currentRow++; // Gap after struktural box
-
-            // Get children separated by type
-            $children = $jabatan->children ?? collect();
-            $strukturalChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Struktural');
-            $pelaksanaChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Pelaksana');
-            $fungsionalChildren = $children->filter(fn($c) => $c->jenis_jabatan === 'Fungsional');
-
-            // Draw Pelaksana table if exists
-            if ($pelaksanaChildren->isNotEmpty()) {
-                $currentRow = $this->drawTable($sheet, 'Pelaksana', $pelaksanaChildren, $currentRow, $startCol);
-                $currentRow++; // Gap after table
-            }
-
-            // Draw Fungsional table if exists
-            if ($fungsionalChildren->isNotEmpty()) {
-                $currentRow = $this->drawTable($sheet, 'Fungsional', $fungsionalChildren, $currentRow, $startCol);
-                $currentRow++; // Gap after table
-            }
-
-            // Recursively draw struktural children
+            // Calculate total width needed for all children
+            $childWidths = [];
             foreach ($strukturalChildren as $child) {
-                $currentRow = $this->drawJabatanNode($sheet, $child, $currentRow, $startCol);
-                $currentRow++; // Gap between siblings
+                $childWidths[] = $this->calculateTreeWidth($child);
             }
+            $totalChildWidth = array_sum($childWidths) + (count($childWidths) - 1) * self::COL_GAP;
+
+            // Center children under parent
+            $parentCenterCol = $startCol + intval(self::STRUKTURAL_WIDTH / 2);
+            $childCol = $parentCenterCol - intval($totalChildWidth / 2);
+            $childCol = max(1, $childCol);
+
+            foreach ($strukturalChildren as $index => $child) {
+                $childWidth = $childWidths[$index];
+
+                // Center this child within its allocated width
+                $childCenterCol = $childCol + intval($childWidth / 2) - intval(self::STRUKTURAL_WIDTH / 2);
+                $childCenterCol = max(1, $childCenterCol);
+
+                $childEndRow = $this->drawJabatanTree($sheet, $child, $childStartRow, $childCenterCol);
+                $maxEndRow = max($maxEndRow, $childEndRow);
+
+                $childCol += $childWidth + self::COL_GAP;
+            }
+
+            $currentRow = $maxEndRow;
         }
 
         return $currentRow;
     }
 
     /**
+     * Draw a struktural box (header, nama, kelas)
+     * Returns the last row used
+     */
+    private function drawStrukturalBox($sheet, $jabatan, $startRow, $startCol)
+    {
+        $colStart = $this->getColumnLetter($startCol);
+        $colEnd = $this->getColumnLetter($startCol + self::STRUKTURAL_WIDTH - 1);
+
+        $currentRow = $startRow;
+
+        // Row 1: Header "Jabatan Struktural"
+        $sheet->mergeCells("{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+        $sheet->setCellValue("{$colStart}{$currentRow}", 'Jabatan Struktural');
+        $this->applyHeaderStyle($sheet, "{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+        $currentRow++;
+
+        // Row 2: Nama Jabatan
+        $sheet->mergeCells("{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+        $sheet->setCellValue("{$colStart}{$currentRow}", $jabatan->nama);
+        $this->applyNameStyle($sheet, "{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+        $currentRow++;
+
+        // Row 3: Kelas
+        $sheet->mergeCells("{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+        $sheet->setCellValue("{$colStart}{$currentRow}", 'Kelas ' . ($jabatan->kelas ?? '-'));
+        $this->applyKelasStyle($sheet, "{$colStart}{$currentRow}:{$colEnd}{$currentRow}");
+
+        // Box border
+        $this->applyBoxBorder($sheet, "{$colStart}{$startRow}:{$colEnd}{$currentRow}");
+
+        return $currentRow;
+    }
+
+    /**
      * Draw a table for Pelaksana or Fungsional jabatan
+     * Returns the row after the table
      */
     private function drawTable($sheet, $jenis, $items, $startRow, $startCol)
     {
@@ -176,13 +239,13 @@ class PetaJabatanExport implements WithEvents, WithTitle
 
         $currentRow = $startRow;
 
-        // Table header: "Jabatan Pelaksana" or "Jabatan Fungsional"
+        // Table header
         $sheet->mergeCells("{$colA}{$currentRow}:{$colE}{$currentRow}");
         $sheet->setCellValue("{$colA}{$currentRow}", "Jabatan {$jenis}");
         $this->applyHeaderStyle($sheet, "{$colA}{$currentRow}:{$colE}{$currentRow}");
         $currentRow++;
 
-        // Column headers: Nama Jabatan | Kls | B | K | S
+        // Column headers
         $sheet->setCellValue("{$colA}{$currentRow}", 'Nama Jabatan');
         $sheet->setCellValue("{$colB}{$currentRow}", 'Kls');
         $sheet->setCellValue("{$colC}{$currentRow}", 'B');
@@ -202,7 +265,7 @@ class PetaJabatanExport implements WithEvents, WithTitle
             $sheet->setCellValue("{$colC}{$currentRow}", $bezetting);
             $sheet->setCellValue("{$colD}{$currentRow}", $item->kebutuhan);
             $sheet->setCellValue("{$colE}{$currentRow}", $selisihText);
-            $this->applyDataRowStyle($sheet, "{$colA}{$currentRow}:{$colE}{$currentRow}");
+            $this->applyDataRowStyle($sheet, "{$colA}{$currentRow}:{$colE}{$currentRow}", $startCol);
             $currentRow++;
         }
 
@@ -235,7 +298,7 @@ class PetaJabatanExport implements WithEvents, WithTitle
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
-                'size' => 11,
+                'size' => 10,
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -246,7 +309,6 @@ class PetaJabatanExport implements WithEvents, WithTitle
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ]);
-        $sheet->getRowDimension(explode(':', $range)[0][1] ?? substr($range, 1, 1))->setRowHeight(22);
     }
 
     /**
@@ -262,6 +324,10 @@ class PetaJabatanExport implements WithEvents, WithTitle
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical' => Alignment::VERTICAL_CENTER,
                 'wrapText' => true,
+            ],
+            'borders' => [
+                'left' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
+                'right' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
             ],
         ]);
     }
@@ -280,10 +346,10 @@ class PetaJabatanExport implements WithEvents, WithTitle
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
             'borders' => [
-                'top' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
+                'top' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']],
+                'left' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
+                'right' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
+                'bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
             ],
         ]);
     }
@@ -300,7 +366,7 @@ class PetaJabatanExport implements WithEvents, WithTitle
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => 'F3F4F6'],
+                'startColor' => ['rgb' => 'E5E7EB'],
             ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -318,7 +384,7 @@ class PetaJabatanExport implements WithEvents, WithTitle
     /**
      * Apply data row style
      */
-    private function applyDataRowStyle($sheet, $range)
+    private function applyDataRowStyle($sheet, $range, $startCol)
     {
         $sheet->getStyle($range)->applyFromArray([
             'font' => [
@@ -338,11 +404,9 @@ class PetaJabatanExport implements WithEvents, WithTitle
         // Center align for columns B-E (Kls, B, K, S)
         $parts = explode(':', $range);
         $row = preg_replace('/[^0-9]/', '', $parts[0]);
-        $startCol = preg_replace('/[0-9]/', '', $parts[0]);
 
-        // Get columns after first one
-        $colB = chr(ord($startCol) + 1);
-        $colE = chr(ord($startCol) + 4);
+        $colB = $this->getColumnLetter($startCol + 1);
+        $colE = $this->getColumnLetter($startCol + 4);
 
         $sheet->getStyle("{$colB}{$row}:{$colE}{$row}")->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
