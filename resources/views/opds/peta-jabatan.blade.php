@@ -475,9 +475,9 @@ function calculateTableHeight(items) {
     return headerHeight + columnHeaderHeight + rowHeights.reduce((sum, h) => sum + h, 0);
 }
 
-// Calculate tree layout - each struktural node has its tables directly below it
+// Layout B: Tables below parent, then struktural children below tables
 function calculateLayout(nodes, x = 0, y = 0, level = 0) {
-    // Separate nodes into struktural and non-struktural (tables)
+    // Separate nodes into struktural and non-struktural
     const strukturalNodes = [];
     const pelaksanaNodes = [];
     const fungsionalNodes = [];
@@ -492,99 +492,84 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         }
     });
 
+    // Create table objects (Pelaksana first, then Fungsional)
+    const tableObjects = [];
+
+    if (pelaksanaNodes.length > 0) {
+        tableObjects.push({
+            isTable: true,
+            jenis_jabatan: 'Pelaksana',
+            items: pelaksanaNodes,
+            layoutWidth: 350,
+            layoutHeight: calculateTableHeight(pelaksanaNodes)
+        });
+    }
+
+    if (fungsionalNodes.length > 0) {
+        tableObjects.push({
+            isTable: true,
+            jenis_jabatan: 'Fungsional',
+            items: fungsionalNodes,
+            layoutWidth: 350,
+            layoutHeight: calculateTableHeight(fungsionalNodes)
+        });
+    }
+
     const positions = [];
     let totalWidth = 0;
+    let currentY = y;
 
-    // First pass: calculate width needed for each struktural node (including its subtree)
-    strukturalNodes.forEach((node, index) => {
-        // Separate this node's children
-        const childStrukturals = [];
-        const childPelaksana = [];
-        const childFungsional = [];
-
-        if (node.children) {
-            node.children.forEach(child => {
-                if (child.jenis_jabatan === 'Pelaksana') {
-                    childPelaksana.push(child);
-                } else if (child.jenis_jabatan === 'Fungsional') {
-                    childFungsional.push(child);
-                } else {
-                    childStrukturals.push(child);
-                }
+    // First: Position tables vertically (stacked below each other, centered at x)
+    if (tableObjects.length > 0) {
+        tableObjects.forEach((table) => {
+            positions.push({
+                node: table,
+                x: x,
+                y: currentY,
+                isTable: true
             });
-        }
+            currentY += table.layoutHeight + CONFIG.verticalGap;
+        });
 
-        // Store separated children
-        node.childStrukturals = childStrukturals;
-        node.childPelaksana = childPelaksana;
-        node.childFungsional = childFungsional;
+        // Tables contribute to width
+        totalWidth = Math.max(totalWidth, 350);
+    }
 
-        // Calculate width needed
+    // Second: Calculate width for struktural nodes (they go below tables)
+    strukturalNodes.forEach((node, index) => {
         let nodeWidth = CONFIG.boxWidth;
 
-        // Consider table width
-        if (childPelaksana.length > 0 || childFungsional.length > 0) {
-            nodeWidth = Math.max(nodeWidth, 350);
-        }
-
-        // Consider struktural children width
-        if (childStrukturals.length > 0) {
-            const childLayout = calculateLayout(childStrukturals, 0, 0, level + 1);
+        if (node.children && node.children.length > 0) {
+            const childLayout = calculateLayout(node.children, 0, 0, level + 1);
             node.childLayout = childLayout;
             nodeWidth = Math.max(nodeWidth, childLayout.totalWidth);
         }
 
         node.layoutWidth = nodeWidth;
-        totalWidth += nodeWidth;
 
         if (index > 0) {
             totalWidth += CONFIG.horizontalGap;
         }
+        totalWidth += nodeWidth;
     });
 
-    // Handle case where only tables exist (no struktural nodes)
-    if (strukturalNodes.length === 0) {
-        if (pelaksanaNodes.length > 0) {
-            const pelaksanaTable = {
-                isTable: true,
-                jenis_jabatan: 'Pelaksana',
-                items: pelaksanaNodes,
-                layoutWidth: 350,
-                layoutHeight: calculateTableHeight(pelaksanaNodes)
-            };
-            positions.push({
-                node: pelaksanaTable,
-                x: x,
-                y: y,
-                isTable: true
-            });
-            y += pelaksanaTable.layoutHeight + CONFIG.verticalGap;
-        }
-
-        if (fungsionalNodes.length > 0) {
-            const fungsionalTable = {
-                isTable: true,
-                jenis_jabatan: 'Fungsional',
-                items: fungsionalNodes,
-                layoutWidth: 350,
-                layoutHeight: calculateTableHeight(fungsionalNodes)
-            };
-            positions.push({
-                node: fungsionalTable,
-                x: x,
-                y: y,
-                isTable: true
-            });
-        }
-
-        return {
-            positions: positions,
-            totalWidth: Math.max(totalWidth, 350)
-        };
+    // Ensure minimum width for tables
+    if (tableObjects.length > 0) {
+        totalWidth = Math.max(totalWidth, 350);
     }
 
-    // Second pass: position struktural nodes horizontally
+    // Third: Position struktural nodes horizontally at currentY (below tables)
     let currentX = x - totalWidth / 2;
+
+    // Recalculate currentX for centering struktural nodes only
+    if (strukturalNodes.length > 0) {
+        let strukturalTotalWidth = 0;
+        strukturalNodes.forEach((node, index) => {
+            if (index > 0) strukturalTotalWidth += CONFIG.horizontalGap;
+            strukturalTotalWidth += node.layoutWidth;
+        });
+        currentX = x - strukturalTotalWidth / 2;
+    }
 
     strukturalNodes.forEach((node, index) => {
         if (index > 0) {
@@ -592,7 +577,7 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
         }
 
         const nodeX = currentX + node.layoutWidth / 2;
-        const nodeY = y;
+        const nodeY = currentY;
         const nodeHeight = node.layoutHeight || CONFIG.boxHeight;
 
         positions.push({
@@ -601,51 +586,10 @@ function calculateLayout(nodes, x = 0, y = 0, level = 0) {
             y: nodeY
         });
 
-        // Track Y position for elements below this node
-        let belowY = nodeY + nodeHeight + CONFIG.verticalGap;
-
-        // Add tables for this node's non-struktural children (directly below the struktural box)
-        if (node.childPelaksana.length > 0) {
-            const pelaksanaTable = {
-                isTable: true,
-                jenis_jabatan: 'Pelaksana',
-                items: node.childPelaksana,
-                layoutWidth: 350,
-                layoutHeight: calculateTableHeight(node.childPelaksana)
-            };
-            positions.push({
-                node: pelaksanaTable,
-                x: nodeX,
-                y: belowY,
-                isTable: true,
-                parentX: nodeX,
-                parentBottomY: nodeY + nodeHeight
-            });
-            belowY += pelaksanaTable.layoutHeight + CONFIG.verticalGap;
-        }
-
-        if (node.childFungsional.length > 0) {
-            const fungsionalTable = {
-                isTable: true,
-                jenis_jabatan: 'Fungsional',
-                items: node.childFungsional,
-                layoutWidth: 350,
-                layoutHeight: calculateTableHeight(node.childFungsional)
-            };
-            positions.push({
-                node: fungsionalTable,
-                x: nodeX,
-                y: belowY,
-                isTable: true,
-                parentX: nodeX,
-                parentBottomY: nodeY + nodeHeight
-            });
-            belowY += fungsionalTable.layoutHeight + CONFIG.verticalGap;
-        }
-
-        // Position struktural children below tables
-        if (node.childLayout && node.childStrukturals.length > 0) {
-            node.childPositions = calculateLayout(node.childStrukturals, nodeX, belowY, level + 1).positions;
+        // Position children recursively (they will be below this node)
+        if (node.childLayout) {
+            const childY = nodeY + nodeHeight + CONFIG.verticalGap;
+            node.childPositions = calculateLayout(node.children, nodeX, childY, level + 1).positions;
         }
 
         currentX += node.layoutWidth;
@@ -983,15 +927,13 @@ function renderTree(positions, parentInfo = null) {
         }
     });
 
-    // Render table nodes - they have their own parentX/parentBottomY for connectors
+    // Render table nodes
     tablePositions.forEach(pos => {
-        const { node, x, y, parentX, parentBottomY } = pos;
+        const { node, x, y } = pos;
         drawTableNode(node.jenis_jabatan, node.items, x, y);
 
-        // Draw connector from parent struktural node (not the passed parentInfo)
-        if (parentX !== undefined && parentBottomY !== undefined) {
-            drawConnector(parentX, parentBottomY, x, y);
-        } else if (parentInfo) {
+        // Draw connector from parent if exists
+        if (parentInfo) {
             drawConnector(parentInfo.centerX, parentInfo.bottomY, x, y);
         }
     });
