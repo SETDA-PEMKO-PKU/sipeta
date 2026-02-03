@@ -116,11 +116,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
             Route::post('/', [OpdController::class, 'store'])->name('opds.store');
-            
+
             // Routes yang memerlukan OPD access check
             Route::middleware('check.opd.access')->group(function () {
                 Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
                 Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
+                Route::get('/{id}/peta-jabatan/export-excel', [OpdController::class, 'exportPetaJabatanExcel'])->name('opds.peta-jabatan.export-excel');
                 Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');
                 Route::put('/{id}', [OpdController::class, 'update'])->name('opds.update');
                 Route::delete('/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');

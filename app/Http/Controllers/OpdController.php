@@ -8,6 +8,8 @@ use App\Models\Asn;
 use App\Models\AdminActivityLog;
 use App\Traits\LogsAdminActivity;
 use Illuminate\Http\Request;
+use App\Exports\PetaJabatanExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OpdController extends Controller
 {
@@ -61,21 +63,21 @@ class OpdController extends Controller
         // Calculate total jabatan per OPD using a single efficient query
         // Get all OPD IDs on current page
         $opdIds = $opds->pluck('id')->toArray();
-        
+
         // Get all root jabatan IDs for these OPDs
         $rootJabatanByOpd = Jabatan::whereIn('opd_id', $opdIds)
             ->whereNull('parent_id')
             ->select('id', 'opd_id')
             ->get()
             ->groupBy('opd_id');
-        
+
         // Calculate total jabatan count per OPD (including all descendants)
         $jabatanCountByOpd = [];
         foreach ($opdIds as $opdId) {
-            $rootIds = isset($rootJabatanByOpd[$opdId]) 
-                ? $rootJabatanByOpd[$opdId]->pluck('id')->toArray() 
+            $rootIds = isset($rootJabatanByOpd[$opdId])
+                ? $rootJabatanByOpd[$opdId]->pluck('id')->toArray()
                 : [];
-            
+
             if (empty($rootIds)) {
                 $jabatanCountByOpd[$opdId] = 0;
                 continue;
@@ -86,19 +88,19 @@ class OpdController extends Controller
             $currentIds = $rootIds;
             $maxDepth = 20;
             $depth = 0;
-            
+
             while (!empty($currentIds) && $depth < $maxDepth) {
                 $childIds = Jabatan::whereIn('parent_id', $currentIds)
                     ->pluck('id')
                     ->toArray();
-                
+
                 if (empty($childIds)) break;
-                
+
                 $allIds = array_merge($allIds, $childIds);
                 $currentIds = $childIds;
                 $depth++;
             }
-            
+
             $jabatanCountByOpd[$opdId] = count($allIds);
         }
 
@@ -112,7 +114,7 @@ class OpdController extends Controller
         if ($admin && $admin->isAdminOpd() && $admin->opd_id) {
             // Admin OPD hanya lihat stats OPD miliknya
             $opdId = $admin->opd_id;
-            
+
             // Get all jabatan IDs for this OPD
             $rootIds = Jabatan::where('opd_id', $opdId)->whereNull('parent_id')->pluck('id')->toArray();
             $allJabatanIds = [];
@@ -120,7 +122,7 @@ class OpdController extends Controller
             $maxDepth = 20;
             $depth = 0;
             $allJabatanIds = $rootIds;
-            
+
             while (!empty($currentIds) && $depth < $maxDepth) {
                 $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
                 if (empty($childIds)) break;
@@ -128,7 +130,7 @@ class OpdController extends Controller
                 $currentIds = $childIds;
                 $depth++;
             }
-            
+
             $stats = [
                 'total_opd' => 1,
                 'total_jabatan' => count($allJabatanIds),
@@ -142,7 +144,7 @@ class OpdController extends Controller
                 'total_asn' => Asn::count(),
             ];
         }
-        
+
         return view('opds.index', compact('opds', 'stats'));
     }
 
@@ -180,13 +182,13 @@ class OpdController extends Controller
 
         // Stats - simple counts
         $opd->total_asn_count = $opd->asns->count();
-        
+
         // Get all jabatan IDs for this OPD efficiently
         $rootIds = Jabatan::where('opd_id', $id)->whereNull('parent_id')->pluck('id')->toArray();
         $allJabatanIds = $this->collectAllJabatanIds($rootIds);
-        
+
         $opd->total_jabatan_count = count($allJabatanIds);
-        
+
         // Calculate total kebutuhan from all jabatan
         $opd->total_kebutuhan = Jabatan::whereIn('id', $allJabatanIds)->sum('kebutuhan');
 
@@ -197,10 +199,10 @@ class OpdController extends Controller
                                ->withCount('asns')
                                ->with(['asns'])
                                ->get();
-        
+
         // Load all children recursively using a helper
         $this->loadAllChildrenRecursively($rootJabatans);
-        
+
         $opd->allJabatans = $this->flattenJabatanTree($rootJabatans);
         $opd->jabatanTree = $rootJabatans;
 
@@ -218,7 +220,7 @@ class OpdController extends Controller
 
         // Get all jabatan IDs
         $jabatanIds = $jabatans->pluck('id')->toArray();
-        
+
         // Load all children in one query
         $allChildren = Jabatan::whereIn('parent_id', $jabatanIds)
                               ->withCount('asns')
@@ -230,7 +232,7 @@ class OpdController extends Controller
         foreach ($jabatans as $jabatan) {
             $children = $allChildren->get($jabatan->id, collect());
             $jabatan->setRelation('children', $children);
-            
+
             // Recursively load grandchildren
             if ($children->isNotEmpty()) {
                 $this->loadAllChildrenRecursively($children, $depth + 1, $maxDepth);
@@ -244,14 +246,14 @@ class OpdController extends Controller
     private function flattenJabatanTree($jabatans)
     {
         $result = collect();
-        
+
         foreach ($jabatans as $jabatan) {
             $result->push($jabatan);
             if ($jabatan->children && $jabatan->children->isNotEmpty()) {
                 $result = $result->merge($this->flattenJabatanTree($jabatan->children));
             }
         }
-        
+
         return $result;
     }
 
@@ -272,7 +274,7 @@ class OpdController extends Controller
         while (!empty($currentIds) && $depth < $maxDepth) {
             // Batch query for all children at this level
             $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
-            
+
             if (empty($childIds)) {
                 break;
             }
@@ -510,7 +512,7 @@ class OpdController extends Controller
         $opd = Opd::findOrFail($id);
         $oldNama = $opd->nama;
         $oldData = $opd->toArray();
-        
+
         $opd->update([
             'nama' => $request->nama
         ]);
@@ -655,7 +657,7 @@ class OpdController extends Controller
                   ->firstOrFail();
 
         $namaAsn = $asn->nama;
-        
+
         // Log activity sebelum menghapus
         AdminActivityLog::log(
             AdminActivityLog::ACTION_DELETE,
@@ -665,7 +667,7 @@ class OpdController extends Controller
             $asn->toArray(),
             null
         );
-        
+
         $asn->delete();
 
         return redirect()->route('admin.opds.show', $opdId)
@@ -678,20 +680,35 @@ class OpdController extends Controller
     public function petaJabatan($id)
     {
         $opd = Opd::findOrFail($id);
-        
+
         // Load jabatan tree with all levels using recursive helper
         $jabatanKepala = Jabatan::where('opd_id', $id)
                                 ->whereNull('parent_id')
                                 ->withCount('asns')
                                 ->with(['asns'])
                                 ->get();
-        
+
         // Load all children recursively
         $this->loadAllChildrenRecursively($jabatanKepala);
-        
+
         $opd->setRelation('jabatanKepala', $jabatanKepala);
 
         return view('opds.peta-jabatan', compact('opd'));
+    }
+
+    /**
+     * Export peta jabatan ke Excel dengan format bagan
+     */
+    public function exportPetaJabatanExcel($id)
+    {
+        $opd = Opd::findOrFail($id);
+
+        $filename = 'peta-jabatan-' . \Str::slug($opd->nama) . '-' . date('Y-m-d') . '.xlsx';
+
+        // Log export activity
+        $this->logExport(AdminActivityLog::MODULE_OPD, "Export Peta Jabatan Excel: {$opd->nama}");
+
+        return Excel::download(new PetaJabatanExport($opd), $filename);
     }
 
     /**
