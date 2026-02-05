@@ -22,6 +22,10 @@
             <p class="text-gray-600 mt-1">Kelola Data Pegawai/ASN</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.pegawai.export', request()->query()) }}" class="btn btn-outline">
+                <span class="iconify" data-icon="mdi:file-excel" data-width="18" data-height="18"></span>
+                <span class="ml-2">Export Excel</span>
+            </a>
             @if(auth('admin')->user()->canManageAsn())
             <a href="{{ route('admin.pegawai.create') }}" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:account-plus" data-width="18" data-height="18"></span>

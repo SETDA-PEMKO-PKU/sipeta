@@ -1,15 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\OpdController;
-use App\Http\Controllers\OpdImportController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Admin\PegawaiController;
-use App\Http\Controllers\Admin\AnalyticsController;
-use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\MutasiController;
+use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\OpdController;
+use App\Http\Controllers\OpdImportController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +81,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Pegawai Management (with OPD access check)
         Route::resource('pegawai', PegawaiController::class)->middleware('check.opd.access');
+        Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export')->middleware('check.opd.access');
 
         // Jabatan Management (with OPD access check)
         Route::resource('jabatan', \App\Http\Controllers\Admin\OpdJabatanController::class)->middleware('check.opd.access');

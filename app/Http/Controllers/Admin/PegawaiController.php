@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\PegawaiExport;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\HasOpdScope;
 use App\Models\Asn;
-use App\Models\Opd;
 use App\Models\Jabatan;
+use App\Models\Opd;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PegawaiController extends Controller
 {
     use HasOpdScope;
+
     /**
      * Apply middleware untuk permission check
      */
@@ -19,8 +22,9 @@ class PegawaiController extends Controller
     {
         // Only super_admin and admin_bkpsdm can create, edit, and delete ASN
         $this->middleware('admin.permission:manage_asn')
-             ->except(['index', 'getJabatanByOpd']);
+            ->except(['index', 'getJabatanByOpd']);
     }
+
     /**
      * Menampilkan daftar semua pegawai
      */
@@ -34,15 +38,15 @@ class PegawaiController extends Controller
         // Search berdasarkan nama, NIP, OPD, atau Jabatan
         if ($request->filled('search')) {
             $searchTerm = strtolower($request->search);
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"])
-                  ->orWhereRaw('LOWER(nip) LIKE ?', ["%{$searchTerm}%"])
-                  ->orWhereHas('opd', function($q) use ($searchTerm) {
-                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
-                  })
-                  ->orWhereHas('jabatan', function($q) use ($searchTerm) {
-                      $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
-                  });
+                    ->orWhereRaw('LOWER(nip) LIKE ?', ["%{$searchTerm}%"])
+                    ->orWhereHas('opd', function ($q) use ($searchTerm) {
+                        $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+                    })
+                    ->orWhereHas('jabatan', function ($q) use ($searchTerm) {
+                        $q->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+                    });
             });
         }
 
@@ -58,21 +62,21 @@ class PegawaiController extends Controller
 
         // Filter berdasarkan Jenis Jabatan
         if ($request->filled('jenis_jabatan')) {
-            $query->whereHas('jabatan', function($q) use ($request) {
+            $query->whereHas('jabatan', function ($q) use ($request) {
                 $q->where('jenis_jabatan', $request->jenis_jabatan);
             });
         }
 
         // Filter berdasarkan Kelas Jabatan
         if ($request->filled('kelas')) {
-            $query->whereHas('jabatan', function($q) use ($request) {
+            $query->whereHas('jabatan', function ($q) use ($request) {
                 $q->where('kelas', $request->kelas);
             });
         }
 
         // Per page options
         $perPage = $request->get('per_page', 15);
-        if (!in_array($perPage, [10, 15, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 15, 25, 50, 100])) {
             $perPage = 15;
         }
 
@@ -82,10 +86,10 @@ class PegawaiController extends Controller
         // Statistik - hitung dari total query (bukan paginated)
         $totalPegawai = $statsQuery->count();
         $totalOpd = (clone $statsQuery)->distinct('opd_id')->count('opd_id');
-        $totalStruktural = (clone $statsQuery)->whereHas('jabatan', function($q) {
+        $totalStruktural = (clone $statsQuery)->whereHas('jabatan', function ($q) {
             $q->where('jenis_jabatan', 'Struktural');
         })->count();
-        $totalFungsional = (clone $statsQuery)->whereHas('jabatan', function($q) {
+        $totalFungsional = (clone $statsQuery)->whereHas('jabatan', function ($q) {
             $q->where('jenis_jabatan', 'Fungsional');
         })->count();
 
@@ -94,24 +98,24 @@ class PegawaiController extends Controller
         // Data untuk filter dropdown - filter OPD based on accessible OPDs
         $accessibleOpdIds = $this->getAccessibleOpdIds();
         $opds = Opd::whereIn('id', $accessibleOpdIds)->orderBy('nama')->get();
-        
+
         // Filter jabatans based on accessible OPDs
         $jabatans = Jabatan::whereIn('opd_id', $accessibleOpdIds)->orderBy('nama')->get();
 
         // Daftar jenis jabatan yang unik - scoped to accessible OPDs
         $jenisJabatans = Jabatan::whereIn('opd_id', $accessibleOpdIds)
-                                ->select('jenis_jabatan')
-                                ->distinct()
-                                ->whereNotNull('jenis_jabatan')
-                                ->pluck('jenis_jabatan');
+            ->select('jenis_jabatan')
+            ->distinct()
+            ->whereNotNull('jenis_jabatan')
+            ->pluck('jenis_jabatan');
 
         // Daftar kelas jabatan yang unik - scoped to accessible OPDs
         $kelasJabatans = Jabatan::whereIn('opd_id', $accessibleOpdIds)
-                                ->select('kelas')
-                                ->distinct()
-                                ->whereNotNull('kelas')
-                                ->orderBy('kelas', 'desc')
-                                ->pluck('kelas');
+            ->select('kelas')
+            ->distinct()
+            ->whereNotNull('kelas')
+            ->orderBy('kelas', 'desc')
+            ->pluck('kelas');
 
         return view('admin.pegawai.index', compact(
             'pegawais',
@@ -134,9 +138,9 @@ class PegawaiController extends Controller
         // Filter OPD dropdown for admin OPD (show only their OPD)
         $accessibleOpdIds = $this->getAccessibleOpdIds();
         $opds = Opd::with(['jabatanKepala.children.children'])
-                   ->whereIn('id', $accessibleOpdIds)
-                   ->orderBy('nama')
-                   ->get();
+            ->whereIn('id', $accessibleOpdIds)
+            ->orderBy('nama')
+            ->get();
 
         return view('admin.pegawai.create', compact('opds'));
     }
@@ -147,7 +151,7 @@ class PegawaiController extends Controller
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // Auto-set opd_id for admin OPD
         if ($admin->isAdminOpd()) {
             $request->merge(['opd_id' => $admin->opd_id]);
@@ -157,7 +161,7 @@ class PegawaiController extends Controller
             'nama' => 'required|string|max:255',
             'nip' => 'required|string|max:30|unique:asns,nip',
             'jabatan_id' => 'required|exists:jabatans,id',
-            'opd_id' => 'required|exists:opds,id'
+            'opd_id' => 'required|exists:opds,id',
         ]);
 
         // Validate OPD access
@@ -166,10 +170,10 @@ class PegawaiController extends Controller
         // Validate ASN-jabatan assignment is within same OPD
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
         $jabatanOpdId = $jabatan->getOpdId();
-        
+
         if ($jabatanOpdId != $request->opd_id) {
             return back()->withErrors([
-                'jabatan_id' => 'Jabatan harus berada dalam OPD yang sama dengan ASN'
+                'jabatan_id' => 'Jabatan harus berada dalam OPD yang sama dengan ASN',
             ])->withInput();
         }
 
@@ -177,11 +181,11 @@ class PegawaiController extends Controller
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'opd_id' => $request->opd_id
+            'opd_id' => $request->opd_id,
         ]);
 
         return redirect()->route('admin.pegawai.index')
-                        ->with('success', 'Pegawai berhasil ditambahkan!');
+            ->with('success', 'Pegawai berhasil ditambahkan!');
     }
 
     /**
@@ -190,16 +194,16 @@ class PegawaiController extends Controller
     public function edit($id)
     {
         $pegawai = Asn::with(['jabatan', 'opd'])->findOrFail($id);
-        
+
         // Validate OPD access in edit method
         $this->validateOpdAccess($pegawai->opd_id);
-        
+
         // Filter OPD dropdown for admin OPD (show only their OPD)
         $accessibleOpdIds = $this->getAccessibleOpdIds();
         $opds = Opd::with(['jabatanKepala.children.children'])
-                   ->whereIn('id', $accessibleOpdIds)
-                   ->orderBy('nama')
-                   ->get();
+            ->whereIn('id', $accessibleOpdIds)
+            ->orderBy('nama')
+            ->get();
 
         return view('admin.pegawai.edit', compact('pegawai', 'opds'));
     }
@@ -210,12 +214,12 @@ class PegawaiController extends Controller
     public function update(Request $request, $id)
     {
         $pegawai = Asn::findOrFail($id);
-        
+
         // Validate OPD access in update method
         $this->validateOpdAccess($pegawai->opd_id);
-        
+
         $admin = auth('admin')->user();
-        
+
         // Auto-set opd_id for admin OPD
         if ($admin->isAdminOpd()) {
             $request->merge(['opd_id' => $admin->opd_id]);
@@ -223,9 +227,9 @@ class PegawaiController extends Controller
 
         $request->validate([
             'nama' => 'required|string|max:255',
-            'nip' => 'required|string|max:30|unique:asns,nip,' . $id,
+            'nip' => 'required|string|max:30|unique:asns,nip,'.$id,
             'jabatan_id' => 'required|exists:jabatans,id',
-            'opd_id' => 'required|exists:opds,id'
+            'opd_id' => 'required|exists:opds,id',
         ]);
 
         // Validate OPD access for the new OPD (in case it changed)
@@ -234,10 +238,10 @@ class PegawaiController extends Controller
         // Validate ASN-jabatan assignment is within same OPD
         $jabatan = Jabatan::findOrFail($request->jabatan_id);
         $jabatanOpdId = $jabatan->getOpdId();
-        
+
         if ($jabatanOpdId != $request->opd_id) {
             return back()->withErrors([
-                'jabatan_id' => 'Jabatan harus berada dalam OPD yang sama dengan ASN'
+                'jabatan_id' => 'Jabatan harus berada dalam OPD yang sama dengan ASN',
             ])->withInput();
         }
 
@@ -245,11 +249,11 @@ class PegawaiController extends Controller
             'nama' => $request->nama,
             'nip' => $request->nip,
             'jabatan_id' => $request->jabatan_id,
-            'opd_id' => $request->opd_id
+            'opd_id' => $request->opd_id,
         ]);
 
         return redirect()->route('admin.pegawai.index')
-                        ->with('success', 'Data pegawai berhasil diperbarui!');
+            ->with('success', 'Data pegawai berhasil diperbarui!');
     }
 
     /**
@@ -258,16 +262,36 @@ class PegawaiController extends Controller
     public function destroy($id)
     {
         $pegawai = Asn::findOrFail($id);
-        
+
         // Validate OPD access in destroy method
         $this->validateOpdAccess($pegawai->opd_id);
-        
+
         $namaPegawai = $pegawai->nama;
 
         $pegawai->delete();
 
         return redirect()->route('admin.pegawai.index')
-                        ->with('success', 'Pegawai "' . $namaPegawai . '" berhasil dihapus!');
+            ->with('success', 'Pegawai "'.$namaPegawai.'" berhasil dihapus!');
+    }
+
+    /**
+     * Export data pegawai ke Excel
+     */
+    public function export(Request $request)
+    {
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+
+        $filters = [
+            'search' => $request->get('search'),
+            'opd_id' => $request->get('opd_id'),
+            'jabatan_id' => $request->get('jabatan_id'),
+            'jenis_jabatan' => $request->get('jenis_jabatan'),
+            'kelas' => $request->get('kelas'),
+        ];
+
+        $filename = 'data-pegawai-'.date('Y-m-d-His').'.xlsx';
+
+        return Excel::download(new PegawaiExport($accessibleOpdIds, $filters), $filename);
     }
 
     /**
@@ -280,15 +304,15 @@ class PegawaiController extends Controller
         $jabatans = [];
 
         // Recursive function untuk mendapatkan semua jabatan
-        $addJabatan = function($jabatan, $level = 0) use (&$jabatans, &$addJabatan) {
+        $addJabatan = function ($jabatan, $level = 0) use (&$jabatans, &$addJabatan) {
             $prefix = str_repeat('— ', $level);
 
             $jabatans[] = [
                 'id' => $jabatan->id,
-                'nama' => $prefix . $jabatan->nama,
+                'nama' => $prefix.$jabatan->nama,
                 'type' => $jabatan->isRoot() ? 'kepala' : 'sub',
                 'parent_id' => $jabatan->parent_id,
-                'level' => $level
+                'level' => $level,
             ];
 
             // Rekursif untuk children
