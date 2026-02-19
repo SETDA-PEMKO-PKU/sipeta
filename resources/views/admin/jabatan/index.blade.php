@@ -125,51 +125,51 @@
     </div>
 
     <!-- Jabatan Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Jabatan</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">OPD</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bagian/Bidang</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kelas</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kebutuhan</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Bezetting</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Jabatan</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">OPD</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bagian/Bidang</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kelas</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kebutuhan</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Bezetting</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 @forelse($jabatans as $jabatan)
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ $jabatan->nama }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title="{{ $jabatan->opdLangsung ? $jabatan->opdLangsung->nama : ($jabatan->parent ? $jabatan->parent->opdLangsung->nama ?? '-' : '-') }}">
                             {{ $jabatan->opdLangsung ? $jabatan->opdLangsung->nama : ($jabatan->parent ? $jabatan->parent->opdLangsung->nama ?? '-' : '-') }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title="{{ $jabatan->parent ? $jabatan->parent->nama : '-' }}">
                             {{ $jabatan->parent ? $jabatan->parent->nama : '-' }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                             {{ $jabatan->jenis_jabatan ?? '-' }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $jabatan->kelas ? 'Kelas ' . $jabatan->kelas : '-' }}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
+                            {{ $jabatan->kelas ?? '-' }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
                             {{ $jabatan->kebutuhan ?? 0 }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
                             {{ $jabatan->asns->count() }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                             <a href="{{ route('admin.jabatan.show', $jabatan->id) }}" class="text-blue-600 hover:text-blue-900">Detail</a>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                        <td colspan="8" class="px-4 py-3 text-center text-gray-500">
                             Tidak ada data jabatan
                         </td>
                     </tr>
