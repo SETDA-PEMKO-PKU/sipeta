@@ -42,9 +42,33 @@
         </div>
     </div>
 
+    <!-- Search -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <form method="GET" action="{{ route('admin.jabatan.index') }}">
+            {{-- Preserve existing filters --}}
+            @if(request('opd_id'))<input type="hidden" name="opd_id" value="{{ request('opd_id') }}">@endif
+            @if(request('jenis_jabatan'))<input type="hidden" name="jenis_jabatan" value="{{ request('jenis_jabatan') }}">@endif
+            @if(request('kelas'))<input type="hidden" name="kelas" value="{{ request('kelas') }}">@endif
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-3 flex items-center">
+                        <span class="iconify text-gray-400" data-icon="mdi:magnify" data-width="20" data-height="20"></span>
+                    </span>
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jabatan..."
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg">Cari</button>
+                @if(request('search'))
+                <a href="{{ route('admin.jabatan.index', request()->except('search', 'page')) }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Reset</a>
+                @endif
+            </div>
+        </form>
+    </div>
+
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
         <form method="GET" action="{{ route('admin.jabatan.index') }}" class="grid grid-cols-1 md:grid-cols-{{ auth('admin')->user()->isAdminOpd() ? '3' : '4' }} gap-4">
+            @if(request('search'))<input type="hidden" name="search" value="{{ request('search') }}">@endif
             @if(!auth('admin')->user()->isAdminOpd())
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">OPD</label>

@@ -31,6 +31,12 @@ class OpdJabatanController extends Controller
         // Apply OPD scope for admin OPD
         $query = $this->applyOpdScope($query);
 
+        // Search by nama jabatan
+        if ($request->filled('search')) {
+            $searchTerm = strtolower($request->search);
+            $query->whereRaw('LOWER(nama) LIKE ?', ["%{$searchTerm}%"]);
+        }
+
         // Filter by OPD
         if ($request->filled('opd_id')) {
             $query->where('opd_id', $request->opd_id);
