@@ -129,21 +129,21 @@ class OpdImportController extends Controller
         // Data rows
         $row = 2;
         $no = 1;
-        foreach ($grouped as $jabatans) {
-            $opdNama = $jabatans->first()->opd->nama;
+        foreach ($opds as $opd) {
+            $opdJabatans = $opd->getAllJabatans();
 
-            foreach ($jabatans as $jabatan) {
+            foreach ($opdJabatans as $jabatan) {
                 $kebutuhan = max(1, $jabatan->kebutuhan);
 
                 // Lookup parent name dari map (no query)
                 $atasanNama = '-';
-                if ($jabatan->parent_id && isset($jabatanMap[$jabatan->parent_id])) {
-                    $atasanNama = $jabatanMap[$jabatan->parent_id]->nama;
+                if ($jabatan->parent_id && isset($allJabatansMap[$jabatan->parent_id])) {
+                    $atasanNama = $allJabatansMap[$jabatan->parent_id]->nama;
                 }
 
                 for ($i = 1; $i <= $kebutuhan; $i++) {
                     $sheet->setCellValue('A' . $row, $no++);
-                    $sheet->setCellValue('B' . $row, $opdNama);
+                    $sheet->setCellValue('B' . $row, $opd->nama);
                     $sheet->setCellValue('C' . $row, $jabatan->id);
                     $sheet->setCellValue('D' . $row, $jabatan->nama);
                     $sheet->setCellValue('E' . $row, $atasanNama);
