@@ -102,13 +102,27 @@ class OpdImportController extends Controller
      */
     public function downloadTemplateAll()
     {
-        $opds = Opd::orderBy('nama')->get();
+        set_time_limit(120);
+
+        // 1 query: semua jabatan + relasi opd, grouped by opd
+        $allJabatans = Jabatan::with('opd')
+            ->whereHas('opd')
+            ->orderBy('opd_id')
+            ->orderBy('nama')
+            ->get();
+
+        // Build parent name lookup (in-memory, 0 extra queries)
+        $jabatanMap = $allJabatans->keyBy('id');
+
+        // Group by OPD, sort by OPD nama
+        $grouped = $allJabatans->groupBy('opd_id')
+            ->sortBy(fn ($items) => $items->first()->opd->nama);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Import ASN Semua OPD');
 
-        // Header - sama dengan template per-OPD + kolom OPD
+        // Header
         $headers = ['no', 'opd', 'jabatan_id', 'jabatan', 'atasan', 'kebutuhan_ke', 'nip', 'nama'];
         $sheet->fromArray($headers, null, 'A1');
 
@@ -123,30 +137,27 @@ class OpdImportController extends Controller
         // Data rows
         $row = 2;
         $no = 1;
-        foreach ($opds as $opd) {
-            $allJabatans = $opd->getAllJabatans();
+        foreach ($grouped as $jabatans) {
+            $opdNama = $jabatans->first()->opd->nama;
 
-            foreach ($allJabatans as $jabatan) {
+            foreach ($jabatans as $jabatan) {
                 $kebutuhan = max(1, $jabatan->kebutuhan);
 
-                // Get parent jabatan name
+                // Lookup parent name dari map (no query)
                 $atasanNama = '-';
-                if ($jabatan->parent_id) {
-                    $parent = Jabatan::find($jabatan->parent_id);
-                    if ($parent) {
-                        $atasanNama = $parent->nama;
-                    }
+                if ($jabatan->parent_id && isset($jabatanMap[$jabatan->parent_id])) {
+                    $atasanNama = $jabatanMap[$jabatan->parent_id]->nama;
                 }
 
                 for ($i = 1; $i <= $kebutuhan; $i++) {
                     $sheet->setCellValue('A' . $row, $no++);
-                    $sheet->setCellValue('B' . $row, $opd->nama);
+                    $sheet->setCellValue('B' . $row, $opdNama);
                     $sheet->setCellValue('C' . $row, $jabatan->id);
                     $sheet->setCellValue('D' . $row, $jabatan->nama);
                     $sheet->setCellValue('E' . $row, $atasanNama);
                     $sheet->setCellValue('F' . $row, $i . ' dari ' . $kebutuhan);
-                    $sheet->setCellValue('G' . $row, ''); // NIP - diisi user
-                    $sheet->setCellValue('H' . $row, ''); // Nama - diisi user
+                    $sheet->setCellValue('G' . $row, '');
+                    $sheet->setCellValue('H' . $row, '');
                     $row++;
                 }
             }
