@@ -117,6 +117,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('opds')->group(function () {
             Route::get('/', [OpdController::class, 'index'])->name('opds.index');
             Route::post('/', [OpdController::class, 'store'])->name('opds.store');
+            Route::get('/import/download-template-all', [OpdImportController::class, 'downloadTemplateAll'])->name('opds.import.download-template-all');
 
             // Routes yang memerlukan OPD access check
             Route::middleware('check.opd.access')->group(function () {

@@ -98,6 +98,85 @@ class OpdImportController extends Controller
     }
 
     /**
+     * Generate dan download template Excel gabungan untuk SELURUH OPD
+     */
+    public function downloadTemplateAll()
+    {
+        $opds = Opd::orderBy('nama')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Import ASN Semua OPD');
+
+        // Header - sama dengan template per-OPD + kolom OPD
+        $headers = ['no', 'opd', 'jabatan_id', 'jabatan', 'atasan', 'kebutuhan_ke', 'nip', 'nama'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // Style header
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+        ];
+        $sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
+
+        // Data rows
+        $row = 2;
+        $no = 1;
+        foreach ($opds as $opd) {
+            $allJabatans = $opd->getAllJabatans();
+
+            foreach ($allJabatans as $jabatan) {
+                $kebutuhan = max(1, $jabatan->kebutuhan);
+
+                // Get parent jabatan name
+                $atasanNama = '-';
+                if ($jabatan->parent_id) {
+                    $parent = Jabatan::find($jabatan->parent_id);
+                    if ($parent) {
+                        $atasanNama = $parent->nama;
+                    }
+                }
+
+                for ($i = 1; $i <= $kebutuhan; $i++) {
+                    $sheet->setCellValue('A' . $row, $no++);
+                    $sheet->setCellValue('B' . $row, $opd->nama);
+                    $sheet->setCellValue('C' . $row, $jabatan->id);
+                    $sheet->setCellValue('D' . $row, $jabatan->nama);
+                    $sheet->setCellValue('E' . $row, $atasanNama);
+                    $sheet->setCellValue('F' . $row, $i . ' dari ' . $kebutuhan);
+                    $sheet->setCellValue('G' . $row, ''); // NIP - diisi user
+                    $sheet->setCellValue('H' . $row, ''); // Nama - diisi user
+                    $row++;
+                }
+            }
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'H') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Protect columns A-F (readonly), allow G-H to be edited
+        if ($row > 2) {
+            $sheet->getStyle('A2:F' . ($row - 1))->getProtection()->setLocked(\PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED);
+            $sheet->getStyle('G2:H' . ($row - 1))->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        }
+
+        // Generate filename
+        $filename = 'template_import_asn_semua_opd_' . date('Y-m-d') . '.xlsx';
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
      * Tampilkan form upload file
      */
     public function showImportForm($opdId)

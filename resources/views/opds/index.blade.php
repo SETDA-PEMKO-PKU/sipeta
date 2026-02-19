@@ -12,6 +12,10 @@
             <p class="text-gray-600 mt-1">Kelola Organisasi Perangkat Daerah</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.opds.import.download-template-all') }}" class="btn btn-success">
+                <span class="iconify" data-icon="mdi:file-download" data-width="18" data-height="18"></span>
+                <span class="ml-2">Download Template Semua OPD</span>
+            </a>
             @if(auth('admin')->user()->canManageOpdJabatan())
             <button @click="$dispatch('open-modal', 'add-opd')" class="btn btn-primary">
                 <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
