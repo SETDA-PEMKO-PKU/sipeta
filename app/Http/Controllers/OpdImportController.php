@@ -104,11 +104,47 @@ class OpdImportController extends Controller
     {
         set_time_limit(120);
 
-        // Load semua jabatan 1x untuk parent lookup (tanpa eager load asns)
-        $allJabatansMap = Jabatan::all()->keyBy('id');
+        $opds = Opd::orderBy('nama')->get()->keyBy('id');
 
-        // Loop per OPD, pakai getAllJabatans() yang handle hierarchy
-        $opds = Opd::orderBy('nama')->get();
+        // 1 query: load semua jabatan (tanpa asns, tidak perlu untuk template)
+        $allJabatans = Jabatan::all();
+        $jabatanMap = $allJabatans->keyBy('id');
+
+        // Build children lookup untuk traversal
+        $childrenByParent = $allJabatans->groupBy('parent_id');
+
+        // Kumpulkan jabatan per OPD via in-memory tree traversal
+        $jabatanPerOpd = [];
+        foreach ($opds as $opd) {
+            // Root jabatan: yang punya opd_id langsung dan tanpa parent
+            $roots = $allJabatans->where('opd_id', $opd->id)->whereNull('parent_id');
+            if ($roots->isEmpty()) continue;
+
+            $opdJabatans = collect();
+            $queue = $roots->pluck('id')->toArray();
+            $visited = [];
+
+            while (!empty($queue)) {
+                $currentId = array_shift($queue);
+                if (in_array($currentId, $visited)) continue;
+                $visited[] = $currentId;
+
+                if (isset($jabatanMap[$currentId])) {
+                    $opdJabatans->push($jabatanMap[$currentId]);
+                }
+
+                // Tambah children ke queue
+                if (isset($childrenByParent[$currentId])) {
+                    foreach ($childrenByParent[$currentId] as $child) {
+                        $queue[] = $child->id;
+                    }
+                }
+            }
+
+            if ($opdJabatans->isNotEmpty()) {
+                $jabatanPerOpd[$opd->id] = $opdJabatans->sortBy('nama');
+            }
+        }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -129,21 +165,21 @@ class OpdImportController extends Controller
         // Data rows
         $row = 2;
         $no = 1;
-        foreach ($opds as $opd) {
-            $opdJabatans = $opd->getAllJabatans();
+        foreach ($jabatanPerOpd as $opdId => $jabatans) {
+            $opdNama = $opds[$opdId]->nama;
 
-            foreach ($opdJabatans as $jabatan) {
+            foreach ($jabatans as $jabatan) {
                 $kebutuhan = max(1, $jabatan->kebutuhan);
 
                 // Lookup parent name dari map (no query)
                 $atasanNama = '-';
-                if ($jabatan->parent_id && isset($allJabatansMap[$jabatan->parent_id])) {
-                    $atasanNama = $allJabatansMap[$jabatan->parent_id]->nama;
+                if ($jabatan->parent_id && isset($jabatanMap[$jabatan->parent_id])) {
+                    $atasanNama = $jabatanMap[$jabatan->parent_id]->nama;
                 }
 
                 for ($i = 1; $i <= $kebutuhan; $i++) {
                     $sheet->setCellValue('A' . $row, $no++);
-                    $sheet->setCellValue('B' . $row, $opd->nama);
+                    $sheet->setCellValue('B' . $row, $opdNama);
                     $sheet->setCellValue('C' . $row, $jabatan->id);
                     $sheet->setCellValue('D' . $row, $jabatan->nama);
                     $sheet->setCellValue('E' . $row, $atasanNama);
