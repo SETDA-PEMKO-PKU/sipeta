@@ -42,84 +42,78 @@
         </div>
     </div>
 
-    <!-- Search -->
+    <!-- Search & Filters (single form) -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
         <form method="GET" action="{{ route('admin.jabatan.index') }}">
-            {{-- Preserve existing filters --}}
-            @if(request('opd_id'))<input type="hidden" name="opd_id" value="{{ request('opd_id') }}">@endif
-            @if(request('jenis_jabatan'))<input type="hidden" name="jenis_jabatan" value="{{ request('jenis_jabatan') }}">@endif
-            @if(request('kelas'))<input type="hidden" name="kelas" value="{{ request('kelas') }}">@endif
-            <div class="flex gap-2">
-                <div class="relative flex-1">
-                    <span class="absolute inset-y-0 left-3 flex items-center">
+            {{-- Search row --}}
+            <div class="flex gap-2 mb-4">
+                <div class="relative flex-1 min-w-0">
+                    <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <span class="iconify text-gray-400" data-icon="mdi:magnify" data-width="20" data-height="20"></span>
                     </span>
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jabatan..."
                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                 </div>
-                <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg">Cari</button>
-                @if(request('search'))
-                <a href="{{ route('admin.jabatan.index', request()->except('search', 'page')) }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Reset</a>
+                <button type="submit" class="shrink-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg">Cari</button>
+                @if(request()->hasAny(['search', 'opd_id', 'jenis_jabatan', 'kelas']))
+                <a href="{{ route('admin.jabatan.index') }}" class="shrink-0 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Reset</a>
                 @endif
             </div>
-        </form>
-    </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-        <form method="GET" action="{{ route('admin.jabatan.index') }}" class="grid grid-cols-1 md:grid-cols-{{ auth('admin')->user()->isAdminOpd() ? '3' : '4' }} gap-4">
-            @if(request('search'))<input type="hidden" name="search" value="{{ request('search') }}">@endif
-            @if(!auth('admin')->user()->isAdminOpd())
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">OPD</label>
-                <select name="opd_id" class="w-full rounded border-gray-300">
-                    <option value="">Semua OPD</option>
-                    @foreach($opds as $opd)
-                        <option value="{{ $opd->id }}" {{ request('opd_id') == $opd->id ? 'selected' : '' }}>
-                            {{ $opd->nama }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            @else
-            <!-- Admin OPD: Show OPD name as info -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">OPD Anda</label>
-                <div class="w-full rounded border border-blue-200 bg-blue-50 px-3 py-2 flex items-center gap-2">
-                    <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
-                    <span class="text-sm font-medium text-blue-900">{{ auth('admin')->user()->opd->nama }}</span>
+            {{-- Filter row --}}
+            <div class="grid grid-cols-1 md:grid-cols-{{ auth('admin')->user()->isAdminOpd() ? '3' : '4' }} gap-4">
+                @if(!auth('admin')->user()->isAdminOpd())
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">OPD</label>
+                    <select name="opd_id" class="w-full rounded border-gray-300">
+                        <option value="">Semua OPD</option>
+                        @foreach($opds as $opd)
+                            <option value="{{ $opd->id }}" {{ request('opd_id') == $opd->id ? 'selected' : '' }}>
+                                {{ $opd->nama }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-            </div>
-            @endif
+                @else
+                <!-- Admin OPD: Show OPD name as info -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">OPD Anda</label>
+                    <div class="w-full rounded border border-blue-200 bg-blue-50 px-3 py-2 flex items-center gap-2">
+                        <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
+                        <span class="text-sm font-medium text-blue-900">{{ auth('admin')->user()->opd->nama }}</span>
+                    </div>
+                </div>
+                @endif
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Jabatan</label>
-                <select name="jenis_jabatan" class="w-full rounded border-gray-300">
-                    <option value="">Semua Jenis</option>
-                    @foreach($jenisJabatans as $jenis)
-                        <option value="{{ $jenis }}" {{ request('jenis_jabatan') == $jenis ? 'selected' : '' }}>
-                            {{ $jenis }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Jabatan</label>
+                    <select name="jenis_jabatan" class="w-full rounded border-gray-300">
+                        <option value="">Semua Jenis</option>
+                        @foreach($jenisJabatans as $jenis)
+                            <option value="{{ $jenis }}" {{ request('jenis_jabatan') == $jenis ? 'selected' : '' }}>
+                                {{ $jenis }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Kelas</label>
-                <select name="kelas" class="w-full rounded border-gray-300">
-                    <option value="">Semua Kelas</option>
-                    @foreach($kelasJabatans as $kelas)
-                        <option value="{{ $kelas }}" {{ request('kelas') == $kelas ? 'selected' : '' }}>
-                            Kelas {{ $kelas }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kelas</label>
+                    <select name="kelas" class="w-full rounded border-gray-300">
+                        <option value="">Semua Kelas</option>
+                        @foreach($kelasJabatans as $kelas)
+                            <option value="{{ $kelas }}" {{ request('kelas') == $kelas ? 'selected' : '' }}>
+                                Kelas {{ $kelas }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="flex items-end">
-                <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded w-full">
-                    Filter
-                </button>
+                <div class="flex items-end">
+                    <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded w-full">
+                        Filter
+                    </button>
+                </div>
             </div>
         </form>
     </div>
