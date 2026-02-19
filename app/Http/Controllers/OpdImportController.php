@@ -104,19 +104,11 @@ class OpdImportController extends Controller
     {
         set_time_limit(120);
 
-        // 1 query: semua jabatan + relasi opd, grouped by opd
-        $allJabatans = Jabatan::with('opd')
-            ->whereHas('opd')
-            ->orderBy('opd_id')
-            ->orderBy('nama')
-            ->get();
+        // Load semua jabatan 1x untuk parent lookup (tanpa eager load asns)
+        $allJabatansMap = Jabatan::all()->keyBy('id');
 
-        // Build parent name lookup (in-memory, 0 extra queries)
-        $jabatanMap = $allJabatans->keyBy('id');
-
-        // Group by OPD, sort by OPD nama
-        $grouped = $allJabatans->groupBy('opd_id')
-            ->sortBy(fn ($items) => $items->first()->opd->nama);
+        // Loop per OPD, pakai getAllJabatans() yang handle hierarchy
+        $opds = Opd::orderBy('nama')->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
