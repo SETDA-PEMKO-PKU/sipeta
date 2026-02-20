@@ -32,6 +32,10 @@
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800">Daftar Jabatan</h2>
         <div class="flex gap-3">
+            <a href="{{ route('admin.jabatan.export', request()->only(['search', 'opd_id', 'jenis_jabatan', 'kelas'])) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded flex items-center gap-2">
+                <span class="iconify" data-icon="mdi:file-download" data-width="18" data-height="18"></span>
+                Export Excel
+            </a>
             <a href="{{ route('admin.jabatan.import.form') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2">
                 <span class="iconify" data-icon="mdi:file-upload" data-width="18" data-height="18"></span>
                 Import Excel
@@ -139,10 +143,10 @@
                         <td class="px-4 py-3 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ $jabatan->nama }}</div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title="{{ $jabatan->opdLangsung ? $jabatan->opdLangsung->nama : ($jabatan->parent ? $jabatan->parent->opdLangsung->nama ?? '-' : '-') }}">
+                        <td class="px-4 py-3 text-sm text-gray-500">
                             {{ $jabatan->opdLangsung ? $jabatan->opdLangsung->nama : ($jabatan->parent ? $jabatan->parent->opdLangsung->nama ?? '-' : '-') }}
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title="{{ $jabatan->parent ? $jabatan->parent->nama : '-' }}">
+                        <td class="px-4 py-3 text-sm text-gray-500">
                             {{ $jabatan->parent ? $jabatan->parent->nama : '-' }}
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">

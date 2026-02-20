@@ -85,6 +85,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Jabatan Management (with OPD access check)
         Route::resource('jabatan', \App\Http\Controllers\Admin\OpdJabatanController::class)->middleware('check.opd.access');
+        Route::get('jabatan-export', [\App\Http\Controllers\Admin\OpdJabatanController::class, 'export'])->name('jabatan.export')->middleware('check.opd.access');
 
         // Jabatan Import Routes
         Route::prefix('jabatan-import')->name('jabatan.import.')->middleware('check.opd.access')->group(function () {

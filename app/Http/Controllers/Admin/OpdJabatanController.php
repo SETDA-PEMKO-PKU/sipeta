@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\JabatanExport;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\HasOpdScope;
 use App\Models\Jabatan;
 use App\Models\Opd;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OpdJabatanController extends Controller
 {
@@ -252,6 +254,25 @@ class OpdJabatanController extends Controller
 
         return redirect()->route('admin.jabatan.index')
                         ->with('success', 'Data jabatan berhasil diperbarui!');
+    }
+
+    /**
+     * Export jabatan data to Excel
+     */
+    public function export(Request $request)
+    {
+        $accessibleOpdIds = $this->getAccessibleOpdIds();
+
+        $filters = [
+            'search' => $request->get('search'),
+            'opd_id' => $request->get('opd_id'),
+            'jenis_jabatan' => $request->get('jenis_jabatan'),
+            'kelas' => $request->get('kelas'),
+        ];
+
+        $filename = 'data-jabatan-'.date('Y-m-d-His').'.xlsx';
+
+        return Excel::download(new JabatanExport($accessibleOpdIds, $filters), $filename);
     }
 
     /**
