@@ -147,8 +147,8 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Pilih Atasan (Jabatan Struktural)
                         </label>
-                        <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan"
-                                x-html="atasanOptions">
+                        <select name="atasan_id" x-ref="atasanSelect" @change="atasanId = $event.target.value; onAtasanChange()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
+                            <option value="">-- Pilih Atasan Dahulu --</option>
                         </select>
                         <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
@@ -161,8 +161,8 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Jabatan Tujuan (di bawah atasan yang dipilih)
                         </label>
-                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan"
-                                x-html="jabatanTujuanOptions">
+                        <select name="jabatan_tujuan_id" x-ref="jabatanSelect" @change="jabatanTujuanId = $event.target.value" class="input w-full" :disabled="!atasanId || loadingJabatan">
+                            <option value="">-- Pilih Jabatan (Opsional) --</option>
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
                         <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
@@ -248,21 +248,30 @@ function mutasiForm() {
         loadingJabatan: false,
         _searchAbort: null,
 
-        get atasanOptions() {
-            let html = '<option value="">-- Pilih Atasan Dahulu --</option>';
+        populateAtasanSelect(selectedId = '') {
+            const sel = this.$refs.atasanSelect;
+            sel.innerHTML = '<option value="">-- Pilih Atasan Dahulu --</option>';
             this.atasanList.forEach(a => {
-                html += '<option value="' + a.id + '">' + a.nama + '</option>';
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = a.nama;
+                sel.appendChild(opt);
             });
-            return html;
+            sel.value = selectedId;
+            this.atasanId = selectedId;
         },
 
-        get jabatanTujuanOptions() {
-            let html = '<option value="">-- Pilih Jabatan (Opsional) --</option>';
+        populateJabatanSelect(selectedId = '') {
+            const sel = this.$refs.jabatanSelect;
+            sel.innerHTML = '<option value="">-- Pilih Jabatan (Opsional) --</option>';
             this.jabatanTujuanList.forEach(j => {
-                let label = j.nama + ' (' + j.jenis_jabatan + (j.kelas ? ' - Kelas ' + j.kelas : '') + ')';
-                html += '<option value="' + j.id + '">' + label + '</option>';
+                const opt = document.createElement('option');
+                opt.value = j.id;
+                opt.textContent = j.nama + ' (' + j.jenis_jabatan + (j.kelas ? ' - Kelas ' + j.kelas : '') + ')';
+                sel.appendChild(opt);
             });
-            return html;
+            sel.value = selectedId;
+            this.jabatanTujuanId = selectedId;
         },
 
         async init() {
@@ -342,10 +351,10 @@ function mutasiForm() {
         },
 
         async onOpdTujuanChange() {
-            this.atasanId = '';
-            this.jabatanTujuanId = '';
             this.atasanList = [];
             this.jabatanTujuanList = [];
+            this.populateAtasanSelect();
+            this.populateJabatanSelect();
             await this.fetchAtasanList();
         },
 
@@ -357,9 +366,9 @@ function mutasiForm() {
                 const res = await fetch(`{{ url('/admin/mutasi/jabatan-struktural') }}/${this.opdTujuanId}`);
                 if (!res.ok) throw new Error('Failed to load atasan list');
                 this.atasanList = await res.json();
+                this.populateAtasanSelect(restoreAtasanId || '');
 
                 if (restoreAtasanId) {
-                    this.atasanId = restoreAtasanId;
                     await this.fetchJabatanByAtasan(restoreJabatanId);
                 }
             } catch (e) {
@@ -370,8 +379,8 @@ function mutasiForm() {
         },
 
         async onAtasanChange() {
-            this.jabatanTujuanId = '';
             this.jabatanTujuanList = [];
+            this.populateJabatanSelect();
             await this.fetchJabatanByAtasan();
         },
 
@@ -383,10 +392,7 @@ function mutasiForm() {
                 const res = await fetch(`{{ url('/admin/mutasi/jabatan-by-atasan') }}/${this.opdTujuanId}/${this.atasanId}`);
                 if (!res.ok) throw new Error('Failed to load jabatan list');
                 this.jabatanTujuanList = await res.json();
-
-                if (restoreJabatanId) {
-                    this.jabatanTujuanId = restoreJabatanId;
-                }
+                this.populateJabatanSelect(restoreJabatanId || '');
             } catch (e) {
                 console.error('fetchJabatanByAtasan error:', e);
             } finally {
