@@ -277,6 +277,24 @@ class OpdJabatanController extends Controller
     }
 
     /**
+     * Update kebutuhan jabatan secara inline (AJAX)
+     */
+    public function updateKebutuhan(Request $request, $id)
+    {
+        $jabatan = Jabatan::findOrFail($id);
+
+        $this->validateOpdAccess($jabatan->getOpdId());
+
+        $request->validate([
+            'kebutuhan' => 'required|integer|min:0|max:9999',
+        ]);
+
+        $jabatan->update(['kebutuhan' => $request->kebutuhan]);
+
+        return response()->json(['success' => true, 'kebutuhan' => $jabatan->kebutuhan]);
+    }
+
+    /**
      * Apply OPD scope ke query jabatan secara tree-aware.
      * Menggunakan recursive CTE agar child jabatan (opd_id = NULL) tetap ikut ter-scope.
      */
