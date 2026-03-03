@@ -279,13 +279,14 @@ class MutasiController extends Controller
      */
     public function getJabatanStruktural($opdId)
     {
+        // Load 4 levels deep (one extra vs other methods) so jabatans at level 4 with children are not missed after leaf filtering
         $opd = Opd::with(['jabatanKepala.children.children.children.children'])->findOrFail($opdId);
 
         $jabatans = [];
 
         $traverse = function ($jabatan, $level = 0) use (&$jabatans, &$traverse) {
             // Hanya masukkan jabatan yang punya anak (bisa jadi atasan)
-            if ($jabatan->children->count() > 0) {
+            if ($jabatan->children->isNotEmpty()) {
                 $jabatans[] = [
                     'id'        => $jabatan->id,
                     'nama'      => str_repeat('— ', $level) . $jabatan->nama,
