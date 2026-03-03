@@ -148,7 +148,7 @@
                             Pilih Atasan (Jabatan Struktural)
                         </label>
                         <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan"
-                                x-html="'<option value=\'\'>-- Pilih Atasan Dahulu --</option>' + atasanList.map(a => `<option value='${a.id}'>${a.nama.replace(/</g,'&lt;')}</option>`).join('')">
+                                x-html="atasanOptions">
                         </select>
                         <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
@@ -162,7 +162,7 @@
                             Jabatan Tujuan (di bawah atasan yang dipilih)
                         </label>
                         <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan"
-                                x-html="'<option value=\'\'>-- Pilih Jabatan (Opsional) --</option>' + jabatanTujuanList.map(j => `<option value='${j.id}'>${j.nama.replace(/</g,'&lt;')} (${j.jenis_jabatan}${j.kelas ? ' - Kelas ' + j.kelas : ''})</option>`).join('')">
+                                x-html="jabatanTujuanOptions">
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
                         <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
@@ -247,6 +247,23 @@ function mutasiForm() {
         loadingAtasan: false,
         loadingJabatan: false,
         _searchAbort: null,
+
+        get atasanOptions() {
+            let html = '<option value="">-- Pilih Atasan Dahulu --</option>';
+            this.atasanList.forEach(a => {
+                html += '<option value="' + a.id + '">' + a.nama + '</option>';
+            });
+            return html;
+        },
+
+        get jabatanTujuanOptions() {
+            let html = '<option value="">-- Pilih Jabatan (Opsional) --</option>';
+            this.jabatanTujuanList.forEach(j => {
+                let label = j.nama + ' (' + j.jenis_jabatan + (j.kelas ? ' - Kelas ' + j.kelas : '') + ')';
+                html += '<option value="' + j.id + '">' + label + '</option>';
+            });
+            return html;
+        },
 
         async init() {
             @if(isset($selectedAsn) && $selectedAsn)
