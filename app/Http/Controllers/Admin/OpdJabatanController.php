@@ -8,6 +8,7 @@ use App\Http\Traits\HasOpdScope;
 use App\Models\Jabatan;
 use App\Models\Opd;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OpdJabatanController extends Controller
@@ -30,8 +31,8 @@ class OpdJabatanController extends Controller
     {
         $query = Jabatan::with(['parent', 'opdLangsung', 'asns']);
 
-        // Apply OPD scope for admin OPD
-        $query = $this->applyOpdScope($query);
+        // Apply OPD scope for admin OPD (tree-aware: includes descendants with null opd_id)
+        $query = $this->applyJabatanOpdScope($query);
 
         // Search by nama jabatan
         if ($request->filled('search')) {
@@ -273,6 +274,30 @@ class OpdJabatanController extends Controller
         $filename = 'data-jabatan-'.date('Y-m-d-His').'.xlsx';
 
         return Excel::download(new JabatanExport($accessibleOpdIds, $filters), $filename);
+    }
+
+    /**
+     * Apply OPD scope ke query jabatan secara tree-aware.
+     * Menggunakan recursive CTE agar child jabatan (opd_id = NULL) tetap ikut ter-scope.
+     */
+    private function applyJabatanOpdScope($query)
+    {
+        $admin = auth('admin')->user();
+
+        if ($admin && $admin->isAdminOpd()) {
+            $jabatanIds = DB::select("
+                WITH RECURSIVE tree AS (
+                    SELECT id FROM jabatans WHERE opd_id = ?
+                    UNION ALL
+                    SELECT j.id FROM jabatans j JOIN tree t ON j.parent_id = t.id
+                )
+                SELECT id FROM tree
+            ", [$admin->opd_id]);
+
+            return $query->whereIn('id', array_column($jabatanIds, 'id'));
+        }
+
+        return $query;
     }
 
     /**
