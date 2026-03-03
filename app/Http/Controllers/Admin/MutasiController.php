@@ -279,33 +279,27 @@ class MutasiController extends Controller
      */
     public function getJabatanStruktural($opdId)
     {
-        $opd = Opd::with(['jabatanKepala.children.children.children'])->findOrFail($opdId);
+        $opd = Opd::with(['jabatanKepala.children.children.children.children'])->findOrFail($opdId);
 
         $jabatans = [];
 
-        // Recursive function untuk mendapatkan hanya jabatan struktural
-        $addJabatanStruktural = function($jabatan, $level = 0) use (&$jabatans, &$addJabatanStruktural) {
-            // Hanya tambahkan jika jenis_jabatan bukan Pelaksana atau Fungsional
-            if (in_array($jabatan->jenis_jabatan, ['Struktural', 'Kepala', ''])) {
-                $prefix = str_repeat('— ', $level);
-
+        $traverse = function ($jabatan, $level = 0) use (&$jabatans, &$traverse) {
+            // Hanya masukkan jabatan yang punya anak (bisa jadi atasan)
+            if ($jabatan->children->count() > 0) {
                 $jabatans[] = [
-                    'id' => $jabatan->id,
-                    'nama' => $prefix . $jabatan->nama,
+                    'id'        => $jabatan->id,
+                    'nama'      => str_repeat('— ', $level) . $jabatan->nama,
                     'parent_id' => $jabatan->parent_id,
-                    'level' => $level
+                    'level'     => $level,
                 ];
-
-                // Rekursif untuk children
                 foreach ($jabatan->children as $child) {
-                    $addJabatanStruktural($child, $level + 1);
+                    $traverse($child, $level + 1);
                 }
             }
         };
 
-        // Proses semua jabatan kepala
         foreach ($opd->jabatanKepala as $jabatan) {
-            $addJabatanStruktural($jabatan);
+            $traverse($jabatan, 0);
         }
 
         return response()->json($jabatans);
