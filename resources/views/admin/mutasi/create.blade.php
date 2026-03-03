@@ -147,7 +147,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Pilih Atasan (Jabatan Struktural)
                         </label>
-                        <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
+                        <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full no-tom-select" :disabled="!opdTujuanId || loadingAtasan">
                             <option value="">-- Pilih Atasan Dahulu --</option>
                             <template x-for="atasan in atasanList" :key="atasan.id">
                                 <option :value="atasan.id" x-text="atasan.nama"></option>
@@ -169,7 +169,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Jabatan Tujuan (di bawah atasan yang dipilih)
                         </label>
-                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full" :disabled="!atasanId || loadingJabatan">
+                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full no-tom-select" :disabled="!atasanId || loadingJabatan">
                             <option value="">-- Pilih Jabatan (Opsional) --</option>
                             <template x-for="jabatan in jabatanTujuanList" :key="jabatan.id">
                                 <option :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
