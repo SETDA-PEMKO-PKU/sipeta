@@ -294,14 +294,14 @@ function mutasiForm() {
             }
         },
 
-        selectAsn(asn) {
+        async selectAsn(asn) {
             this.selectedAsn = asn;
             this.searchQuery = asn.nama;
             this.showResults = false;
             this.searchResults = [];
             if (this.jenisMutasi === 'internal_opd') {
                 this.opdTujuanId = String(asn.opd_id);
-                this.fetchAtasanList();
+                await this.fetchAtasanList();
             }
         },
 
@@ -319,14 +319,14 @@ function mutasiForm() {
             }
         },
 
-        onJenisMutasiChange() {
+        async onJenisMutasiChange() {
             this.atasanId = '';
             this.jabatanTujuanId = '';
             this.atasanList = [];
             this.jabatanTujuanList = [];
             if (this.jenisMutasi === 'internal_opd' && this.selectedAsn) {
                 this.opdTujuanId = String(this.selectedAsn.opd_id);
-                this.fetchAtasanList();
+                await this.fetchAtasanList();
             }
         },
 
