@@ -252,10 +252,11 @@ function mutasiForm() {
         jabatanTujuanList: [],
         loadingAtasan: false,
         loadingJabatan: false,
+        _searchAbort: null,
 
         async init() {
             @if(isset($selectedAsn) && $selectedAsn)
-            this.selectedAsn = {{ json_encode($selectedAsn) }};
+            this.selectedAsn = {{ Illuminate\Support\Js::from($selectedAsn) }};
             this.searchQuery = this.selectedAsn.nama;
             @endif
 
@@ -278,12 +279,18 @@ function mutasiForm() {
                 this.showResults = false;
                 return;
             }
+            if (this._searchAbort) this._searchAbort.abort();
+            this._searchAbort = new AbortController();
             try {
-                const res = await fetch(`{{ route('admin.mutasi.search-asn') }}?q=${encodeURIComponent(this.searchQuery)}`);
+                const res = await fetch(
+                    `{{ route('admin.mutasi.search-asn') }}?q=${encodeURIComponent(this.searchQuery)}`,
+                    { signal: this._searchAbort.signal }
+                );
+                if (!res.ok) throw new Error('Search failed');
                 this.searchResults = await res.json();
                 this.showResults = true;
             } catch (e) {
-                console.error('searchAsn error:', e);
+                if (e.name !== 'AbortError') console.error('searchAsn error:', e);
             }
         },
 
@@ -302,6 +309,14 @@ function mutasiForm() {
             this.selectedAsn = null;
             this.searchQuery = '';
             this.searchResults = [];
+            this.showResults = false;
+            if (this.jenisMutasi === 'internal_opd') {
+                this.opdTujuanId = '';
+                this.atasanId = '';
+                this.jabatanTujuanId = '';
+                this.atasanList = [];
+                this.jabatanTujuanList = [];
+            }
         },
 
         onJenisMutasiChange() {
@@ -328,7 +343,8 @@ function mutasiForm() {
 
             this.loadingAtasan = true;
             try {
-                const res = await fetch(`/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`);
+                const res = await fetch(`{{ url('/admin/mutasi/jabatan-struktural') }}/${this.opdTujuanId}`);
+                if (!res.ok) throw new Error('Failed to load atasan list');
                 this.atasanList = await res.json();
 
                 if (restoreAtasanId) {
@@ -353,7 +369,8 @@ function mutasiForm() {
 
             this.loadingJabatan = true;
             try {
-                const res = await fetch(`/admin/mutasi/jabatan-by-atasan/${this.opdTujuanId}/${this.atasanId}`);
+                const res = await fetch(`{{ url('/admin/mutasi/jabatan-by-atasan') }}/${this.opdTujuanId}/${this.atasanId}`);
+                if (!res.ok) throw new Error('Failed to load jabatan list');
                 this.jabatanTujuanList = await res.json();
 
                 if (restoreJabatanId) {
