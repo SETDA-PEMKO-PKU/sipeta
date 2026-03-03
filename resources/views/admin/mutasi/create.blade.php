@@ -147,21 +147,22 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Pilih Atasan (Jabatan Struktural)
                         </label>
-                        <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full no-tom-select" :disabled="!opdTujuanId || loadingAtasan">
-                            <option value="">-- Pilih Atasan Dahulu --</option>
-                            <template x-for="atasan in atasanList" :key="atasan.id">
-                                <option :value="atasan.id" x-text="atasan.nama"></option>
-                            </template>
+                        <select name="atasan_id" @change="atasanId = $event.target.value; onAtasanChange()" class="input w-full no-tom-select" :disabled="!opdTujuanId || loadingAtasan"
+                            x-effect="
+                                $el.innerHTML = '<option value=\'\'>-- Pilih Atasan Dahulu --</option>';
+                                atasanList.forEach(function(a) {
+                                    var opt = document.createElement('option');
+                                    opt.value = a.id;
+                                    opt.textContent = a.nama;
+                                    if (String(a.id) === String(atasanId)) opt.selected = true;
+                                    $el.appendChild(opt);
+                                });
+                            ">
                         </select>
                         <p x-show="loadingAtasan" class="text-xs text-gray-500 mt-1">Memuat daftar atasan...</p>
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
                             Tidak ada jabatan struktural di OPD tujuan
                         </p>
-                        <!-- Debug Raw Data -->
-                        <div class="mt-2 p-2 bg-gray-100 text-xs rounded border border-gray-300 overflow-auto max-h-40">
-                            <p class="font-bold">Debug Data Atasan (Count: <span x-text="atasanList.length"></span>):</p>
-                            <pre x-text="JSON.stringify(atasanList, null, 2)"></pre>
-                        </div>
                     </div>
 
                     <!-- Jabatan Tujuan -->
@@ -169,11 +170,17 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Jabatan Tujuan (di bawah atasan yang dipilih)
                         </label>
-                        <select name="jabatan_tujuan_id" x-model="jabatanTujuanId" class="input w-full no-tom-select" :disabled="!atasanId || loadingJabatan">
-                            <option value="">-- Pilih Jabatan (Opsional) --</option>
-                            <template x-for="jabatan in jabatanTujuanList" :key="jabatan.id">
-                                <option :value="jabatan.id" x-text="jabatan.nama + ' (' + jabatan.jenis_jabatan + (jabatan.kelas ? ' - Kelas ' + jabatan.kelas : '') + ')'"></option>
-                            </template>
+                        <select name="jabatan_tujuan_id" @change="jabatanTujuanId = $event.target.value" class="input w-full no-tom-select" :disabled="!atasanId || loadingJabatan"
+                            x-effect="
+                                $el.innerHTML = '<option value=\'\'>-- Pilih Jabatan (Opsional) --</option>';
+                                jabatanTujuanList.forEach(function(j) {
+                                    var opt = document.createElement('option');
+                                    opt.value = j.id;
+                                    opt.textContent = j.nama + ' (' + j.jenis_jabatan + (j.kelas ? ' - Kelas ' + j.kelas : '') + ')';
+                                    if (String(j.id) === String(jabatanTujuanId)) opt.selected = true;
+                                    $el.appendChild(opt);
+                                });
+                            ">
                         </select>
                         <p x-show="loadingJabatan" class="text-xs text-gray-500 mt-1">Memuat daftar jabatan...</p>
                         <p x-show="!loadingJabatan && jabatanTujuanList.length === 0 && atasanId" class="text-xs text-gray-500 mt-1">
