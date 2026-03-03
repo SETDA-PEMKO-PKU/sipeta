@@ -28,6 +28,7 @@ class OpdImportController extends Controller
      */
     public function downloadTemplate($opdId)
     {
+        set_time_limit(120);
         $opd = Opd::findOrFail($opdId);
         $allJabatans = $opd->getAllJabatans();
 
@@ -220,6 +221,7 @@ class OpdImportController extends Controller
      */
     public function showImportForm($opdId)
     {
+        set_time_limit(120);
         $opd = Opd::with([
             'jabatanKepala.children.children.children',
             'jabatanKepala.asns',

@@ -33,47 +33,44 @@ class Opd extends Model
     }
 
     /**
-     * Mendapatkan semua jabatan termasuk sub-jabatan (SUPER OPTIMIZED)
-     * Menggunakan hanya 2 query untuk menghindari N+1 problem
+     * Mendapatkan semua jabatan termasuk sub-jabatan untuk OPD ini
      */
     public function getAllJabatans()
     {
-        // Get all root jabatan IDs for this OPD
+        // Step 1: Get root jabatan IDs for this OPD
         $rootJabatanIds = Jabatan::where('opd_id', $this->id)
                                   ->whereNull('parent_id')
                                   ->pluck('id')
                                   ->toArray();
-        
+
         if (empty($rootJabatanIds)) {
             return collect();
         }
 
-        // Get ALL jabatans at once (no filtering by OPD - will collect all)
-        // This is faster than querying per level
-        $allJabatans = Jabatan::with(['asns'])
-                              ->get()
-                              ->keyBy('id');
-        
-        // Build list of IDs belonging to this OPD using in-memory traversal
-        $opdJabatanIds = $rootJabatanIds;
-        $queue = $rootJabatanIds;
-        
-        while (!empty($queue)) {
-            $currentId = array_shift($queue);
-            
-            // Find children of current jabatan
-            foreach ($allJabatans as $jabatan) {
-                if ($jabatan->parent_id == $currentId && !in_array($jabatan->id, $opdJabatanIds)) {
-                    $opdJabatanIds[] = $jabatan->id;
-                    $queue[] = $jabatan->id;
-                }
+        // Step 2: Traverse tree level by level to collect all descendant IDs
+        $allIds = $rootJabatanIds;
+        $currentIds = $rootJabatanIds;
+        $maxDepth = 15;
+        $depth = 0;
+
+        while (!empty($currentIds) && $depth < $maxDepth) {
+            $childIds = Jabatan::whereIn('parent_id', $currentIds)->pluck('id')->toArray();
+
+            if (empty($childIds)) {
+                break;
             }
+
+            $allIds = array_merge($allIds, $childIds);
+            $currentIds = $childIds;
+            $depth++;
         }
 
-        // Return only jabatans belonging to this OPD
-        return $allJabatans->whereIn('id', $opdJabatanIds)
-                           ->sortBy('nama')
-                           ->values();
+        // Step 3: Load only jabatans that belong to this OPD (not all OPDs)
+        return Jabatan::with(['asns'])
+                      ->whereIn('id', $allIds)
+                      ->get()
+                      ->sortBy('nama')
+                      ->values();
     }
 
     /**
