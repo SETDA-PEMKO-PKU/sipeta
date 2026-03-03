@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MutasiController;
 use App\Http\Controllers\Admin\PegawaiController;
@@ -62,6 +63,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/export', [ActivityLogController::class, 'export'])->name('export');
                 Route::get('/stats', [ActivityLogController::class, 'stats'])->name('stats');
                 Route::get('/{activityLog}', [ActivityLogController::class, 'show'])->name('show');
+            });
+
+            // Database Backup (Super Admin only)
+            Route::prefix('backup')->name('backup.')->group(function () {
+                Route::get('/', [DatabaseBackupController::class, 'index'])->name('index');
+                Route::post('/', [DatabaseBackupController::class, 'store'])->name('store');
+                Route::get('/download/{filename}', [DatabaseBackupController::class, 'download'])
+                    ->name('download')
+                    ->where('filename', '.*');
+                Route::delete('/destroy/{filename}', [DatabaseBackupController::class, 'destroy'])
+                    ->name('destroy')
+                    ->where('filename', '.*');
             });
         });
 

@@ -73,6 +73,12 @@
                     <span class="iconify" data-icon="mdi:history" data-width="20" data-height="20"></span>
                     <span class="font-medium">Log Aktivitas</span>
                 </a>
+
+                <a href="{{ route('admin.backup.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.backup.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:database-export" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Backup Database</span>
+                </a>
                 @endif
 
                 @if(auth('admin')->user()->canMutasiAsn())
