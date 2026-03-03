@@ -157,6 +157,11 @@
                         <p x-show="!loadingAtasan && atasanList.length === 0 && opdTujuanId" class="text-xs text-gray-500 mt-1">
                             Tidak ada jabatan struktural di OPD tujuan
                         </p>
+                        <!-- Debug Raw Data -->
+                        <div class="mt-2 p-2 bg-gray-100 text-xs rounded border border-gray-300 overflow-auto max-h-40">
+                            <p class="font-bold">Debug Data Atasan (Count: <span x-text="atasanList.length"></span>):</p>
+                            <pre x-text="JSON.stringify(atasanList, null, 2)"></pre>
+                        </div>
                     </div>
 
                     <!-- Jabatan Tujuan -->
