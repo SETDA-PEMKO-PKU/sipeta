@@ -213,8 +213,33 @@
                                 </template>
                             </div>
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
-                            {{ $jabatan->asns->count() }}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            @if($jabatan->asns->count() > 0)
+                            <div class="relative inline-block" x-data="{ open: false }" @click.outside="open = false">
+                                <button @click="open = !open"
+                                    class="px-2 py-0.5 rounded font-medium text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+                                    title="Lihat daftar pegawai">
+                                    {{ $jabatan->asns->count() }}
+                                </button>
+                                <div x-show="open" x-transition
+                                    class="absolute z-50 right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg text-left"
+                                    style="display:none">
+                                    <div class="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        Pegawai ({{ $jabatan->asns->count() }})
+                                    </div>
+                                    <ul class="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                                        @foreach($jabatan->asns as $asn)
+                                        <li class="px-3 py-2">
+                                            <div class="text-sm font-medium text-gray-800">{{ $asn->nama }}</div>
+                                            <div class="text-xs text-gray-400">{{ $asn->nip }}</div>
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                            @else
+                            <span class="text-gray-400">0</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                             <a href="{{ route('admin.jabatan.show', $jabatan->id) }}" class="text-blue-600 hover:text-blue-900">Detail</a>
