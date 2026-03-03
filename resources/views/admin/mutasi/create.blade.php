@@ -147,7 +147,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Pilih Atasan (Jabatan Struktural)
                         </label>
-                        <select name="atasan_id" x-model="atasanId" @change="loadJabatanTujuanByAtasan()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
+                        <select name="atasan_id" x-model="atasanId" @change="onAtasanChange()" class="input w-full" :disabled="!opdTujuanId || loadingAtasan">
                             <option value="">-- Pilih Atasan Dahulu --</option>
                             <template x-for="atasan in atasanList" :key="atasan.id">
                                 <option :value="atasan.id" x-text="atasan.nama"></option>
@@ -253,8 +253,7 @@ function mutasiForm() {
         loadingAtasan: false,
         loadingJabatan: false,
 
-        init() {
-            // Set selectedAsn from server data
+        async init() {
             @if(isset($selectedAsn) && $selectedAsn)
             this.selectedAsn = {{ json_encode($selectedAsn) }};
             this.searchQuery = this.selectedAsn.nama;
@@ -266,15 +265,10 @@ function mutasiForm() {
 
             @if(old('opd_tujuan_id'))
             this.opdTujuanId = '{{ old('opd_tujuan_id') }}';
-            this.onOpdTujuanChange();
-            @endif
-
-            @if(old('atasan_id'))
-            this.atasanId = '{{ old('atasan_id') }}';
-            @endif
-
-            @if(old('jabatan_tujuan_id'))
-            this.jabatanTujuanId = '{{ old('jabatan_tujuan_id') }}';
+            await this.fetchAtasanList(
+                '{{ old('atasan_id') }}',
+                '{{ old('jabatan_tujuan_id') }}'
+            );
             @endif
         },
 
@@ -284,13 +278,12 @@ function mutasiForm() {
                 this.showResults = false;
                 return;
             }
-
             try {
-                const response = await fetch(`{{ route('admin.mutasi.search-asn') }}?q=${encodeURIComponent(this.searchQuery)}`);
-                this.searchResults = await response.json();
+                const res = await fetch(`{{ route('admin.mutasi.search-asn') }}?q=${encodeURIComponent(this.searchQuery)}`);
+                this.searchResults = await res.json();
                 this.showResults = true;
-            } catch (error) {
-                console.error('Error searching ASN:', error);
+            } catch (e) {
+                console.error('searchAsn error:', e);
             }
         },
 
@@ -299,11 +292,9 @@ function mutasiForm() {
             this.searchQuery = asn.nama;
             this.showResults = false;
             this.searchResults = [];
-
-            // Auto-select OPD for internal mutation
             if (this.jenisMutasi === 'internal_opd') {
-                this.opdTujuanId = asn.opd_id;
-                this.onOpdTujuanChange();
+                this.opdTujuanId = String(asn.opd_id);
+                this.fetchAtasanList();
             }
         },
 
@@ -314,62 +305,66 @@ function mutasiForm() {
         },
 
         onJenisMutasiChange() {
-            // Reset atasan and jabatan when changing jenis mutasi
             this.atasanId = '';
             this.jabatanTujuanId = '';
             this.atasanList = [];
             this.jabatanTujuanList = [];
-
             if (this.jenisMutasi === 'internal_opd' && this.selectedAsn) {
-                this.opdTujuanId = this.selectedAsn.opd_id;
-                this.onOpdTujuanChange();
+                this.opdTujuanId = String(this.selectedAsn.opd_id);
+                this.fetchAtasanList();
             }
         },
 
         async onOpdTujuanChange() {
-            // Reset atasan and jabatan selection
             this.atasanId = '';
             this.jabatanTujuanId = '';
             this.atasanList = [];
             this.jabatanTujuanList = [];
+            await this.fetchAtasanList();
+        },
 
-            if (!this.opdTujuanId) {
-                return;
-            }
+        async fetchAtasanList(restoreAtasanId = null, restoreJabatanId = null) {
+            if (!this.opdTujuanId) return;
 
-            // Load atasan list (structural positions only)
             this.loadingAtasan = true;
             try {
-                const url = `/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`;
-                const response = await fetch(url);
-                this.atasanList = await response.json();
-            } catch (error) {
-                console.error('Error loading atasan:', error);
+                const res = await fetch(`/admin/mutasi/jabatan-struktural/${this.opdTujuanId}`);
+                this.atasanList = await res.json();
+
+                if (restoreAtasanId) {
+                    this.atasanId = restoreAtasanId;
+                    await this.fetchJabatanByAtasan(restoreJabatanId);
+                }
+            } catch (e) {
+                console.error('fetchAtasanList error:', e);
             } finally {
                 this.loadingAtasan = false;
             }
         },
 
-        async loadJabatanTujuanByAtasan() {
-            // Reset jabatan selection
+        async onAtasanChange() {
             this.jabatanTujuanId = '';
             this.jabatanTujuanList = [];
+            await this.fetchJabatanByAtasan();
+        },
 
-            if (!this.opdTujuanId || !this.atasanId) {
-                return;
-            }
+        async fetchJabatanByAtasan(restoreJabatanId = null) {
+            if (!this.opdTujuanId || !this.atasanId) return;
 
-            // Load jabatan under selected atasan
             this.loadingJabatan = true;
             try {
-                const response = await fetch(`/admin/mutasi/jabatan-by-atasan/${this.opdTujuanId}/${this.atasanId}`);
-                this.jabatanTujuanList = await response.json();
-            } catch (error) {
-                console.error('Error loading jabatan:', error);
+                const res = await fetch(`/admin/mutasi/jabatan-by-atasan/${this.opdTujuanId}/${this.atasanId}`);
+                this.jabatanTujuanList = await res.json();
+
+                if (restoreJabatanId) {
+                    this.jabatanTujuanId = restoreJabatanId;
+                }
+            } catch (e) {
+                console.error('fetchJabatanByAtasan error:', e);
             } finally {
                 this.loadingJabatan = false;
             }
-        }
+        },
     };
 }
 </script>
