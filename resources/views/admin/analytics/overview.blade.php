@@ -1,7 +1,7 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Dashboard Analytics')
-@section('page-title', 'Dashboard Analytics Overview')
+@section('title', 'Dashboard Analisis')
+@section('page-title', 'Dashboard Analisis Overview')
 
 @push('styles')
 <style>

@@ -65,6 +65,7 @@ document.addEventListener("alpine:init", () => {
             this.messages = this.messages.filter((m) => m.id !== id);
         },
     });
+
 });
 
 // Alpine.js components

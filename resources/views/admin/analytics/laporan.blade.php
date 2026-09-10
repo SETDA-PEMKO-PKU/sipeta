@@ -1,7 +1,7 @@
 @extends('admin.layouts.app')
 
 @section('title', 'Laporan & Export')
-@section('page-title', 'Laporan & Export Analytics')
+@section('page-title', 'Laporan & Export Analisis')
 
 @section('content')
 <div class="p-4 lg:p-8">

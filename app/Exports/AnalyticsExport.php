@@ -13,12 +13,14 @@ class AnalyticsExport implements FromCollection, WithHeadings, WithStyles, WithT
 {
     protected $type;
     protected $opdId;
+    protected $accessibleOpdIds;
     protected $analyticsService;
 
-    public function __construct($type = 'overview', $opdId = null)
+    public function __construct($type = 'overview', $opdId = null, $accessibleOpdIds = null)
     {
         $this->type = $type;
         $this->opdId = $opdId;
+        $this->accessibleOpdIds = $accessibleOpdIds;
         $this->analyticsService = new AnalyticsService();
     }
 
@@ -97,7 +99,7 @@ class AnalyticsExport implements FromCollection, WithHeadings, WithStyles, WithT
      */
     private function getOverviewData()
     {
-        $topOpd = $this->analyticsService->getTopOpdByStaffing(999);
+        $topOpd = $this->analyticsService->getTopOpdByStaffing(999, $this->accessibleOpdIds);
 
         return $topOpd->map(function ($item) {
             $item = (array) $item;
@@ -142,7 +144,12 @@ class AnalyticsExport implements FromCollection, WithHeadings, WithStyles, WithT
      */
     private function getKepegawaianData()
     {
-        $data = $this->analyticsService->getDistribusiAsnPerOpd([]);
+        $filters = [];
+        if ($this->accessibleOpdIds !== null) {
+            $filters['accessible_opd_ids'] = $this->accessibleOpdIds;
+        }
+        
+        $data = $this->analyticsService->getDistribusiAsnPerOpd($filters);
 
         return $data->map(function ($item) {
             $item = (array) $item;
@@ -158,7 +165,7 @@ class AnalyticsExport implements FromCollection, WithHeadings, WithStyles, WithT
      */
     private function getJabatanData()
     {
-        $data = $this->analyticsService->getJabatanAnalytics();
+        $data = $this->analyticsService->getJabatanAnalytics($this->accessibleOpdIds);
         $result = [];
 
         foreach ($data['total_per_jenis'] as $jenis => $total) {
@@ -178,7 +185,7 @@ class AnalyticsExport implements FromCollection, WithHeadings, WithStyles, WithT
      */
     private function getGapData()
     {
-        $understaffed = $this->analyticsService->getUnderstaffedPositions(999);
+        $understaffed = $this->analyticsService->getUnderstaffedPositions(999, $this->accessibleOpdIds);
 
         return $understaffed->map(function ($item) {
             return [

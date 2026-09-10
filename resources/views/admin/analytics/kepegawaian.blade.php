@@ -1,7 +1,7 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Analytics Kepegawaian')
-@section('page-title', 'Analytics Kepegawaian')
+@section('title', 'Analisis Kepegawaian')
+@section('page-title', 'Analisis Kepegawaian')
 
 @push('styles')
 <style>

@@ -11,7 +11,11 @@ git pull
 
 # Jika masih error, force reset
 git fetch origin
-git reset --hard origin/main  # atau origin/master jika branch master
+git reset --hard origin/dev  # atau origin/master jika branch master
+
+# Install dependencies dan build assets
+npm install
+npm run build
 
 # Kembalikan ownership
 sudo chown -R www-data:www-data /home/kirimi/sipeta
@@ -23,6 +27,7 @@ sudo chmod -R 775 /home/kirimi/sipeta/bootstrap/cache
 # Clear cache
 sudo -u www-data php artisan config:clear
 sudo -u www-data php artisan cache:clear
+sudo -u www-data php artisan optimize:clear
 
 # Restart
 sudo systemctl restart php8.3-fpm nginx

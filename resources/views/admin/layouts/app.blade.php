@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin Panel') - Sistem Peta Jabatan</title>
+    <title>@yield('title', 'Admin Panel') - AKUPETA</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
@@ -55,14 +55,42 @@
                     <span class="font-medium">Daftar Pegawai</span>
                 </a>
 
+                <a href="{{ route('admin.jabatan.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.jabatan.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:briefcase-search" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Pencarian Jabatan</span>
+                </a>
+
+                @if(auth('admin')->user()->isSuperAdmin())
                 <a href="{{ route('admin.admins.index') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.admins.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <span class="iconify" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
                     <span class="font-medium">Kelola Admin</span>
                 </a>
 
+                <a href="{{ route('admin.activity-logs.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.activity-logs.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:history" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Log Aktivitas</span>
+                </a>
+
+                <a href="{{ route('admin.backup.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.backup.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:database-export" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Backup Database</span>
+                </a>
+                @endif
+
+                @if(auth('admin')->user()->canMutasiAsn())
+                <a href="{{ route('admin.mutasi.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.mutasi.*') ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <span class="iconify" data-icon="mdi:swap-horizontal" data-width="20" data-height="20"></span>
+                    <span class="font-medium">Mutasi Pegawai</span>
+                </a>
+                @endif
+
                 <div class="pt-4 pb-2 px-4">
-                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analytics</span>
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Analisis</span>
                 </div>
 
                 <a href="{{ route('admin.analytics.overview') }}"
@@ -104,6 +132,19 @@
 
             <!-- User Info & Logout -->
             <div class="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+                <!-- OPD Badge for Admin OPD -->
+                <div class="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-blue-600 font-medium">OPD Anda</p>
+                            <p class="text-sm font-semibold text-blue-900 truncate">{{ auth('admin')->user()->opd->nama }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -137,8 +178,21 @@
                 </div>
 
                 <div class="flex items-center gap-2">
+                    @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                            <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="14" data-height="14"></span>
+                            <span class="text-xs font-medium text-blue-900">{{ auth('admin')->user()->opd->nama }}</span>
+                        </div>
+                    @endif
+                    
                     @if(auth('admin')->user()->isSuperAdmin())
                         <span class="badge badge-primary text-xs">Super Admin</span>
+                    @elseif(auth('admin')->user()->isAdminOpd())
+                        <span class="badge badge-warning text-xs">Admin OPD</span>
+                    @elseif(auth('admin')->user()->isAdminOrganisasi())
+                        <span class="badge badge-success text-xs">Admin Organisasi</span>
+                    @elseif(auth('admin')->user()->isAdminBkpsdm())
+                        <span class="badge badge-info text-xs">Admin BKPSDM</span>
                     @else
                         <span class="badge badge-gray text-xs">Admin</span>
                     @endif
@@ -172,7 +226,7 @@
             <!-- Footer -->
             <footer class="bg-white border-t border-gray-200 py-4 px-4 lg:px-8">
                 <div class="text-center text-sm text-gray-600">
-                    &copy; {{ date('Y') }} Sistem Peta Jabatan. All rights reserved.
+                    &copy; {{ date('Y') }} AKUPETA - Aplikasi Kendali Utama Peta Jabatan. All rights reserved.
                 </div>
             </footer>
         </div>

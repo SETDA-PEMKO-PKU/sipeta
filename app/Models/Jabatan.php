@@ -26,23 +26,23 @@ class Jabatan extends Model
     ];
 
     /**
-     * Relasi ke bagian yang memiliki jabatan ini (melalui parent_id)
+     * Relasi ke parent jabatan (self-referencing)
      */
-    public function bagian()
+    public function parent()
     {
-        return $this->belongsTo(Bagian::class, 'parent_id');
+        return $this->belongsTo(Jabatan::class, 'parent_id');
     }
 
     /**
-     * Relasi ke bagian parent
+     * Relasi ke child jabatan (sub-jabatan)
      */
-    public function parentBagian()
+    public function children()
     {
-        return $this->belongsTo(Bagian::class, 'parent_id');
+        return $this->hasMany(Jabatan::class, 'parent_id');
     }
 
     /**
-     * Mendapatkan jabatan-jabatan dalam bagian yang sama
+     * Mendapatkan jabatan-jabatan dalam level yang sama (siblings)
      */
     public function siblings()
     {
@@ -59,7 +59,7 @@ class Jabatan extends Model
     }
 
     /**
-     * Mendapatkan OPD langsung atau melalui bagian
+     * Mendapatkan OPD langsung atau melalui parent jabatan
      */
     public function opd()
     {
@@ -67,10 +67,19 @@ class Jabatan extends Model
         if ($this->opd_id) {
             return $this->belongsTo(Opd::class, 'opd_id');
         }
-        // Jika jabatan terkait dengan bagian
-        return $this->hasOneThrough(Opd::class, Bagian::class, 'id', 'id', 'parent_id', 'opd_id');
+
+        // Jika tidak, cari OPD melalui parent jabatan
+        $parent = $this->parent;
+        while ($parent) {
+            if ($parent->opd_id) {
+                return $parent->belongsTo(Opd::class, 'opd_id');
+            }
+            $parent = $parent->parent;
+        }
+
+        return null;
     }
-    
+
     /**
      * Relationship langsung ke OPD untuk jabatan kepala
      */
@@ -80,46 +89,69 @@ class Jabatan extends Model
     }
 
     /**
-     * Mendapatkan semua jabatan dalam bagian yang sama dan sub-bagian
+     * Mendapatkan OPD ID dari jabatan ini atau parent-nya
      */
-    public function getRelatedJabatans()
+    public function getOpdId()
     {
-        if (!$this->parentBagian) {
-            return collect();
+        if ($this->opd_id) {
+            return $this->opd_id;
         }
-        
-        $relatedJabatans = collect();
-        
-        // Jabatan dalam bagian yang sama
-        $relatedJabatans = $relatedJabatans->merge(
-            Jabatan::where('parent_id', $this->parent_id)
-                   ->where('id', '!=', $this->id)
-                   ->get()
-        );
-        
-        // Jabatan dalam sub-bagian
-        foreach ($this->parentBagian->children as $subBagian) {
-            $relatedJabatans = $relatedJabatans->merge($subBagian->jabatans);
+
+        $parent = $this->parent;
+        while ($parent) {
+            if ($parent->opd_id) {
+                return $parent->opd_id;
+            }
+            $parent = $parent->parent;
         }
-        
-        return $relatedJabatans;
+
+        return null;
     }
 
     /**
-     * Mendapatkan path hierarki jabatan melalui bagian
+     * Mendapatkan semua descendants (child, grandchild, etc.)
+     */
+    public function getAllDescendants()
+    {
+        $descendants = collect();
+
+        foreach ($this->children as $child) {
+            $descendants->push($child);
+            $descendants = $descendants->merge($child->getAllDescendants());
+        }
+
+        return $descendants;
+    }
+
+    /**
+     * Mendapatkan path hierarki jabatan
      */
     public function getPath()
     {
         $path = collect([$this]);
-        $parentBagian = $this->parentBagian;
-        
-        while ($parentBagian) {
-            $path->prepend($parentBagian);
-            $parentBagian = $parentBagian->parent;
+        $parent = $this->parent;
+
+        while ($parent) {
+            $path->prepend($parent);
+            $parent = $parent->parent;
         }
-        
+
         return $path;
     }
 
+    /**
+     * Check apakah jabatan ini adalah root (kepala OPD)
+     */
+    public function isRoot()
+    {
+        return $this->opd_id !== null && $this->parent_id === null;
+    }
 
+    /**
+     * Check apakah jabatan ini adalah leaf (tidak punya children)
+     */
+    public function isLeaf()
+    {
+        return $this->children()->count() === 0;
+    }
 }

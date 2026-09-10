@@ -5,6 +5,18 @@
 
 @section('content')
 <div class="p-4 lg:p-8">
+    <!-- Breadcrumbs -->
+    @if(auth('admin')->user()->isAdminOpd() && auth('admin')->user()->opd)
+    <nav class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+        <span class="iconify" data-icon="mdi:office-building" data-width="16" data-height="16"></span>
+        <span class="font-medium text-gray-900">{{ auth('admin')->user()->opd->nama }}</span>
+        <span class="iconify" data-icon="mdi:chevron-right" data-width="16" data-height="16"></span>
+        <a href="{{ route('admin.pegawai.index') }}" class="hover:text-gray-900">Daftar Pegawai</a>
+        <span class="iconify" data-icon="mdi:chevron-right" data-width="16" data-height="16"></span>
+        <span>Edit Pegawai</span>
+    </nav>
+    @endif
+
     <!-- Header -->
     <div class="mb-6">
         <div class="flex items-center gap-3 mb-2">
@@ -77,18 +89,28 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Organisasi Perangkat Daerah (OPD) <span class="text-red-500">*</span>
                     </label>
-                    <select name="opd_id"
-                            x-model="selectedOpdId"
-                            @change="loadJabatans()"
-                            required
-                            class="input w-full">
-                        <option value="">-- Pilih OPD --</option>
-                        @foreach($opds as $opd)
-                            <option value="{{ $opd->id }}" {{ old('opd_id', $pegawai->opd_id) == $opd->id ? 'selected' : '' }}>
-                                {{ $opd->nama }}
-                            </option>
-                        @endforeach
-                    </select>
+                    @if(auth('admin')->user()->isAdminOpd())
+                        <!-- Admin OPD: Show OPD name only, hidden input -->
+                        <input type="hidden" name="opd_id" x-model="selectedOpdId" value="{{ auth('admin')->user()->opd_id }}">
+                        <div class="input w-full bg-gray-50 flex items-center gap-2">
+                            <span class="iconify text-blue-600" data-icon="mdi:office-building" data-width="18" data-height="18"></span>
+                            <span class="text-gray-900 font-medium">{{ auth('admin')->user()->opd->nama }}</span>
+                        </div>
+                    @else
+                        <!-- Other admins: Show dropdown -->
+                        <select name="opd_id"
+                                x-model="selectedOpdId"
+                                @change="loadJabatans()"
+                                required
+                                class="input w-full">
+                            <option value="">-- Pilih OPD --</option>
+                            @foreach($opds as $opd)
+                                <option value="{{ $opd->id }}" {{ old('opd_id', $pegawai->opd_id) == $opd->id ? 'selected' : '' }}>
+                                    {{ $opd->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
 
                 <!-- Pilih Jabatan (Tree Structure) -->

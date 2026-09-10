@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\BagianController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +17,3 @@ use App\Http\Controllers\Api\BagianController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-
-// API untuk auto-complete bagian
-Route::get('/opds/{opd}/bagians/search', [BagianController::class, 'search'])
-     ->name('api.bagians.search');

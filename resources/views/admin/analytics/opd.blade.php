@@ -1,7 +1,7 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Analytics per OPD')
-@section('page-title', 'Analytics per OPD')
+@section('title', 'Analisis per OPD')
+@section('page-title', 'Analisis per OPD')
 
 @push('styles')
 <style>
@@ -186,7 +186,7 @@
                 <div class="flex justify-center mb-4">
                     <span class="iconify text-gray-400" data-icon="mdi:chart-box-outline" data-width="64"></span>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Pilih OPD untuk Melihat Analytics</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Pilih OPD untuk Melihat Analisis</h3>
                 <p class="text-gray-600">Silakan pilih OPD dari dropdown di atas untuk melihat data analytics.</p>
             </div>
         </div>

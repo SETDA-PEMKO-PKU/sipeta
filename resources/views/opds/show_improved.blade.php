@@ -866,7 +866,7 @@
                             $kelasJabatan = $allJabatans->whereNotNull('kelas')->groupBy('kelas');
                         @endphp
                         @if($kelasJabatan->count() > 0)
-                            @foreach($kelasJabatan->sortKeys() as $kelas => $jabatans)
+                            @foreach($kelasJabatan->sortKeysDesc() as $kelas => $jabatans)
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <small>Kelas {{ $kelas }}</small>
                                     <span class="badge bg-secondary">{{ $jabatans->count() }}</span>
@@ -881,6 +881,95 @@
                 </div>
             </div>
         </div>
+
+        <!-- Statistik Per Kelas Jabatan (Detail) -->
+        @php
+            $statsPerKelas = $kelasJabatan->map(function($jabatans, $kelas) {
+                $kebutuhan = $jabatans->sum('kebutuhan');
+                $bezetting = $jabatans->sum(function($j) { return $j->asns->count(); });
+                $selisih = $bezetting - $kebutuhan;
+                return [
+                    'kelas' => $kelas,
+                    'kebutuhan' => $kebutuhan,
+                    'bezetting' => $bezetting,
+                    'selisih' => $selisih,
+                    'jumlah_jabatan' => $jabatans->count()
+                ];
+            });
+        @endphp
+
+        @if($statsPerKelas->count() > 0)
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="modern-card slide-up">
+                    <div class="card-header bg-orange d-flex justify-content-between align-items-center" style="background-color: #f97316;">
+                        <h4 class="mb-0 text-white">
+                            <i class="fas fa-layer-group me-2"></i>
+                            Statistik Per Kelas Jabatan
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-start">Kelas Jabatan</th>
+                                        <th class="text-center">Jumlah Jabatan</th>
+                                        <th class="text-center">Kebutuhan</th>
+                                        <th class="text-center">Bezetting</th>
+                                        <th class="text-center">Selisih</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($statsPerKelas->sortKeysDesc() as $stat)
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">Kelas {{ $stat['kelas'] }}</span>
+                                        </td>
+                                        <td class="text-center text-muted">{{ $stat['jumlah_jabatan'] }}</td>
+                                        <td class="text-center">
+                                            <span class="fw-bold text-warning">{{ $stat['kebutuhan'] }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="fw-bold text-success">{{ $stat['bezetting'] }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($stat['selisih'] > 0)
+                                                <span class="badge bg-success">+{{ $stat['selisih'] }}</span>
+                                            @elseif($stat['selisih'] < 0)
+                                                <span class="badge bg-danger">{{ $stat['selisih'] }}</span>
+                                            @else
+                                                <span class="badge bg-secondary">0</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr class="fw-bold">
+                                        <td>Total</td>
+                                        <td class="text-center">{{ $statsPerKelas->sum('jumlah_jabatan') }}</td>
+                                        <td class="text-center text-warning">{{ $statsPerKelas->sum('kebutuhan') }}</td>
+                                        <td class="text-center text-success">{{ $statsPerKelas->sum('bezetting') }}</td>
+                                        <td class="text-center">
+                                            @php $totalSelisih = $statsPerKelas->sum('selisih'); @endphp
+                                            @if($totalSelisih > 0)
+                                                <span class="badge bg-success">+{{ $totalSelisih }}</span>
+                                            @elseif($totalSelisih < 0)
+                                                <span class="badge bg-danger">{{ $totalSelisih }}</span>
+                                            @else
+                                                <span class="badge bg-secondary">0</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Manajemen Jabatan -->
         <div class="row mb-5">

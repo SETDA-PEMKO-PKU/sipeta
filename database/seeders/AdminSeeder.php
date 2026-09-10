@@ -23,12 +23,21 @@ class AdminSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Create Regular Admin
+        // Create Admin Organisasi
         Admin::create([
-            'name' => 'Admin',
-            'email' => 'admin@sipeta.com',
+            'name' => 'Admin Organisasi',
+            'email' => 'organisasi@sipeta.com',
             'password' => Hash::make('password'),
-            'role' => 'admin',
+            'role' => 'admin_organisasi',
+            'is_active' => true,
+        ]);
+
+        // Create Admin BKPSDM
+        Admin::create([
+            'name' => 'Admin BKPSDM',
+            'email' => 'bkpsdm@sipeta.com',
+            'password' => Hash::make('password'),
+            'role' => 'admin_bkpsdm',
             'is_active' => true,
         ]);
     }
