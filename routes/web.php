@@ -1,0 +1,186 @@
+<?php
+
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BezettingController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MutasiController;
+use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\OpdController;
+use App\Http\Controllers\OpdImportController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+// Landing page
+Route::get('/', function () {
+    return view('landing');
+})->name('landing');
+
+// Redirect /home ke admin dashboard
+Route::get('/home', function () {
+    return redirect()->route('admin.dashboard');
+});
+
+// Admin Authentication Routes
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Guest routes (not authenticated)
+    Route::middleware('guest:admin')->group(function () {
+        Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
+        Route::post('login', [AuthController::class, 'login']);
+    });
+
+    // Authenticated routes
+    Route::middleware('admin.auth')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Admin Management (Super Admin only)
+        Route::middleware('admin.permission:super_admin_only')->group(function () {
+            Route::resource('admins', AdminController::class);
+            Route::get('admins-generate-opd', [AdminController::class, 'showGenerateOpdForm'])->name('admins.generate-opd');
+            Route::post('admins-generate-opd/single', [AdminController::class, 'generateSingleOpdAdmin'])->name('admins.generate-opd.single');
+            Route::post('admins-generate-opd/download', [AdminController::class, 'downloadGeneratedExcel'])->name('admins.generate-opd.download');
+            Route::get('admins-reset-password', [AdminController::class, 'showResetPasswordForm'])->name('admins.reset-password');
+            Route::post('admins-reset-password/single', [AdminController::class, 'resetSingleAdminPassword'])->name('admins.reset-password.single');
+            Route::post('admins-reset-password/download', [AdminController::class, 'downloadResetPasswordExcel'])->name('admins.reset-password.download');
+            Route::delete('admins-bulk-delete', [AdminController::class, 'bulkDestroy'])->name('admins.bulk-destroy');
+
+            // Activity Logs (Super Admin only)
+            Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+                Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+                Route::get('/export', [ActivityLogController::class, 'export'])->name('export');
+                Route::get('/stats', [ActivityLogController::class, 'stats'])->name('stats');
+                Route::get('/{activityLog}', [ActivityLogController::class, 'show'])->name('show');
+            });
+
+            // Database Backup (Super Admin only)
+            Route::prefix('backup')->name('backup.')->group(function () {
+                Route::get('/', [DatabaseBackupController::class, 'index'])->name('index');
+                Route::post('/', [DatabaseBackupController::class, 'store'])->name('store');
+                Route::get('/download/{filename}', [DatabaseBackupController::class, 'download'])
+                    ->name('download')
+                    ->where('filename', '.*');
+                Route::delete('/destroy/{filename}', [DatabaseBackupController::class, 'destroy'])
+                    ->name('destroy')
+                    ->where('filename', '.*');
+                Route::post('/import', [DatabaseBackupController::class, 'import'])->name('import');
+            });
+        });
+
+        // Mutasi Pegawai (Super Admin and Admin BKPSDM only)
+        Route::prefix('mutasi')->name('mutasi.')->group(function () {
+            Route::get('/', [MutasiController::class, 'index'])->name('index');
+            Route::get('/create', [MutasiController::class, 'create'])->name('create');
+            Route::post('/', [MutasiController::class, 'store'])->name('store');
+            Route::get('/export', [MutasiController::class, 'export'])->name('export');
+            Route::get('/search-asn', [MutasiController::class, 'searchAsn'])->name('search-asn');
+            Route::get('/jabatan/{opdId}', [MutasiController::class, 'getJabatanByOpd'])->name('jabatan');
+            Route::get('/jabatan-struktural/{opdId}', [MutasiController::class, 'getJabatanStruktural'])->name('jabatan-struktural');
+            Route::get('/jabatan-by-atasan/{opdId}/{atasanId}', [MutasiController::class, 'getJabatanByAtasan'])->name('jabatan-by-atasan');
+            Route::get('/riwayat/{asnId}', [MutasiController::class, 'riwayatAsn'])->name('riwayat');
+            Route::get('/{mutasi}', [MutasiController::class, 'show'])->name('show');
+        });
+
+        // Pegawai Management (with OPD access check)
+        Route::resource('pegawai', PegawaiController::class)->middleware('check.opd.access');
+        Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export')->middleware('check.opd.access');
+
+        // Jabatan Management (with OPD access check)
+        Route::resource('jabatan', \App\Http\Controllers\Admin\OpdJabatanController::class)->middleware('check.opd.access');
+        Route::patch('jabatan/{id}/kebutuhan', [\App\Http\Controllers\Admin\OpdJabatanController::class, 'updateKebutuhan'])->name('jabatan.updateKebutuhan')->middleware('check.opd.access');
+        Route::get('jabatan-export', [\App\Http\Controllers\Admin\OpdJabatanController::class, 'export'])->name('jabatan.export')->middleware('check.opd.access');
+
+        // Jabatan Import Routes
+        Route::prefix('jabatan-import')->name('jabatan.import.')->middleware('check.opd.access')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\JabatanImportController::class, 'showImportForm'])->name('form');
+            Route::get('/download-template', [\App\Http\Controllers\Admin\JabatanImportController::class, 'downloadTemplate'])->name('download-template');
+            Route::post('/preview', [\App\Http\Controllers\Admin\JabatanImportController::class, 'previewImport'])->name('preview');
+            Route::post('/process', [\App\Http\Controllers\Admin\JabatanImportController::class, 'processImport'])->name('process');
+            Route::post('/single', [\App\Http\Controllers\Admin\JabatanImportController::class, 'importSingleRow'])->name('single');
+            Route::post('/clear-session', [\App\Http\Controllers\Admin\JabatanImportController::class, 'clearImportSession'])->name('clear-session');
+        });
+
+        // Nama Jabatan Referensi (super admin only)
+        Route::resource('nama-jabatan-referensi', \App\Http\Controllers\Admin\NamaJabatanReferensiController::class);
+
+        // Analytics Routes (with OPD access check)
+        Route::prefix('analytics')->name('analytics.')->middleware('check.opd.access')->group(function () {
+            Route::get('overview', [AnalyticsController::class, 'overview'])->name('overview');
+            Route::get('opd', [AnalyticsController::class, 'opdAnalytics'])->name('opd');
+            Route::get('kepegawaian', [AnalyticsController::class, 'kepegawaianAnalytics'])->name('kepegawaian');
+            Route::get('jabatan', [AnalyticsController::class, 'jabatanAnalytics'])->name('jabatan');
+            Route::get('gap', [AnalyticsController::class, 'gapAnalysis'])->name('gap');
+            Route::get('laporan', [AnalyticsController::class, 'laporan'])->name('laporan');
+
+            // Export routes
+            Route::get('export/excel', [AnalyticsController::class, 'exportExcel'])->name('export.excel');
+            Route::get('export/pdf', [AnalyticsController::class, 'exportPdf'])->name('export.pdf');
+
+            // API for charts
+            Route::get('api/chart-data', [AnalyticsController::class, 'getChartData'])->name('api.chart-data');
+            Route::get('api/sidebar-bezetting', [AnalyticsController::class, 'getSidebarBezetting'])->name('api.sidebar-bezetting');
+        });
+
+        // Bezetting Jabatan
+        Route::prefix('bezetting')->name('bezetting.')->middleware('check.opd.access')->group(function () {
+            Route::get('/', [BezettingController::class, 'index'])->name('index');
+            Route::get('/search', [BezettingController::class, 'search'])->name('search');
+            Route::get('/detail/{namaJabatan}', [BezettingController::class, 'detail'])->name('detail');
+        });
+
+        // OPD Management (moved inside admin middleware)
+        Route::prefix('opds')->group(function () {
+            Route::get('/', [OpdController::class, 'index'])->name('opds.index');
+            Route::post('/', [OpdController::class, 'store'])->name('opds.store');
+            Route::get('/import/download-template-all', [OpdImportController::class, 'downloadTemplateAll'])->name('opds.import.download-template-all');
+
+            // Routes yang memerlukan OPD access check
+            Route::middleware('check.opd.access')->group(function () {
+                Route::get('/{id}', [OpdController::class, 'show'])->name('opds.show');
+                Route::get('/{id}/peta-jabatan', [OpdController::class, 'petaJabatan'])->name('opds.peta-jabatan');
+                Route::get('/{id}/peta-jabatan/export-excel', [OpdController::class, 'exportPetaJabatanExcel'])->name('opds.peta-jabatan.export-excel');
+                Route::get('/{id}/export', [OpdController::class, 'export'])->name('opds.export');
+                Route::put('/{id}', [OpdController::class, 'update'])->name('opds.update');
+                Route::delete('/{id}', [OpdController::class, 'destroy'])->name('opds.destroy');
+
+                // CRUD Jabatan dalam OPD
+                Route::post('/{opd}/jabatan', [OpdController::class, 'storeJabatan'])->name('opds.jabatan.store');
+                Route::put('/{opd}/jabatan/{jabatan}', [OpdController::class, 'updateJabatan'])->name('opds.jabatan.update');
+                Route::delete('/{opd}/jabatan/{jabatan}', [OpdController::class, 'destroyJabatan'])->name('opds.jabatan.destroy');
+
+                // CRUD ASN dalam OPD
+                Route::post('/{opd}/asn', [OpdController::class, 'storeAsn'])->name('opds.asn.store');
+                Route::put('/{opd}/asn/{asn}', [OpdController::class, 'updateAsn'])->name('opds.asn.update');
+                Route::delete('/{opd}/asn/{asn}', [OpdController::class, 'destroyAsn'])->name('opds.asn.destroy');
+
+                // Import ASN dari CSV
+                Route::get('/{opd}/import', [OpdImportController::class, 'showImportForm'])->name('opds.import.form');
+                Route::get('/{opd}/import/download-template', [OpdImportController::class, 'downloadTemplate'])->name('opds.import.download-template');
+                Route::post('/{opd}/import/preview', [OpdImportController::class, 'previewImport'])->name('opds.import.preview');
+                Route::post('/{opd}/import/process', [OpdImportController::class, 'processImport'])->name('opds.import.process');
+                Route::post('/{opd}/import/single', [OpdImportController::class, 'importSingleRow'])->name('opds.import.single');
+                Route::post('/{opd}/import/clear-session', [OpdImportController::class, 'clearImportSession'])->name('opds.import.clear-session');
+            });
+        });
+
+        // API routes
+        Route::prefix('api')->group(function () {
+            Route::get('/opds/{id}/tree', [OpdController::class, 'getOpdTree'])->name('api.opds.tree');
+            Route::get('/jabatan/{id}/asns', [OpdController::class, 'getJabatanAsns'])->name('api.jabatan.asns');
+            Route::get('/opds/{id}/jabatans', [PegawaiController::class, 'getJabatanByOpd'])->name('api.opds.jabatans');
+        });
+    });
+});

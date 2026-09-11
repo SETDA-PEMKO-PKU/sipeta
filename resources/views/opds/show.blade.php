@@ -1,0 +1,568 @@
+@extends('admin.layouts.app')
+
+@section('title', 'Detail OPD - ' . $opd->nama)
+@section('page-title', 'Detail OPD')
+
+@section('content')
+<div class="p-4 lg:p-8" x-data="opdShow()">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <a href="{{ route('admin.opds.index') }}" class="text-gray-600 hover:text-gray-900">
+                <span class="iconify" data-icon="mdi:arrow-left" data-width="20" data-height="20"></span>
+            </a>
+            <div class="flex-1">
+                <h2 class="text-2xl font-bold text-gray-900" x-show="!editingNama">{{ $opd->nama }}</h2>
+                @if(auth('admin')->user()->canManageOpdJabatan())
+                <form action="{{ route('admin.opds.update', $opd->id) }}" method="POST" x-show="editingNama" @submit="editingNama = false" class="flex items-center gap-2">
+                    @csrf
+                    @method('PUT')
+                    <input type="text" name="nama" value="{{ $opd->nama }}" class="input text-gray-900" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+                    <button type="button" @click="editingNama = false" class="btn btn-outline btn-sm">Batal</button>
+                </form>
+                @endif
+            </div>
+            <div class="flex gap-2">
+                @if(auth('admin')->user()->canManageOpdJabatan())
+                <button @click="editingNama = !editingNama" class="btn btn-outline" x-show="!editingNama">
+                    <span class="iconify" data-icon="mdi:pencil" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Edit Nama</span>
+                </button>
+                @endif
+                <a href="{{ route('admin.opds.peta-jabatan', $opd->id) }}" class="btn" style="background-color: #8b5cf6; border-color: #8b5cf6; color: white;">
+                    <span class="iconify" data-icon="mdi:file-tree" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Peta Jabatan</span>
+                </a>
+                @if(auth('admin')->user()->canImportAsn())
+                <a href="{{ route('admin.opds.import.form', $opd->id) }}" class="btn" style="background-color: #10b981; border-color: #10b981; color: white;">
+                    <span class="iconify" data-icon="mdi:upload" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Import CSV</span>
+                </a>
+                @endif
+                <a href="{{ route('admin.opds.export', $opd->id) }}" class="btn btn-primary">
+                    <span class="iconify" data-icon="mdi:download" data-width="18" data-height="18"></span>
+                    <span class="ml-2">Export</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <!-- Alert Messages -->
+        @if(session('success'))
+            <div class="alert alert-success mb-4 flex items-center gap-2 animate-fade-in">
+                <span class="iconify" data-icon="mdi:check-circle" data-width="18" data-height="18"></span>
+                <span>{{ session('success') }}</span>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-error mb-4 flex items-center gap-2 animate-fade-in">
+                <span class="iconify" data-icon="mdi:alert-circle" data-width="18" data-height="18"></span>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="alert alert-error mb-4">
+                <ul class="list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="card bg-white shadow-sm">
+                <div class="card-body">
+                    <div class="stat">
+                        <div class="stat-title flex items-center gap-2">
+                            <span class="iconify text-blue-500" data-icon="mdi:briefcase" data-width="20" data-height="20"></span>
+                            <span class="stat-label">Total Jabatan</span>
+                        </div>
+                        <div class="stat-value text-primary-600">{{ $opd->total_jabatan_count }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-white shadow-sm">
+                <div class="card-body">
+                    <div class="stat">
+                        <div class="stat-title flex items-center gap-2">
+                            <span class="iconify text-green-500" data-icon="mdi:account-group" data-width="20" data-height="20"></span>
+                            <span class="stat-label">Total ASN</span>
+                        </div>
+                        <div class="stat-value text-green-600">{{ $opd->asns->count() }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-white shadow-sm">
+                <div class="card-body">
+                    <div class="stat">
+                        <div class="stat-title flex items-center gap-2">
+                            <span class="iconify text-purple-500" data-icon="mdi:chart-line" data-width="20" data-height="20"></span>
+                            <span class="stat-label">Pemenuhan</span>
+                        </div>
+                        @php
+                            $totalKebutuhan = $opd->allJabatans->sum('kebutuhan');
+                            $persentase = $totalKebutuhan > 0 ? round(($opd->asns->count() / $totalKebutuhan) * 100, 1) : 0;
+                        @endphp
+                        <div class="stat-value text-purple-600">{{ $persentase }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistik Per Kelas Jabatan -->
+        @php
+            // Group all jabatan by kelas
+            $jabatanByKelas = $opd->allJabatans->whereNotNull('kelas')->groupBy('kelas')->sortKeys();
+            
+            // Calculate stats per kelas
+            $statsPerKelas = $jabatanByKelas->map(function($jabatans, $kelas) {
+                $kebutuhan = $jabatans->sum('kebutuhan');
+                $bezetting = $jabatans->sum(function($j) { return $j->asns->count(); });
+                $selisih = $bezetting - $kebutuhan;
+                return [
+                    'kelas' => $kelas,
+                    'kebutuhan' => $kebutuhan,
+                    'bezetting' => $bezetting,
+                    'selisih' => $selisih,
+                    'jumlah_jabatan' => $jabatans->count()
+                ];
+            });
+        @endphp
+
+        @if($statsPerKelas->count() > 0)
+        <div class="card bg-white shadow-sm mb-6">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <span class="iconify text-orange-500" data-icon="mdi:layers" data-width="20" data-height="20"></span>
+                    Statistik Per Kelas Jabatan
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Kelas Jabatan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Jumlah Jabatan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Kebutuhan</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Bezetting</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Selisih</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($statsPerKelas->sortKeysDesc() as $stat)
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        Kelas {{ $stat['kelas'] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center text-gray-600">{{ $stat['jumlah_jabatan'] }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="font-medium text-orange-600">{{ $stat['kebutuhan'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="font-medium text-green-600">{{ $stat['bezetting'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if($stat['selisih'] > 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                            +{{ $stat['selisih'] }}
+                                        </span>
+                                    @elseif($stat['selisih'] < 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                            {{ $stat['selisih'] }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            0
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-50 font-semibold">
+                                <td class="px-4 py-3 text-gray-700">Total</td>
+                                <td class="px-4 py-3 text-center text-gray-700">{{ $statsPerKelas->sum('jumlah_jabatan') }}</td>
+                                <td class="px-4 py-3 text-center text-orange-600">{{ $statsPerKelas->sum('kebutuhan') }}</td>
+                                <td class="px-4 py-3 text-center text-green-600">{{ $statsPerKelas->sum('bezetting') }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    @php $totalSelisih = $statsPerKelas->sum('selisih'); @endphp
+                                    @if($totalSelisih > 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                            +{{ $totalSelisih }}
+                                        </span>
+                                    @elseif($totalSelisih < 0)
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                            {{ $totalSelisih }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            0
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Struktur Organisasi -->
+        <div class="card bg-white shadow-sm">
+            <div class="card-header flex justify-between items-center">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <span class="iconify text-blue-500" data-icon="mdi:file-tree" data-width="20" data-height="20"></span>
+                    Struktur Organisasi
+                </h3>
+                @if(auth('admin')->user()->canManageOpdJabatan())
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.jabatan.import.form', ['opd_id' => $opd->id]) }}" class="btn btn-sm" style="background-color: #f59e0b; border-color: #f59e0b; color: white;">
+                        <span class="iconify" data-icon="mdi:file-import" data-width="16" data-height="16"></span>
+                        <span class="ml-1">Import Jabatan</span>
+                    </a>
+                    <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-sm btn-primary">
+                        <span class="iconify" data-icon="mdi:plus" data-width="16" data-height="16"></span>
+                        <span class="ml-1">Jabatan</span>
+                    </button>
+                </div>
+                @endif
+            </div>
+            <div class="card-body">
+                @if($opd->jabatanTree && $opd->jabatanTree->count() > 0)
+                    <div class="tree">
+                        <!-- Root Jabatan -->
+                        @foreach($opd->jabatanTree as $jabatan)
+                            @include('opds.partials.tree-jabatan', [
+                                'jabatan' => $jabatan,
+                                'opd' => $opd,
+                                'level' => 0
+                            ])
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-12">
+                        <span class="iconify text-gray-300" data-icon="mdi:file-tree" data-width="64" data-height="64"></span>
+                        <p class="mt-4 text-gray-500">
+                            Mulai membangun struktur organisasi {{ $opd->nama }} dengan menambahkan jabatan
+                        </p>
+                        @if(auth('admin')->user()->canManageOpdJabatan())
+                        <div class="mt-6">
+                            <button @click="$dispatch('open-modal', 'add-jabatan')" class="btn btn-primary">
+                                <span class="iconify" data-icon="mdi:plus" data-width="18" data-height="18"></span>
+                                <span class="ml-2">Tambah Jabatan</span>
+                            </button>
+                        </div>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Jabatan -->
+    <x-modal name="add-jabatan" title="Tambah Jabatan" maxWidth="lg">
+        <form action="{{ route('admin.opds.jabatan.store', $opd->id) }}" method="POST"
+              x-data="jabatanForm()"
+              @submit.prevent="if (!jenis) { alert('Pilih jenis jabatan terlebih dahulu'); return; } if (!namaFinal) { alert('Pilih atau isi nama jabatan'); return; } $el.submit()">
+            @csrf
+            <div class="space-y-4">
+
+                {{-- 1. Jabatan ini berada di bawah --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan Ini Berada di Bawah</label>
+                    <input type="hidden" name="parent_jabatan_id" x-model="selectedParentId">
+
+                    <div class="border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+                        <div @click="selectedParentId = ''; selectedParentName = 'Tidak ada (Jabatan Root)'"
+                             :class="selectedParentId == '' ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-50'"
+                             class="p-3 cursor-pointer border-b border-gray-100 flex items-center">
+                            <span class="iconify text-gray-400 mr-2" data-icon="mdi:domain" data-width="16" data-height="16"></span>
+                            <span class="text-sm font-medium text-gray-700">Tidak ada (Jabatan Root/Kepala)</span>
+                            <span x-show="selectedParentId == ''" class="iconify text-blue-500 ml-auto" data-icon="mdi:check-circle" data-width="16" data-height="16"></span>
+                        </div>
+
+                        @if($opd->allJabatans->count() > 0)
+                            @php
+                                function renderJabatanTree($jabatans, $parentId = null, $level = 0) {
+                                    $filtered = $jabatans->where('parent_id', $parentId);
+                                    foreach ($filtered as $jabatan) {
+                                        $indent = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $level);
+                                        echo '<div @click="selectedParentId = \'' . $jabatan->id . '\'; selectedParentName = \'' . addslashes($jabatan->nama) . '\'"
+                                                   :class="selectedParentId == \'' . $jabatan->id . '\' ? \'bg-blue-50 border-l-4 border-blue-500\' : \'hover:bg-gray-50\'"
+                                                   class="p-3 cursor-pointer border-b border-gray-100 flex items-center">';
+
+                                        if ($level > 0) {
+                                            echo '<span class="text-gray-300 mr-2">' . $indent . '└─</span>';
+                                        }
+
+                                        echo '<span class="iconify text-blue-400 mr-2" data-icon="mdi:briefcase-outline" data-width="16" data-height="16"></span>';
+                                        echo '<span class="text-sm text-gray-700">' . e($jabatan->nama) . '</span>';
+                                        echo '<span x-show="selectedParentId == \'' . $jabatan->id . '\'" class="iconify text-blue-500 ml-auto" data-icon="mdi:check-circle" data-width="16" data-height="16"></span>';
+                                        echo '</div>';
+
+                                        renderJabatanTree($jabatans, $jabatan->id, $level + 1);
+                                    }
+                                }
+                                renderJabatanTree($opd->allJabatans);
+                            @endphp
+                        @endif
+                    </div>
+
+                    <div class="mt-1 text-xs text-gray-500">
+                        Dipilih: <span class="font-medium text-gray-700" x-text="selectedParentName"></span>
+                    </div>
+                </div>
+
+                {{-- 2. Jenis Jabatan --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
+                    <select name="jenis_jabatan" class="input w-full no-tom-select" x-model="jenis" @change="namaManual = false; namaPilihan = ''; namaSearch = ''">
+                        <option value="">-- Pilih Jenis Jabatan --</option>
+                        @foreach($jenisOptions as $jOpt)
+                            <option value="{{ $jOpt }}">{{ $jOpt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- 3. Nama Jabatan --}}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-sm font-medium text-gray-700">Nama Jabatan *</label>
+                        <button type="button"
+                                @click="namaManual = !namaManual; namaPilihan = ''; namaInputManual = ''; namaSearch = ''"
+                                class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                x-text="namaManual ? 'Pilih dari daftar' : 'Input manual'">
+                        </button>
+                    </div>
+
+                    {{-- Hidden input yang dikirim ke server --}}
+                    <input type="hidden" name="nama" :value="namaFinal">
+
+                    {{-- Dropdown dari referensi --}}
+                    <div x-show="!namaManual">
+                        <input type="text" x-model="namaSearch" placeholder="Ketik untuk mencari..." class="input w-full mb-1" x-show="jenis">
+                        <select class="input w-full no-tom-select" x-model="namaPilihan">
+                            <option value="">-- Pilih nama jabatan --</option>
+                            <template x-for="item in namaOptions" :key="item">
+                                <option :value="item" x-text="item"></option>
+                            </template>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1" x-show="!jenis">Pilih jenis jabatan terlebih dahulu.</p>
+                        <p class="text-xs text-gray-400 mt-1" x-show="jenis && namaOptions.length === 0">Belum ada referensi untuk jenis ini. Gunakan input manual.</p>
+                    </div>
+
+                    {{-- Input manual --}}
+                    <div x-show="namaManual">
+                        <input type="text" x-model="namaInputManual" class="input w-full"
+                               placeholder="Contoh: Kepala Bidang Umum">
+                    </div>
+
+                    <p class="text-xs text-red-500 mt-1" x-show="!namaFinal && jenis">Nama jabatan wajib dipilih.</p>
+                </div>
+
+                {{-- 4. Kelas Jabatan --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kelas Jabatan</label>
+                    <input type="number" name="kelas" class="input w-full" placeholder="Contoh: 9" min="1" max="17">
+                </div>
+
+                {{-- 5. Kebutuhan --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kebutuhan</label>
+                    <input type="number" name="kebutuhan" required class="input w-full" placeholder="Jumlah kebutuhan" min="0" value="1">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'add-jabatan')" class="btn btn-outline">Batal</button>
+                <button type="submit" class="btn btn-primary">Tambah Jabatan</button>
+            </div>
+        </form>
+    </x-modal>
+
+    <!-- Modal: Edit Jabatan -->
+    <x-modal name="edit-jabatan" title="Edit Jabatan" maxWidth="lg">
+        <template x-if="editJabatan">
+            <form :action="`{{ route('admin.opds.show', $opd->id) }}/jabatan/${editJabatan.id}`" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Jabatan</label>
+                        <input type="text" name="nama" x-model="editJabatan.nama" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Parent Jabatan</label>
+                        <select name="parent_jabatan_id" x-model="editJabatan.parent_id" class="input w-full">
+                            <option value="">Tidak ada (Jabatan Root/Kepala)</option>
+                            @foreach($opd->allJabatans as $j)
+                                <option value="{{ $j->id }}" x-bind:disabled="editJabatan && editJabatan.id == {{ $j->id }}">
+                                    {{ str_repeat('—', $j->getPath()->count() - 1) }} {{ $j->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Jabatan</label>
+                        <select name="jenis_jabatan" x-model="editJabatan.jenis_jabatan" required class="input w-full">
+                            <option value="Struktural">Struktural</option>
+                            <option value="Fungsional">Fungsional</option>
+                            <option value="Pelaksana">Pelaksana</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas Jabatan</label>
+                        <input type="number" name="kelas" x-model="editJabatan.kelas" class="input w-full" min="1" max="17">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kebutuhan</label>
+                        <input type="number" name="kebutuhan" x-model="editJabatan.kebutuhan" required class="input w-full" min="0">
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="$dispatch('close-modal', 'edit-jabatan')" class="btn btn-outline">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </template>
+    </x-modal>
+
+    <!-- Modal: Add ASN -->
+    <x-modal name="add-asn" title="Tambah ASN" maxWidth="lg">
+        <form action="{{ route('admin.opds.asn.store', $opd->id) }}" method="POST">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama</label>
+                    <input type="text" name="nama" required class="input w-full" placeholder="Nama lengkap ASN">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">NIP</label>
+                    <input type="text" name="nip" required class="input w-full" placeholder="NIP">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
+                    <select name="jabatan_id" required class="input w-full">
+                        <option value="">Pilih Jabatan</option>
+                        @foreach($opd->allJabatans as $jabatan)
+                            <option value="{{ $jabatan->id }}">
+                                {{ str_repeat('—', $jabatan->getPath()->count() - 1) }} {{ $jabatan->nama }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'add-asn')" class="btn btn-outline">Batal</button>
+                <button type="submit" class="btn btn-primary">Tambah ASN</button>
+            </div>
+        </form>
+    </x-modal>
+
+    <!-- Modal: Edit ASN -->
+    <x-modal name="edit-asn" title="Edit ASN" maxWidth="lg">
+        <template x-if="editAsn">
+            <form :action="`{{ route('admin.opds.show', $opd->id) }}/asn/${editAsn.id}`" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama</label>
+                        <input type="text" name="nama" x-model="editAsn.nama" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NIP</label>
+                        <input type="text" name="nip" x-model="editAsn.nip" required class="input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
+                        <select name="jabatan_id" x-model="editAsn.jabatan_id" required class="input w-full">
+                            <option value="">Pilih Jabatan</option>
+                            @foreach($opd->allJabatans as $jabatan)
+                                <option value="{{ $jabatan->id }}">
+                                    {{ str_repeat('—', $jabatan->getPath()->count() - 1) }} {{ $jabatan->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="$dispatch('close-modal', 'edit-asn')" class="btn btn-outline">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </template>
+    </x-modal>
+</div>
+
+@push('scripts')
+<script>
+window.sipataNamaReferensi = @json($namaReferensi);
+window.sipataJenisOptions = @json($jenisOptions);
+
+document.addEventListener('alpine:init', () => {
+    Alpine.data('opdShow', () => ({
+        editingNama: false,
+        editJabatan: null,
+        editAsn: null,
+
+        init() {
+            this.$el.addEventListener('edit-jabatan', (e) => {
+                this.editJabatan = e.detail;
+                this.$dispatch('open-modal', 'edit-jabatan');
+            });
+
+            this.$el.addEventListener('edit-asn', (e) => {
+                this.editAsn = e.detail;
+                this.$dispatch('open-modal', 'edit-asn');
+            });
+        }
+    }));
+
+    Alpine.data('jabatanForm', () => ({
+        jenis: '',
+        namaManual: false,
+        namaSearch: '',
+        namaPilihan: '',
+        namaInputManual: '',
+        selectedParentId: '',
+        selectedParentName: 'Tidak ada (Jabatan Root)',
+        get namaOptions() {
+            if (!this.jenis || !window.sipataNamaReferensi[this.jenis]) return [];
+            const all = window.sipataNamaReferensi[this.jenis].map(r => typeof r === 'string' ? r : r.nama);
+            if (!this.namaSearch) return all;
+            const q = this.namaSearch.toLowerCase();
+            return all.filter(n => n.toLowerCase().includes(q));
+        },
+        get namaFinal() {
+            return this.namaManual ? this.namaInputManual : this.namaPilihan;
+        }
+    }));
+});
+</script>
+@endpush
+@endsection
