@@ -73,6 +73,12 @@ jobs:
             -p 22022 kirimi@107.155.65.244 '
             set -e
             cd /home/kirimi/sipeta
+
+            # Fix PHP-FPM upload limit
+            SIPETA_INI=/etc/php/8.3/fpm/conf.d/99-sipeta.ini
+            echo "upload_max_filesize = 20M" | sudo tee "$SIPETA_INI" > /dev/null
+            echo "post_max_size = 20M"       | sudo tee -a "$SIPETA_INI" > /dev/null
+
             sudo chown -R kirimi:www-data /home/kirimi/sipeta
             sudo chmod -R ug+rwX storage bootstrap/cache
             sudo -u www-data php artisan config:clear
