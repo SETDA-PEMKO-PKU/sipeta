@@ -75,7 +75,7 @@ class DatabaseBackupController extends Controller
         }
 
         $dumpCommand = sprintf(
-            'mysqldump --single-transaction --routines --triggers ' .
+            'mysqldump --single-transaction --routines --triggers --set-gtid-purged=OFF ' .
             '--host=%s --port=%s --user=%s %s %s %s > %s 2>&1',
             escapeshellarg($host),
             escapeshellarg($port),
@@ -195,6 +195,12 @@ class DatabaseBackupController extends Controller
         $originalName = $uploadedFile->getClientOriginalName();
         $tmpPath      = $uploadedFile->getRealPath();
 
+        // Strip leading non-SQL lines (e.g. mysqldump GTID warning) before import
+        $lines   = file($tmpPath);
+        $cleaned = array_filter($lines, fn($line) => str_starts_with(ltrim($line), '--') || str_starts_with(ltrim($line), '/') || trim($line) === '' || !str_starts_with(ltrim($line), 'Warning'));
+        $cleanPath = tempnam(sys_get_temp_dir(), 'sipeta_import_');
+        file_put_contents($cleanPath, implode('', $cleaned));
+
         $socketOption = '';
         if (!empty($socket)) {
             $socketOption = '--socket=' . escapeshellarg($socket);
@@ -208,10 +214,15 @@ class DatabaseBackupController extends Controller
             empty($password) ? '' : '--password=' . escapeshellarg($password),
             $socketOption,
             escapeshellarg($database),
-            escapeshellarg($tmpPath)
+            escapeshellarg($cleanPath)
         );
 
         exec($importCommand, $output, $exitCode);
+
+        // Clean up temp file
+        if (file_exists($cleanPath)) {
+            unlink($cleanPath);
+        }
 
         if ($exitCode !== 0) {
             $errDetail = implode(' ', $output);
