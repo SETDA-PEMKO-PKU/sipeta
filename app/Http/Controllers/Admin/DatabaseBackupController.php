@@ -159,7 +159,7 @@ class DatabaseBackupController extends Controller
         if ($request->hasFile('sql_file') === false && $request->isMethod('post')) {
             $uploadError = $_FILES['sql_file']['error'] ?? UPLOAD_ERR_NO_FILE;
             $message = match($uploadError) {
-                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'File terlalu besar. Maksimal ukuran upload adalah ' . ini_get('upload_max_filesize') . '.',
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'File terlalu besar. Maksimal ukuran upload adalah 10 MB.',
                 UPLOAD_ERR_NO_FILE => 'File SQL wajib dipilih.',
                 default => 'Upload gagal dengan kode error: ' . $uploadError,
             };
@@ -167,11 +167,11 @@ class DatabaseBackupController extends Controller
         }
 
         $request->validate([
-            'sql_file' => ['required', 'file', 'max:3072'],
+            'sql_file' => ['required', 'file', 'max:10240'],
         ], [
             'sql_file.required' => 'File SQL wajib dipilih.',
             'sql_file.file'     => 'Upload harus berupa file.',
-            'sql_file.max'      => 'Ukuran file maksimal 3 MB.',
+            'sql_file.max'      => 'Ukuran file maksimal 10 MB.',
         ]);
 
         // Validasi ekstensi secara manual karena mimes:sql tidak reliable di semua OS
