@@ -1,0 +1,85 @@
+name: Deploy SIPETA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, xml, zip, bcmath, intl, gd
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install PHP dependencies
+        run: |
+          composer install --no-dev --prefer-dist --no-progress --no-interaction --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Deploy via rsync
+        run: |
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/deploy_key << 'EOF_KEY'
+          -----BEGIN OPENSSH PRIVATE KEY-----
+          b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+          QyNTUxOQAAACBkS9FBmcTdVMPnxlD00ajJAtXiKYC7nr/H/S5zUr8GVQAAAJimUuFNplLh
+          TQAAAAtzc2gtZWQyNTUxOQAAACBkS9FBmcTdVMPnxlD00ajJAtXiKYC7nr/H/S5zUr8GVQ
+          AAAEBPZgyTbLh8pLbreMQLrKPO4SYyZMAlGooiu9OUZcURVGRL0UGZxN1Uw+fGUPTRqMkC
+          1eIpgLuev8f9LnNSvwZVAAAAFWdpdGh1Yi1hY3Rpb25zLWRlcGxveQ==
+          -----END OPENSSH PRIVATE KEY-----
+          EOF_KEY
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' \
+            'Host deploy' \
+            '  HostName 107.155.65.244' \
+            '  User kirimi' \
+            '  Port 22022' \
+            '  IdentityFile ~/.ssh/deploy_key' \
+            '  IdentitiesOnly yes' \
+            '  StrictHostKeyChecking no' > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude 'storage/' \
+            --exclude 'public/storage' \
+            --exclude 'node_modules' \
+            --exclude '.github' \
+            ./ "deploy:/home/kirimi/sipeta/"
+
+      - name: Post-deploy commands
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -p 22022 kirimi@107.155.65.244 '
+            set -e
+            cd /home/kirimi/sipeta
+            sudo chown -R kirimi:www-data /home/kirimi/sipeta
+            sudo chmod -R ug+rwX storage bootstrap/cache
+            sudo -u www-data php artisan config:clear
+            sudo -u www-data php artisan cache:clear
+            sudo -u www-data php artisan view:clear
+            sudo -u www-data php artisan route:clear
+            sudo -u www-data php artisan storage:link
+            sudo -u www-data php artisan migrate --force
+            sudo systemctl reload php8.3-fpm nginx
+          '
